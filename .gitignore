@@ -42,3 +42,7 @@ next-env.d.ts
 
 # Claude local settings
 .claude/settings.local.json
+
+# Pastas de repositório aninhadas (não versionar)
+neblina.records/
+neblina.records-1/
