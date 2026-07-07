@@ -5,6 +5,7 @@ import { CartProvider } from "@/lib/cart";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import CartDrawer from "@/components/CartDrawer";
+import AudioUnlock from "@/components/AudioUnlock";
 import type { Profile } from "@/lib/types";
 
 export default function Providers({
@@ -20,6 +21,7 @@ export default function Providers({
       <main className="flex-1">{children}</main>
       <SiteFooter />
       <CartDrawer />
+      <AudioUnlock />
     </CartProvider>
   );
 }

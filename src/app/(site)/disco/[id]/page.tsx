@@ -7,6 +7,7 @@ import { QUALITY_META } from "@/lib/constants";
 import { formatBRL } from "@/lib/utils";
 import Vinyl from "@/components/Vinyl";
 import BuyButtons from "@/components/BuyButtons";
+import ShippingCalculator from "@/components/ShippingCalculator";
 import PhotoGallery from "@/components/PhotoGallery";
 import Comments from "@/components/Comments";
 import type { RecordItem, RecordPhoto, Comment, ExtraBlock } from "@/lib/types";
@@ -122,6 +123,10 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
               </div>
             </div>
           )}
+
+          <div className="mt-6">
+            <ShippingCalculator weightGrams={r.weight_grams} />
+          </div>
 
           {r.description && (
             <div className="mt-6">

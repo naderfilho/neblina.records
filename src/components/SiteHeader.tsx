@@ -60,9 +60,9 @@ export default function SiteHeader({ profile }: { profile: Profile | null }) {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3">
         <Link href="/" className="flex items-center gap-3">
           <Image src="/logo.png" alt="Neblina Records" width={60} height={60} className="h-14 w-14 object-contain md:h-16 md:w-16" priority />
-          <div className="hidden leading-none sm:block">
-            <p className="font-display text-2xl font-extrabold tracking-tight text-brand">NEBLINA</p>
-            <p className="text-xs font-medium tracking-[0.25em] text-muted">Records</p>
+          <div className="leading-none">
+            <p className="font-display text-2xl font-extrabold tracking-tight text-brand sm:text-3xl">NEBLINA</p>
+            <p className="text-xs font-medium tracking-[0.3em] text-muted sm:text-sm">Records</p>
           </div>
         </Link>
 

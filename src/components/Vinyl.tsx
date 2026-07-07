@@ -14,11 +14,11 @@ type VinylProps = {
   audioEnd?: number | null;
   title?: string;
   className?: string;
-  /** hover(desktop)/toque(mobile) para girar + tocar */
   interactive?: boolean;
-  /** callback ao clicar/tocar no disco (desktop navega; mobile só quando já ativo) */
   onOpen?: () => void;
   spinDuration?: number;
+  /** gira sozinho continuamente (usado no disco do hero) */
+  autoSpin?: boolean;
 };
 
 function bodyStyle(colorId: string): CSSProperties {
@@ -28,12 +28,8 @@ function bodyStyle(colorId: string): CSSProperties {
     backgroundImage: [
       "repeating-radial-gradient(circle at center, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px)",
       "radial-gradient(circle at 30% 26%, rgba(255,255,255,0.12), transparent 42%)",
-      splatter
-        ? "radial-gradient(circle at 62% 70%, rgba(245,160,40,0.55), transparent 13%)"
-        : "",
-      splatter
-        ? "radial-gradient(circle at 34% 62%, rgba(127,201,221,0.45), transparent 11%)"
-        : "",
+      splatter ? "radial-gradient(circle at 62% 70%, rgba(255,157,46,0.55), transparent 13%)" : "",
+      splatter ? "radial-gradient(circle at 34% 62%, rgba(127,201,221,0.45), transparent 11%)" : "",
       `radial-gradient(circle at center, ${c.groove} 0%, ${c.ring} 66%, #050505 100%)`,
     ]
       .filter(Boolean)
@@ -43,14 +39,12 @@ function bodyStyle(colorId: string): CSSProperties {
 
 function ringColor(border: string): string | undefined {
   switch (border) {
-    case "brand":
-      return "#f5a028";
-    case "mist":
-      return "#19b7a6";
-    case "gold":
-      return "#e7c96a";
-    default:
-      return undefined;
+    case "brand": return "#ff9d2e";
+    case "mist": return "#26c0d4";
+    case "gold": return "#e8c56d";
+    case "white": return "#e8ecef";
+    case "double": return "#ff9d2e";
+    default: return undefined;
   }
 }
 
@@ -65,180 +59,265 @@ export default function Vinyl({
   interactive = true,
   onOpen,
   spinDuration = 4,
+  autoSpin = false,
 }: VinylProps) {
   const cfg: DiscConfig = { ...DEFAULT_DISC_CONFIG, ...(config ?? {}) };
   const coarse = useCoarsePointer();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [active, setActive] = useState(false);
 
-  const start = useCallback(() => {
-    setActive(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const [active, setActive] = useState(false);
+  const [dragging, setDragging] = useState(false);
+
+  const activeRef = useRef(false);
+  const draggingRef = useRef(false);
+  const rotationRef = useRef(0);
+  const lastAngleRef = useRef(0);
+  const movedRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
+  const lastTsRef = useRef<number | null>(null);
+  const wasActiveOnDownRef = useRef(false);
+
+  const degPerSec = 360 / spinDuration;
+  const SEC_PER_ROTATION = 1.6; // sensibilidade do scratch
+
+  const applyRotation = () => {
+    if (bodyRef.current) bodyRef.current.style.transform = `rotate(${rotationRef.current}deg)`;
+  };
+
+  const stopRaf = () => {
+    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+    lastTsRef.current = null;
+  };
+
+  const tick = useCallback((ts: number) => {
+    const last = lastTsRef.current ?? ts;
+    lastTsRef.current = ts;
+    const dt = (ts - last) / 1000;
+    if (activeRef.current && !draggingRef.current) {
+      rotationRef.current += degPerSec * dt;
+      applyRotation();
+    }
+    if (activeRef.current || draggingRef.current) {
+      rafRef.current = requestAnimationFrame(tick);
+    } else {
+      stopRaf();
+    }
+  }, [degPerSec]);
+
+  const ensureRaf = useCallback(() => {
+    if (rafRef.current == null) rafRef.current = requestAnimationFrame(tick);
+  }, [tick]);
+
+  const playAudio = useCallback(() => {
     const a = audioRef.current;
-    if (a && audioUrl) {
-      claimAudio(a);
+    if (!a || !audioUrl) return;
+    claimAudio(a);
+    const doPlay = () => {
       try {
-        a.currentTime = audioStart || 0;
+        if (a.currentTime < (audioStart || 0) || (audioEnd && a.currentTime > audioEnd)) {
+          a.currentTime = audioStart || 0;
+        }
       } catch {}
       a.play().catch(() => {});
+    };
+    if (a.readyState >= 2) doPlay();
+    else {
+      a.load();
+      const onReady = () => {
+        a.removeEventListener("loadeddata", onReady);
+        if (activeRef.current) doPlay();
+      };
+      a.addEventListener("loadeddata", onReady);
     }
-  }, [audioUrl, audioStart]);
+  }, [audioUrl, audioStart, audioEnd]);
+
+  const start = useCallback(() => {
+    activeRef.current = true;
+    setActive(true);
+    ensureRaf();
+    playAudio();
+  }, [ensureRaf, playAudio]);
 
   const stop = useCallback(() => {
+    activeRef.current = false;
     setActive(false);
     const a = audioRef.current;
-    if (a) {
-      a.pause();
-      releaseAudio(a);
-    }
+    if (a) { a.pause(); releaseAudio(a); }
   }, []);
 
-  // Se outro disco roubar o áudio, para o giro também
+  // se outro disco roubar o áudio, para o giro
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
     const onPause = () => {
-      if (!a.ended && a.paused) setActive((prev) => (audioUrl ? false : prev));
+      if (!draggingRef.current && a.paused && audioUrl) { activeRef.current = false; setActive(false); }
     };
     a.addEventListener("pause", onPause);
     return () => a.removeEventListener("pause", onPause);
   }, [audioUrl]);
 
+  // giro contínuo (hero)
+  useEffect(() => {
+    if (autoSpin) {
+      activeRef.current = true;
+      setActive(true);
+      ensureRaf();
+    }
+    return () => stopRaf();
+  }, [autoSpin, ensureRaf]);
+
   const onTimeUpdate = () => {
     const a = audioRef.current;
-    if (!a) return;
-    if (audioEnd && a.currentTime >= audioEnd) {
-      a.currentTime = audioStart || 0;
+    if (!a || draggingRef.current) return;
+    if (audioEnd && a.currentTime >= audioEnd) a.currentTime = audioStart || 0;
+  };
+
+  // ---- Interação: arrastar para mixar/scratch ----
+  const angleFromEvent = (clientX: number, clientY: number) => {
+    const el = containerRef.current;
+    if (!el) return 0;
+    const r = el.getBoundingClientRect();
+    return Math.atan2(clientY - (r.top + r.height / 2), clientX - (r.left + r.width / 2)) * (180 / Math.PI);
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (!interactive) return;
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    draggingRef.current = true;
+    setDragging(true);
+    movedRef.current = false;
+    wasActiveOnDownRef.current = activeRef.current;
+    lastAngleRef.current = angleFromEvent(e.clientX, e.clientY);
+    if (!activeRef.current) start();
+    ensureRaf();
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!draggingRef.current) return;
+    const ang = angleFromEvent(e.clientX, e.clientY);
+    let delta = ang - lastAngleRef.current;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    lastAngleRef.current = ang;
+    if (Math.abs(delta) > 1.5) movedRef.current = true;
+
+    rotationRef.current += delta;
+    applyRotation();
+
+    // scratch: mapeia rotação em tempo de áudio
+    const a = audioRef.current;
+    if (a && audioUrl) {
+      const lo = audioStart || 0;
+      const hi = audioEnd || a.duration || lo + 30;
+      let t = a.currentTime + (delta / 360) * SEC_PER_ROTATION;
+      t = Math.max(lo, Math.min(hi, t));
+      try { a.currentTime = t; } catch {}
     }
   };
 
-  // Handlers de interação
-  const hoverProps = interactive && !coarse
-    ? { onMouseEnter: start, onMouseLeave: stop, onFocus: start, onBlur: stop }
-    : {};
+  const endDrag = () => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    setDragging(false);
 
-  const handleClick = () => {
-    if (!interactive) {
-      onOpen?.();
-      return;
-    }
-    if (coarse) {
-      // mobile: 1º toque toca, 2º toque abre
-      if (active) {
-        onOpen?.();
+    if (!movedRef.current) {
+      // toque/clique sem arrastar
+      if (coarse) {
+        if (wasActiveOnDownRef.current) onOpen?.(); // 2º toque abre
       } else {
-        start();
+        onOpen?.(); // desktop: clique abre
       }
     } else {
-      onOpen?.();
+      // terminou de mixar: retoma a reprodução normal
+      if (activeRef.current) playAudio();
     }
   };
+
+  // hover no desktop
+  const hoverProps = interactive && !coarse
+    ? {
+        onMouseEnter: () => start(),
+        onMouseLeave: () => { if (!draggingRef.current && !autoSpin) stop(); },
+      }
+    : {};
 
   const ring = ringColor(cfg.border);
   const showPhoto = cfg.label === "photo" || cfg.label === "photo-ring";
   const isLogo = cfg.label === "logo";
+  const labelBg =
+    cfg.label === "vintage" ? "#e9e0c8" :
+    cfg.label === "dark" ? "#0b0b0b" :
+    isLogo ? "#0b0b0b" :
+    cfg.labelColor ?? "#ff9d2e";
 
   return (
     <div
-      className={cn("relative aspect-square w-full select-none", className)}
-      role={onOpen ? "button" : undefined}
-      tabIndex={onOpen ? 0 : undefined}
+      ref={containerRef}
+      className={cn("relative aspect-square w-full select-none touch-none", interactive && "needle-zone", dragging && "dragging", className)}
       aria-label={title}
       {...hoverProps}
-      onClick={handleClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onOpen?.();
-        }
-      }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
     >
-      {/* sombra projetada */}
       <div className="absolute inset-[6%] rounded-full bg-black/60 blur-xl" aria-hidden />
 
-      {/* corpo do vinil */}
       <div
-        className={cn(
-          "absolute inset-0 rounded-full",
-          "transition-[filter] duration-500",
-          interactive && "needle-zone",
-          active ? "spin" : "spin spin-paused",
-        )}
-        style={{ ...bodyStyle(cfg.color), animationDuration: `${spinDuration}s` }}
+        ref={bodyRef}
+        className="absolute inset-0 rounded-full"
+        style={bodyStyle(cfg.color)}
       >
-        {/* aro externo brilhante */}
         <div className="absolute inset-0 rounded-full ring-1 ring-white/10" aria-hidden />
 
-        {/* label central */}
         <div className="absolute left-1/2 top-1/2 h-[44%] w-[44%] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full">
           {showPhoto && coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={coverUrl}
-              alt={title ?? "Capa"}
-              className="h-full w-full object-cover"
-              draggable={false}
-            />
+            <img src={coverUrl} alt={title ?? "Capa"} className="h-full w-full object-cover" draggable={false} />
           ) : isLogo ? (
-            <div className="flex h-full w-full items-center justify-center bg-brand">
+            <div className="flex h-full w-full items-center justify-center" style={{ background: labelBg }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="Neblina" className="h-[78%] w-[78%] object-contain" />
+              <img src="/logo.png" alt="Neblina" className="h-[86%] w-[86%] object-contain" draggable={false} />
             </div>
           ) : (
-            <div
-              className="h-full w-full"
-              style={{ background: cfg.labelColor ?? "#f5a028" }}
-            />
+            <div className="h-full w-full" style={{ background: labelBg }} />
           )}
         </div>
 
-        {/* anel do label (borda) */}
         {ring && (
           <div
             className="absolute left-1/2 top-1/2 h-[44%] w-[44%] -translate-x-1/2 -translate-y-1/2 rounded-full"
-            style={{ boxShadow: `0 0 0 3px ${ring}, inset 0 0 0 2px rgba(0,0,0,.35)` }}
+            style={{
+              boxShadow:
+                cfg.border === "double"
+                  ? `0 0 0 2px ${ring}, 0 0 0 5px rgba(0,0,0,.5), 0 0 0 7px ${ring}`
+                  : `0 0 0 3px ${ring}, inset 0 0 0 2px rgba(0,0,0,.35)`,
+            }}
             aria-hidden
           />
         )}
 
-        {/* furo central (spindle) */}
         <div className="absolute left-1/2 top-1/2 h-[4.5%] w-[4.5%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0b0b0b] shadow-[inset_0_0_3px_rgba(255,255,255,.35)]" />
       </div>
 
-      {/* indicador tocando */}
-      {active && audioUrl && (
+      {active && audioUrl && !dragging && (
         <div className="pointer-events-none absolute bottom-[8%] left-1/2 flex -translate-x-1/2 items-end gap-[3px]">
           {[0, 1, 2, 3].map((i) => (
-            <span
-              key={i}
-              className="w-[3px] rounded-full bg-brand"
-              style={{
-                height: 10,
-                animation: `eq 0.7s ${i * 0.12}s ease-in-out infinite alternate`,
-              }}
-            />
+            <span key={i} className="w-[3px] rounded-full bg-brand" style={{ height: 10, animation: `eq 0.7s ${i * 0.12}s ease-in-out infinite alternate` }} />
           ))}
         </div>
       )}
 
       {audioUrl && (
-        <audio
-          ref={audioRef}
-          src={audioUrl}
-          preload="none"
-          onTimeUpdate={onTimeUpdate}
-          loop={!audioEnd}
-        />
+        <audio ref={audioRef} src={audioUrl} preload="metadata" onTimeUpdate={onTimeUpdate} loop={!audioEnd} crossOrigin="anonymous" />
       )}
 
       <style jsx>{`
-        @keyframes eq {
-          from {
-            transform: scaleY(0.4);
-          }
-          to {
-            transform: scaleY(1.6);
-          }
-        }
+        @keyframes eq { from { transform: scaleY(0.4); } to { transform: scaleY(1.6); } }
       `}</style>
     </div>
   );

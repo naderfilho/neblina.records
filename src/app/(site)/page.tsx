@@ -29,11 +29,12 @@ export default async function HomePage() {
         <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-6 pb-16 pt-14 md:grid-cols-2 md:pb-24 md:pt-20">
           <div className="fade-up">
             <h1 className="font-display text-5xl font-extrabold leading-[0.98] text-ink md:text-6xl lg:text-7xl">
-              Onde a música <span className="text-gradient">ganha forma</span>
+              Onde o passado <span className="text-gradient">continua girando</span>
             </h1>
-            <p className="mt-6 max-w-lg text-lg leading-relaxed text-muted">
-              Vinis, CDs e raridades escolhidos a dedo. Passe o mouse ou toque em qualquer disco:
-              ele gira, toca e você mixa na hora. Do clássico ao contemporâneo, sete décadas de música.
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
+              Explore uma seleção cuidadosamente escolhida de discos de vinil, dos grandes clássicos que
+              marcaram gerações às edições mais raras. Mais do que uma loja, este é um lugar para descobrir,
+              colecionar e redescobrir álbuns que continuam emocionando apaixonados por música e colecionadores.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="#acervo" className="btn-brand inline-flex items-center gap-2 rounded-xl px-7 py-4 text-sm">

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import RecordCard from "@/components/RecordCard";
-import { QUALITY_GRADES } from "@/lib/constants";
+import { QUALITY_GRADES, QUALITY_META, POPULAR_GENRES, POPULAR_NATIONALITIES } from "@/lib/constants";
 import type { RecordItem } from "@/lib/types";
 
 function uniqueSorted(values: (string | null)[]): string[] {
@@ -53,8 +53,14 @@ export default function RecordGrid({ records }: { records: RecordItem[] }) {
   const [f, setF] = useState<Filters>(EMPTY);
   const [showFilters, setShowFilters] = useState(false);
 
-  const genres = useMemo(() => uniqueSorted(records.map((r) => r.genre)), [records]);
-  const nationalities = useMemo(() => uniqueSorted(records.map((r) => r.nationality)), [records]);
+  const genres = useMemo(
+    () => uniqueSorted([...records.map((r) => r.genre), ...POPULAR_GENRES]),
+    [records],
+  );
+  const nationalities = useMemo(
+    () => uniqueSorted([...records.map((r) => r.nationality), ...POPULAR_NATIONALITIES]),
+    [records],
+  );
 
   // Artistas dependem do estilo/nacionalidade selecionados
   const artists = useMemo(() => {
@@ -137,13 +143,17 @@ export default function RecordGrid({ records }: { records: RecordItem[] }) {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs uppercase tracking-wider text-muted">Qualidade</label>
-              <Select
+              <label className="mb-1.5 block text-xs uppercase tracking-wider text-muted">Qualidade (Goldmine)</label>
+              <select
                 value={f.quality}
-                onChange={(v) => setF((s) => ({ ...s, quality: v }))}
-                options={[...QUALITY_GRADES]}
-                placeholder="Qualquer"
-              />
+                onChange={(e) => setF((s) => ({ ...s, quality: e.target.value }))}
+                className="w-full rounded-xl border border-line bg-panel px-3 py-2.5 text-sm text-ink outline-none focus:border-brand/60"
+              >
+                <option value="">Qualquer</option>
+                {QUALITY_GRADES.map((q) => (
+                  <option key={q} value={q}>{QUALITY_META[q].label}</option>
+                ))}
+              </select>
             </div>
             {activeCount > 0 && (
               <button

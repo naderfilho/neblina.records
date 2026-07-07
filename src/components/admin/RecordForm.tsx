@@ -9,7 +9,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { uploadFile } from "@/lib/upload";
 import {
-  QUALITY_GRADES, RECORD_FORMATS, PAYMENT_METHODS, DEFAULT_DISC_CONFIG,
+  QUALITY_GRADES, QUALITY_META, RECORD_FORMATS, PAYMENT_METHODS, DEFAULT_DISC_CONFIG,
   type DiscConfig,
 } from "@/lib/constants";
 import type { RecordItem, RecordPhoto, ExtraBlock } from "@/lib/types";
@@ -220,13 +220,13 @@ export default function RecordForm({
           <Field label="Qualidade do disco">
             <select className="ipt" value={discQuality} onChange={(e) => setDiscQuality(e.target.value)}>
               <option value="">—</option>
-              {QUALITY_GRADES.map((q) => <option key={q} value={q}>{q}</option>)}
+              {QUALITY_GRADES.map((q) => <option key={q} value={q}>{QUALITY_META[q].label}</option>)}
             </select>
           </Field>
           <Field label="Qualidade da capa">
             <select className="ipt" value={coverQuality} onChange={(e) => setCoverQuality(e.target.value)}>
               <option value="">—</option>
-              {QUALITY_GRADES.map((q) => <option key={q} value={q}>{q}</option>)}
+              {QUALITY_GRADES.map((q) => <option key={q} value={q}>{QUALITY_META[q].label}</option>)}
             </select>
           </Field>
           <Field label="Preço (R$)"><input className="ipt" type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} /></Field>

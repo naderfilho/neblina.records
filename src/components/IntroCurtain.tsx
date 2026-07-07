@@ -42,8 +42,8 @@ export default function IntroCurtain() {
           onClick={skip}
           className="mist-bg fixed inset-0 z-[320] flex flex-col items-center justify-center overflow-hidden"
           initial={{ opacity: 1 }}
-          animate={exiting ? { opacity: 0, scale: 1.08 } : { opacity: 1 }}
-          transition={{ duration: 0.85, ease: [0.7, 0, 0.3, 1] }}
+          animate={exiting ? { opacity: 0 } : { opacity: 1 }}
+          transition={{ duration: 0.9, ease: [0.5, 0, 0.2, 1] }}
         >
           {/* halo de luz */}
           <motion.div
@@ -59,18 +59,19 @@ export default function IntroCurtain() {
             <motion.div
               className="relative h-64 w-64 rounded-full vinyl-grooves shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]"
               initial={{ scale: 0.55, opacity: 0, rotate: -40 }}
-              animate={{ scale: 1, opacity: 1, rotate: 360 }}
+              animate={exiting ? { scale: 0.72, opacity: 1, rotate: 360, y: -24 } : { scale: 1, opacity: 1, rotate: 360, y: 0 }}
               transition={{
-                scale: { duration: 0.9, ease: "backOut" },
+                scale: { duration: exiting ? 0.9 : 0.9, ease: exiting ? "easeInOut" : "backOut" },
+                y: { duration: 0.9, ease: "easeInOut" },
                 opacity: { duration: 0.6 },
                 rotate: { duration: 3.2, ease: "linear", repeat: Infinity },
               }}
             >
               <div className="absolute inset-0 rounded-full ring-1 ring-white/10" />
-              {/* label = logo */}
-              <div className="absolute left-1/2 top-1/2 flex h-[46%] w-[46%] -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden rounded-full bg-brand">
+              {/* label = logo (fundo preto) */}
+              <div className="absolute left-1/2 top-1/2 flex h-[46%] w-[46%] -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden rounded-full bg-[#0b0b0b] ring-2 ring-brand/70">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo.png" alt="Neblina" className="h-[80%] w-[80%] object-contain" />
+                <img src="/logo.png" alt="Neblina" className="h-[88%] w-[88%] object-contain" />
               </div>
               <div className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black shadow-[inset_0_0_3px_rgba(255,255,255,.4)]" />
             </motion.div>
@@ -92,31 +93,31 @@ export default function IntroCurtain() {
                   <stop offset="1" stopColor="#5b6772" />
                 </linearGradient>
               </defs>
-              <circle cx="158" cy="22" r="12" fill="#f5a028" stroke="#2a2118" strokeWidth="2" />
+              <circle cx="158" cy="22" r="12" fill="#ff9d2e" stroke="#2a2118" strokeWidth="2" />
               <line x1="158" y1="22" x2="60" y2="120" stroke="url(#iarm)" strokeWidth="7" strokeLinecap="round" />
               <g transform="rotate(45 56 120)">
                 <rect x="42" y="112" width="30" height="16" rx="3" fill="url(#iarm)" />
               </g>
-              <circle cx="58" cy="122" r="4" fill="#f5a028" />
+              <circle cx="58" cy="122" r="4" fill="#ff9d2e" />
             </motion.svg>
           </div>
 
-          {/* wordmark */}
+          {/* wordmark — some devagar na saída */}
           <motion.div
             className="mt-12 text-center"
             initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.8 }}
+            animate={exiting ? { opacity: 0, y: -14 } : { opacity: 1, y: 0 }}
+            transition={{ duration: exiting ? 0.5 : 0.8, delay: exiting ? 0 : 0.5 }}
           >
-            <p className="font-display text-5xl tracking-wide text-brand md:text-6xl">NEBLINA</p>
-            <p className="mt-1 text-sm tracking-[0.55em] text-mist">R E C O R D S&nbsp;&nbsp;S T O R E</p>
+            <p className="font-display text-6xl font-extrabold tracking-tight text-brand md:text-7xl">NEBLINA</p>
+            <p className="mt-1 text-sm tracking-[0.5em] text-mist">R E C O R D S</p>
           </motion.div>
 
           <motion.p
             className="absolute bottom-8 text-xs tracking-widest text-faint"
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.6 }}
+            animate={exiting ? { opacity: 0 } : { opacity: 1 }}
+            transition={{ delay: exiting ? 0 : 1.6 }}
           >
             toque para entrar
           </motion.p>

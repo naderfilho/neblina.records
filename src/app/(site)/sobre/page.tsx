@@ -11,7 +11,7 @@ const PILARES = [
   { icon: Disc3, title: "LPs & EPs", desc: "O coração da coleção — álbuns completos e edições especiais de artistas nacionais e internacionais." },
   { icon: Award, title: "CDs & Pôsteres", desc: "Edições físicas raras e material gráfico que complementam a experiência do colecionador." },
   { icon: Heart, title: "1950 — 2026", desc: "Do clássico ao contemporâneo: cobertura de mais de sete décadas de história musical." },
-  { icon: Globe, title: "Garimpo a Raridades", desc: "De lançamentos acessíveis a peças raras de colecionador avaliadas em até R$ 2.000." },
+  { icon: Globe, title: "Garimpo a Raridades", desc: "De lançamentos acessíveis a peças raras de colecionador avaliadas em até U$ 10.000,00." },
 ];
 
 const PAISES = ["Reino Unido", "Austrália", "Itália", "Uruguai"];
