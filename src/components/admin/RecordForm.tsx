@@ -64,6 +64,19 @@ export default function RecordForm({
   const [audioStart, setAudioStart] = useState(record?.audio_start ?? 0);
   const [audioEnd, setAudioEnd] = useState<number | null>(record?.audio_end ?? null);
 
+  type TrackItem = { id: string; side: "A" | "B"; title: string; audioUrl: string | null; file?: File };
+  const [tracks, setTracks] = useState<TrackItem[]>(
+    (record?.tracks ?? []).map((t) => ({ id: t.id, side: t.side, title: t.title, audioUrl: t.audio_url })),
+  );
+  const [homeTrackId, setHomeTrackId] = useState<string | null>(record?.home_track_id ?? null);
+
+  function addTrack(side: "A" | "B") {
+    setTracks((t) => [...t, { id: crypto.randomUUID(), side, title: "", audioUrl: null }]);
+  }
+  function onTrackAudio(id: string, file: File) {
+    setTracks((t) => t.map((x) => (x.id === id ? { ...x, file, audioUrl: URL.createObjectURL(file) } : x)));
+  }
+
   const [blocks, setBlocks] = useState<ExtraBlock[]>(
     Array.isArray(record?.extra_blocks) ? (record!.extra_blocks as ExtraBlock[]) : [],
   );
@@ -133,6 +146,15 @@ export default function RecordForm({
         else photoUrls.push(p.url);
       }
 
+      // upload das faixas
+      const finalTracks: { id: string; side: "A" | "B"; title: string; audio_url: string | null }[] = [];
+      for (const t of tracks) {
+        let url = t.audioUrl;
+        if (t.file) url = await uploadFile("audio", t.file, "track-");
+        finalTracks.push({ id: t.id, side: t.side, title: t.title.trim() || "Faixa", audio_url: url });
+      }
+      const homeTrack = finalTracks.find((t) => t.id === homeTrackId);
+
       const payload = {
         title: title.trim(),
         artist: artist.trim(),
@@ -153,9 +175,11 @@ export default function RecordForm({
         payment_methods: payments,
         disc_config: discConfig,
         cover_image_url: coverUrlFinal,
-        audio_url: audioUrlFinal,
+        audio_url: homeTrack?.audio_url ?? audioUrlFinal,
         audio_start: audioStart,
         audio_end: audioEnd,
+        tracks: finalTracks,
+        home_track_id: homeTrackId,
         extra_blocks: blocks,
       };
 
@@ -298,6 +322,64 @@ export default function RecordForm({
             onChange={({ start, end }) => { setAudioStart(start); setAudioEnd(end); }}
           />
         )}
+      </Section>
+
+      {/* Faixas */}
+      <Section
+        title="Faixas — Lado A e Lado B"
+        desc="Cadastre as músicas de cada lado. Elas viram os sulcos do disco na página do disco: passar o mouse mostra o nome e o clique toca. Marque qual faixa toca na home."
+      >
+        <div className="grid gap-6 md:grid-cols-2">
+          {(["A", "B"] as const).map((side) => {
+            const sideTracks = tracks.filter((t) => t.side === side);
+            return (
+              <div key={side}>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="font-display text-lg text-ink">Lado {side}</h3>
+                  <button
+                    type="button"
+                    onClick={() => addTrack(side)}
+                    className="flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-xs text-muted hover:border-brand/50 hover:text-brand"
+                  >
+                    <Plus size={14} /> Faixa
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {sideTracks.length === 0 && <p className="text-xs text-faint">Nenhuma faixa.</p>}
+                  {sideTracks.map((t, idx) => (
+                    <div key={t.id} className="flex items-center gap-2 rounded-lg border border-line bg-bg-soft p-2">
+                      <span className="w-4 text-center text-xs text-faint">{idx + 1}</span>
+                      <input
+                        className="ipt flex-1"
+                        placeholder="Nome da faixa"
+                        value={t.title}
+                        onChange={(e) => setTracks((ts) => ts.map((x) => (x.id === t.id ? { ...x, title: e.target.value } : x)))}
+                      />
+                      <label
+                        className={`flex cursor-pointer items-center gap-1 rounded-lg border px-2 py-1.5 text-xs ${t.audioUrl ? "border-teal/50 text-teal" : "border-line text-muted hover:text-brand"}`}
+                        title={t.audioUrl ? "Áudio enviado" : "Enviar áudio"}
+                      >
+                        <Music size={13} />
+                        <input type="file" accept="audio/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onTrackAudio(t.id, f); }} />
+                      </label>
+                      <label className="flex items-center gap-1 text-[11px] text-muted" title="Toca na home">
+                        <input type="radio" name="hometrack" checked={homeTrackId === t.id} onChange={() => setHomeTrackId(t.id)} className="accent-brand" />
+                        home
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => { setTracks((ts) => ts.filter((x) => x.id !== t.id)); if (homeTrackId === t.id) setHomeTrackId(null); }}
+                        className="text-faint hover:text-red-400"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </Section>
 
       {/* Fotos reais */}

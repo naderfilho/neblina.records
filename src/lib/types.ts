@@ -22,6 +22,13 @@ export type ExtraBlock = {
   value?: string;
 };
 
+export type Track = {
+  id: string;
+  side: "A" | "B";
+  title: string;
+  audio_url: string | null;
+};
+
 export type RecordItem = {
   id: string;
   title: string;
@@ -40,6 +47,8 @@ export type RecordItem = {
   audio_url: string | null;
   audio_start: number;
   audio_end: number | null;
+  tracks: Track[];
+  home_track_id: string | null;
   extra_blocks: ExtraBlock[];
   year: number | null;
   catalog_number: string | null;
