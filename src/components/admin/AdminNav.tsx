@@ -1,0 +1,68 @@
+"use client";
+
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
+import { LayoutDashboard, Disc3, Users, CalendarDays, Store, LogOut } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
+
+const LINKS = [
+  { href: "/admin", label: "Visão geral", icon: LayoutDashboard, exact: true },
+  { href: "/admin/discos", label: "Discos", icon: Disc3 },
+  { href: "/admin/usuarios", label: "Usuários", icon: Users },
+  { href: "/admin/eventos", label: "Eventos", icon: CalendarDays },
+];
+
+export default function AdminNav() {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  async function signOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
+  }
+
+  return (
+    <aside className="flex w-full shrink-0 flex-col border-b border-line bg-bg-soft md:h-screen md:w-64 md:border-b-0 md:border-r">
+      <div className="sticky top-0">
+        <Link href="/admin" className="flex items-center gap-2.5 px-5 py-5">
+          <Image src="/logo.png" alt="Neblina" width={40} height={40} className="h-10 w-10 object-contain" />
+          <div className="leading-none">
+            <p className="font-display text-lg text-brand">NEBLINA</p>
+            <p className="text-[10px] tracking-widest text-muted">ADMIN</p>
+          </div>
+        </Link>
+
+        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 md:flex-col md:overflow-visible">
+          {LINKS.map((l) => {
+            const active = l.exact ? pathname === l.href : pathname.startsWith(l.href);
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={cn(
+                  "flex items-center gap-2.5 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm transition-colors",
+                  active ? "bg-brand/15 text-brand" : "text-muted hover:bg-panel hover:text-ink",
+                )}
+              >
+                <l.icon size={17} /> {l.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="hidden px-3 md:mt-4 md:block">
+          <Link href="/" className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm text-muted hover:bg-panel hover:text-ink">
+            <Store size={17} /> Ver a loja
+          </Link>
+          <button onClick={signOut} className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm text-muted hover:bg-panel hover:text-red-400">
+            <LogOut size={17} /> Sair
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
+}

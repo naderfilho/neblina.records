@@ -1,26 +1,160 @@
 @import "tailwindcss";
 
+/* ============================================================
+   NEBLINA RECORDS — Design System
+   Paleta extraída da logo: laranja sol + montanhas na névoa
+   ============================================================ */
+
+@theme {
+  --color-bg: #0a0d11;
+  --color-bg-soft: #0f151b;
+  --color-panel: #16212c;
+  --color-panel-2: #1c2a37;
+  --color-line: #263644;
+
+  --color-brand: #f5a028;
+  --color-brand-hi: #ffc163;
+  --color-brand-deep: #d67d12;
+
+  --color-teal: #19b7a6;
+  --color-blue: #2b83ad;
+  --color-blue-deep: #1b3a58;
+  --color-mist: #7fc9dd;
+
+  --color-ink: #f4efe6;
+  --color-muted: #9fb1bf;
+  --color-faint: #64778a;
+
+  --font-display: var(--font-oswald), "Arial Narrow", sans-serif;
+  --font-body: var(--font-inter), system-ui, sans-serif;
+
+  --radius-xl: 1.25rem;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: var(--color-bg);
+  --foreground: var(--color-ink);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  border-color: var(--color-line);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Fundo com névoa/montanhas sutil */
+.mist-bg {
+  background:
+    radial-gradient(1100px 520px at 50% -10%, rgba(43,131,173,0.18), transparent 60%),
+    radial-gradient(900px 500px at 85% 10%, rgba(25,183,166,0.10), transparent 55%),
+    radial-gradient(1200px 700px at 15% 100%, rgba(245,160,40,0.06), transparent 60%),
+    var(--color-bg);
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.01em;
+}
+
+/* Wordmark riscado estilo logo */
+.striped-text {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  background-image: repeating-linear-gradient(
+    0deg,
+    var(--color-brand) 0,
+    var(--color-brand) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--color-bg-soft); }
+::-webkit-scrollbar-thumb {
+  background: var(--color-panel-2);
+  border-radius: 999px;
+  border: 2px solid var(--color-bg-soft);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--color-brand-deep); }
+
+/* ---- Vinil: sulcos e giro ---- */
+.vinyl-grooves {
+  background-image:
+    repeating-radial-gradient(
+      circle at center,
+      rgba(255,255,255,0.045) 0px,
+      rgba(255,255,255,0.045) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    radial-gradient(circle at 32% 28%, rgba(255,255,255,0.10), transparent 40%),
+    radial-gradient(circle at center, #191919 0%, #0c0c0c 62%, #050505 100%);
+}
+
+@keyframes spin-vinyl {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.spin { animation: spin-vinyl 4s linear infinite; }
+.spin-slow { animation: spin-vinyl 8s linear infinite; }
+.spin-paused { animation-play-state: paused; }
+
+/* ---- Cursor agulha (desktop) ---- */
+.needle-zone { cursor: none; }
+@media (pointer: coarse) {
+  .needle-zone { cursor: pointer; }
+}
+
+/* ---- Utilitários ---- */
+.glass {
+  background: color-mix(in srgb, var(--color-panel) 78%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-line);
+}
+.card {
+  background: var(--color-panel);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-xl);
+}
+.btn-brand {
+  background: linear-gradient(180deg, var(--color-brand-hi), var(--color-brand));
+  color: #241304;
+  font-weight: 700;
+  box-shadow: 0 6px 20px -6px rgba(245,160,40,0.55);
+}
+.btn-brand:hover { filter: brightness(1.06); }
+.btn-brand:active { transform: translateY(1px); }
+
+.text-balance { text-wrap: balance; }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fade-up 0.7s cubic-bezier(0.2,0.7,0.2,1) both; }
+
+@keyframes float-y {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-8px); }
+}
+
+/* Respeita quem prefere menos movimento */
+@media (prefers-reduced-motion: reduce) {
+  .spin, .spin-slow { animation: none; }
+  .fade-up { animation: none; }
 }
