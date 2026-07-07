@@ -1,4 +1,4 @@
-import { Tent, Building2, Music4, Frame, Disc3, Sparkles, ShieldCheck, Truck, MapPin } from "lucide-react";
+import { Tent, Building2, Music4, Frame, Disc3, Sparkles, ShieldCheck, Truck } from "lucide-react";
 import EventForm from "@/components/EventForm";
 
 export const metadata = {
@@ -38,11 +38,8 @@ export default function EventosPage() {
       {/* HERO */}
       <section className="relative overflow-hidden border-b border-line">
         <div className="mx-auto max-w-5xl px-6 py-20 text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-line bg-panel px-3 py-1 text-xs tracking-wide text-mist">
-            <MapPin size={13} className="text-brand" /> Nova Friburgo · Região Serrana · Rio de Janeiro
-          </span>
-          <h1 className="mt-5 font-display text-5xl leading-tight text-ink md:text-6xl">
-            Leve a <span className="text-brand">Neblina</span> para o seu evento
+          <h1 className="font-display text-5xl font-extrabold leading-tight text-ink md:text-6xl">
+            Leve a <span className="text-gradient">Neblina</span> para o seu evento
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg text-muted">
             Feiras, festivais, eventos corporativos e culturais. Oferecemos propostas personalizadas de acordo com

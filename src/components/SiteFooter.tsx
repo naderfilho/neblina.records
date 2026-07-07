@@ -33,8 +33,8 @@ export default function SiteFooter() {
           <div className="flex items-center gap-3">
             <Image src="/logo.png" alt="Neblina Records" width={56} height={56} className="h-14 w-14 object-contain" />
             <div>
-              <p className="font-display text-xl leading-none text-brand">NEBLINA</p>
-              <p className="text-xs tracking-[0.35em] text-muted">RECORDS STORE</p>
+              <p className="font-display text-2xl font-extrabold leading-none text-brand">NEBLINA</p>
+              <p className="text-xs font-medium tracking-[0.3em] text-muted">Records</p>
             </div>
           </div>
           <p className="mt-5 max-w-md text-sm leading-relaxed text-muted">

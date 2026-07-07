@@ -9,16 +9,19 @@ export default function IntroCurtain() {
   const [show, setShow] = useState(false);
   const [exiting, setExiting] = useState(false);
 
+  function finish() {
+    setShow(false);
+    sessionStorage.setItem(KEY, "1");
+    document.documentElement.classList.add("intro-seen"); // esconde o shell SSR
+    document.body.style.overflow = "";
+  }
+
   useEffect(() => {
     if (sessionStorage.getItem(KEY)) return;
     setShow(true);
     document.body.style.overflow = "hidden";
     const t1 = setTimeout(() => setExiting(true), 3000);
-    const t2 = setTimeout(() => {
-      setShow(false);
-      sessionStorage.setItem(KEY, "1");
-      document.body.style.overflow = "";
-    }, 3900);
+    const t2 = setTimeout(finish, 3900);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -28,11 +31,7 @@ export default function IntroCurtain() {
 
   function skip() {
     setExiting(true);
-    setTimeout(() => {
-      setShow(false);
-      sessionStorage.setItem(KEY, "1");
-      document.body.style.overflow = "";
-    }, 700);
+    setTimeout(finish, 700);
   }
 
   return (
@@ -41,7 +40,7 @@ export default function IntroCurtain() {
         <motion.div
           key="intro"
           onClick={skip}
-          className="mist-bg fixed inset-0 z-[200] flex flex-col items-center justify-center overflow-hidden"
+          className="mist-bg fixed inset-0 z-[320] flex flex-col items-center justify-center overflow-hidden"
           initial={{ opacity: 1 }}
           animate={exiting ? { opacity: 0, scale: 1.08 } : { opacity: 1 }}
           transition={{ duration: 0.85, ease: [0.7, 0, 0.3, 1] }}

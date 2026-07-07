@@ -5,13 +5,14 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ShoppingBag, User, LogOut, LayoutDashboard, ChevronDown, Menu, X } from "lucide-react";
+import TranslateButton from "@/components/TranslateButton";
 import { useCart } from "@/lib/cart";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { href: "/", label: "Discos" },
+  { href: "/#acervo", label: "Discos" },
   { href: "/eventos", label: "Eventos" },
   { href: "/sobre", label: "Sobre" },
 ];
@@ -57,11 +58,11 @@ export default function SiteHeader({ profile }: { profile: Profile | null }) {
       )}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3">
-        <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/logo.png" alt="Neblina Records" width={44} height={44} className="h-11 w-11 object-contain" priority />
-          <div className="hidden sm:block leading-none">
-            <p className="font-display text-lg text-brand">NEBLINA</p>
-            <p className="text-[10px] tracking-[0.3em] text-muted">RECORDS STORE</p>
+        <Link href="/" className="flex items-center gap-3">
+          <Image src="/logo.png" alt="Neblina Records" width={60} height={60} className="h-14 w-14 object-contain md:h-16 md:w-16" priority />
+          <div className="hidden leading-none sm:block">
+            <p className="font-display text-2xl font-extrabold tracking-tight text-brand">NEBLINA</p>
+            <p className="text-xs font-medium tracking-[0.25em] text-muted">Records</p>
           </div>
         </Link>
 
@@ -74,7 +75,8 @@ export default function SiteHeader({ profile }: { profile: Profile | null }) {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <TranslateButton />
           <button
             onClick={() => cart.setOpen(true)}
             className="relative rounded-xl p-2.5 text-ink transition-colors hover:bg-panel"

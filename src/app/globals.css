@@ -1,31 +1,32 @@
 @import "tailwindcss";
 
 /* ============================================================
-   NEBLINA RECORDS — Design System
-   Paleta extraída da logo: laranja sol + montanhas na névoa
+   NEBLINA RECORDS — Design System 2.0
+   Inspirado na logo: sol âmbar sobre montanhas na névoa
    ============================================================ */
 
 @theme {
-  --color-bg: #0a0d11;
-  --color-bg-soft: #0f151b;
-  --color-panel: #16212c;
-  --color-panel-2: #1c2a37;
-  --color-line: #263644;
+  --color-bg: #06090e;
+  --color-bg-soft: #0b1119;
+  --color-panel: #101a24;
+  --color-panel-2: #16232f;
+  --color-line: #223140;
 
-  --color-brand: #f5a028;
-  --color-brand-hi: #ffc163;
-  --color-brand-deep: #d67d12;
+  --color-brand: #ff9d2e;
+  --color-brand-hi: #ffc65e;
+  --color-brand-deep: #d1701a;
+  --color-gold: #e8c56d;
 
-  --color-teal: #19b7a6;
-  --color-blue: #2b83ad;
-  --color-blue-deep: #1b3a58;
-  --color-mist: #7fc9dd;
+  --color-teal: #26c0d4;
+  --color-blue: #2f83b4;
+  --color-blue-deep: #16324f;
+  --color-mist: #93d8e8;
 
-  --color-ink: #f4efe6;
-  --color-muted: #9fb1bf;
-  --color-faint: #64778a;
+  --color-ink: #f7f2e8;
+  --color-muted: #a7b7c4;
+  --color-faint: #61758a;
 
-  --font-display: var(--font-oswald), "Arial Narrow", sans-serif;
+  --font-display: var(--font-bricolage), "Arial Narrow", sans-serif;
   --font-body: var(--font-inter), system-ui, sans-serif;
 
   --radius-xl: 1.25rem;
@@ -52,31 +53,23 @@ body {
   overflow-x: hidden;
 }
 
-/* Fundo com névoa/montanhas sutil */
+/* Fundo escuro com brilho do sol da logo */
 .mist-bg {
   background:
-    radial-gradient(1100px 520px at 50% -10%, rgba(43,131,173,0.18), transparent 60%),
-    radial-gradient(900px 500px at 85% 10%, rgba(25,183,166,0.10), transparent 55%),
-    radial-gradient(1200px 700px at 15% 100%, rgba(245,160,40,0.06), transparent 60%),
+    radial-gradient(1200px 640px at 50% -8%, rgba(255,157,46,0.10), transparent 60%),
+    radial-gradient(900px 560px at 82% 6%, rgba(38,192,212,0.08), transparent 55%),
     var(--color-bg);
 }
 
 h1, h2, h3, h4, .font-display {
   font-family: var(--font-display);
-  letter-spacing: 0.01em;
+  font-weight: 700;
+  letter-spacing: -0.015em;
 }
 
-/* Wordmark riscado estilo logo */
-.striped-text {
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  background-image: repeating-linear-gradient(
-    0deg,
-    var(--color-brand) 0,
-    var(--color-brand) 3px,
-    transparent 3px,
-    transparent 6px
-  );
+/* Título com gradiente âmbar (premium) */
+.text-gradient {
+  background: linear-gradient(100deg, var(--color-brand-hi) 0%, var(--color-brand) 45%, var(--color-gold) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -97,8 +90,8 @@ h1, h2, h3, h4, .font-display {
   background-image:
     repeating-radial-gradient(
       circle at center,
-      rgba(255,255,255,0.045) 0px,
-      rgba(255,255,255,0.045) 1px,
+      rgba(255,255,255,0.05) 0px,
+      rgba(255,255,255,0.05) 1px,
       transparent 1px,
       transparent 3px
     ),
@@ -117,17 +110,18 @@ h1, h2, h3, h4, .font-display {
 /* ---- Cursor agulha (desktop) ---- */
 .needle-zone { cursor: none; }
 @media (pointer: coarse) {
-  .needle-zone { cursor: pointer; }
+  .needle-zone { cursor: grab; }
 }
+.needle-zone.dragging { cursor: grabbing; }
 
 /* ---- Utilitários ---- */
 .glass {
-  background: color-mix(in srgb, var(--color-panel) 78%, transparent);
-  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--color-panel) 72%, transparent);
+  backdrop-filter: blur(14px);
   border: 1px solid var(--color-line);
 }
 .card {
-  background: var(--color-panel);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-panel) 92%, white 2%), var(--color-panel));
   border: 1px solid var(--color-line);
   border-radius: var(--radius-xl);
 }
@@ -135,26 +129,46 @@ h1, h2, h3, h4, .font-display {
   background: linear-gradient(180deg, var(--color-brand-hi), var(--color-brand));
   color: #241304;
   font-weight: 700;
-  box-shadow: 0 6px 20px -6px rgba(245,160,40,0.55);
+  box-shadow: 0 10px 30px -8px rgba(255,157,46,0.5), inset 0 1px 0 rgba(255,255,255,0.35);
 }
-.btn-brand:hover { filter: brightness(1.06); }
-.btn-brand:active { transform: translateY(1px); }
+.btn-brand:hover { filter: brightness(1.05); transform: translateY(-1px); }
+.btn-brand:active { transform: translateY(0); }
+.btn-brand { transition: transform .15s ease, filter .15s ease; }
 
 .text-balance { text-wrap: balance; }
 
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.fade-up { animation: fade-up 0.7s cubic-bezier(0.2,0.7,0.2,1) both; }
+.fade-up { animation: fade-up 0.8s cubic-bezier(0.2,0.7,0.2,1) both; }
 
 @keyframes float-y {
   0%,100% { transform: translateY(0); }
   50%     { transform: translateY(-8px); }
 }
 
-/* Respeita quem prefere menos movimento */
+/* ---- Abertura: shell SSR (evita flash da home) ---- */
+#intro-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(900px 520px at 50% 40%, rgba(255,157,46,0.14), transparent 62%),
+    var(--color-bg);
+}
+html.intro-seen #intro-shell { display: none; }
+
 @media (prefers-reduced-motion: reduce) {
   .spin, .spin-slow { animation: none; }
   .fade-up { animation: none; }
 }
+
+/* Esconde a barra do tradutor do Google */
+.goog-te-banner-frame, .skiptranslate { display: none !important; }
+body { top: 0 !important; }
+#goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
+.goog-text-highlight { background: none !important; box-shadow: none !important; }
