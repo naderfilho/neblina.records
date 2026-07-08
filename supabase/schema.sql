@@ -352,3 +352,33 @@ end $$;
 -- ============================================================================
 --  Fim
 -- ============================================================================
+
+-- ============================================================================
+--  Expansão do admin (campos extras, categorias de foto, faixas e tags)
+-- ============================================================================
+alter table public.records add column if not exists tracks jsonb not null default '[]'::jsonb;
+alter table public.records add column if not exists home_track_id text;
+alter table public.records add column if not exists condition jsonb not null default '{}'::jsonb;
+alter table public.records add column if not exists included_content jsonb not null default '{}'::jsonb;
+alter table public.records add column if not exists history jsonb not null default '{}'::jsonb;
+alter table public.records add column if not exists market jsonb not null default '{}'::jsonb;
+alter table public.records add column if not exists identification jsonb not null default '{}'::jsonb;
+alter table public.records add column if not exists sale_info jsonb not null default '{}'::jsonb;
+alter table public.records add column if not exists tag_ids text[] not null default '{}';
+alter table public.records add column if not exists sort_order int not null default 0;
+alter table public.record_photos add column if not exists category text not null default 'outro';
+create index if not exists records_sort_idx on public.records (sort_order asc, created_at desc);
+
+create table if not exists public.tags (
+  id uuid primary key default gen_random_uuid(),
+  label text not null,
+  bg text not null default '#ff9d2e',
+  fg text not null default '#241304',
+  style text not null default 'solid',
+  created_at timestamptz not null default now()
+);
+alter table public.tags enable row level security;
+drop policy if exists tags_public_read on public.tags;
+create policy tags_public_read on public.tags for select using (true);
+drop policy if exists tags_admin_write on public.tags;
+create policy tags_admin_write on public.tags for all using (public.is_admin()) with check (public.is_admin());
