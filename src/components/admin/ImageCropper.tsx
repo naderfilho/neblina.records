@@ -58,7 +58,7 @@ export default function ImageCropper({
       <div className="w-full max-w-sm rounded-2xl border border-line bg-panel p-5" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
           <h3 className="font-display text-lg text-ink">Ajustar foto</h3>
-          <button onClick={onCancel} className="text-faint hover:text-ink"><X size={18} /></button>
+          <button type="button" onClick={onCancel} className="text-faint hover:text-ink"><X size={18} /></button>
         </div>
 
         <div
@@ -95,8 +95,8 @@ export default function ImageCropper({
         </div>
 
         <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onCancel} className="rounded-lg border border-line px-4 py-2 text-sm text-muted hover:text-ink">Cancelar</button>
-          <button onClick={apply} className="btn-brand flex items-center gap-2 rounded-lg px-4 py-2 text-sm">
+          <button type="button" onClick={onCancel} className="rounded-lg border border-line px-4 py-2 text-sm text-muted hover:text-ink">Cancelar</button>
+          <button type="button" onClick={apply} className="btn-brand flex items-center gap-2 rounded-lg px-4 py-2 text-sm">
             <Check size={16} /> Aplicar
           </button>
         </div>

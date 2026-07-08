@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GripVertical, Save, Loader2, Check } from "lucide-react";
+import { Save, Loader2, Check, GripVertical } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import type { RecordItem } from "@/lib/types";
@@ -32,20 +32,9 @@ export default function AdminOrdenarPage() {
       const arr = [...list];
       const fi = arr.findIndex((x) => x.id === from);
       const ti = arr.findIndex((x) => x.id === to);
-      if (fi === -1 || ti === -1) return arr;
+      if (fi === -1 || ti === -1 || fi === ti) return arr;
       const [moved] = arr.splice(fi, 1);
       arr.splice(ti, 0, moved);
-      return arr;
-    });
-  }
-
-  function move(id: string, dir: -1 | 1) {
-    setItems((list) => {
-      const arr = [...list];
-      const i = arr.findIndex((x) => x.id === id);
-      const j = i + dir;
-      if (j < 0 || j >= arr.length) return arr;
-      [arr[i], arr[j]] = [arr[j], arr[i]];
       return arr;
     });
   }
@@ -53,10 +42,7 @@ export default function AdminOrdenarPage() {
   async function save() {
     setSaving(true);
     setSaved(false);
-    // grava sort_order = posição
-    await Promise.all(
-      items.map((r, i) => supabase.from("records").update({ sort_order: i }).eq("id", r.id)),
-    );
+    await Promise.all(items.map((r, i) => supabase.from("records").update({ sort_order: i }).eq("id", r.id)));
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
@@ -67,7 +53,7 @@ export default function AdminOrdenarPage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl text-ink">Ordenar discos da home</h1>
-          <p className="text-muted">Arraste (ou use as setas) e salve. O topo aparece primeiro na loja.</p>
+          <p className="text-muted">Arraste os discos para reposicionar (como aparecem na home) e salve.</p>
         </div>
         <button onClick={save} disabled={saving || loading} className="btn-brand inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm disabled:opacity-60">
           {saving ? <Loader2 size={17} className="animate-spin" /> : saved ? <Check size={17} /> : <Save size={17} />}
@@ -78,36 +64,30 @@ export default function AdminOrdenarPage() {
       {loading ? (
         <p className="text-muted">Carregando…</p>
       ) : (
-        <ul className="space-y-2">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {items.map((r, i) => (
-            <li
+            <div
               key={r.id}
               draggable
               onDragStart={() => setDragId(r.id)}
               onDragOver={(e) => { e.preventDefault(); if (dragId && dragId !== r.id) reorder(dragId, r.id); }}
               onDragEnd={() => setDragId(null)}
-              className={`flex items-center gap-3 rounded-xl border border-line bg-panel p-3 ${dragId === r.id ? "opacity-50" : ""}`}
+              className={`group relative flex cursor-grab flex-col items-center rounded-2xl border border-line bg-panel p-3 active:cursor-grabbing ${dragId === r.id ? "opacity-40 ring-2 ring-brand" : ""}`}
             >
-              <GripVertical size={18} className="cursor-grab text-faint" />
-              <span className="w-6 text-center font-display text-lg text-faint">{i + 1}</span>
-              <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-line bg-black">
+              <span className="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-xs font-bold text-brand">{i + 1}</span>
+              <GripVertical size={16} className="absolute right-2 top-2 text-faint opacity-0 group-hover:opacity-100" />
+              <div className="aspect-square w-full overflow-hidden rounded-full border border-line bg-black vinyl-grooves">
                 {r.cover_image_url && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={r.cover_image_url} alt="" className="h-full w-full object-cover" />
+                  <img src={r.cover_image_url} alt="" className="h-full w-full scale-[0.44] rounded-full object-cover" draggable={false} />
                 )}
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-ink">{r.title}</p>
-                <p className="truncate text-xs text-muted">{r.artist}</p>
-              </div>
-              <span className="hidden text-sm text-brand sm:block">{formatBRL(r.price)}</span>
-              <div className="flex flex-col">
-                <button onClick={() => move(r.id, -1)} className="px-2 text-muted hover:text-brand" aria-label="Subir">▲</button>
-                <button onClick={() => move(r.id, 1)} className="px-2 text-muted hover:text-brand" aria-label="Descer">▼</button>
-              </div>
-            </li>
+              <p className="mt-2 line-clamp-1 w-full text-center text-sm text-ink">{r.title}</p>
+              <p className="line-clamp-1 w-full text-center text-xs text-muted">{r.artist}</p>
+              <p className="text-xs text-brand">{formatBRL(r.price)}</p>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

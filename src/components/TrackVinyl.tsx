@@ -141,6 +141,15 @@ export default function TrackVinyl({
     a.play().then(() => setPlayingId(t.id)).catch(() => {});
   }
 
+  function flipTo(s: "A" | "B") {
+    if (s === side) return;
+    const a = audioRef.current;
+    if (a) a.pause();
+    setPlayingId(null);
+    setHoverId(null);
+    setSide(s);
+  }
+
   const current = tracks.find((t) => t.id === (hoverId ?? playingId));
   const caption = hoverId
     ? tracks.find((t) => t.id === hoverId)?.title
@@ -182,7 +191,7 @@ export default function TrackVinyl({
         {(["A", "B"] as const).map((s) => (
           <button
             key={s}
-            onClick={() => { setSide(s); setHoverId(null); }}
+            onClick={() => flipTo(s)}
             className={cn(
               "flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium transition-colors",
               side === s ? "border-brand bg-brand/15 text-brand" : "border-line bg-panel text-muted hover:text-ink",

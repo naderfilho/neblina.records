@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 function prompt(title: string, artist: string, year?: string) {
-  return `Pesquise na web informações confiáveis (Discogs, Wikipedia, Rate Your Music) sobre o disco de vinil:
+  return `Pesquise principalmente no Discogs (https://www.discogs.com/pt_BR/) e, como apoio, na Wikipedia e no Rate Your Music, informações confiáveis sobre o disco de vinil:
 Título: "${title}"
 Artista: "${artist}"${year ? `\nAno aproximado: ${year}` : ""}
 

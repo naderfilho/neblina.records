@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Truck, Loader2, MapPin } from "lucide-react";
+import { BrazilFlag, GlobeIcon } from "@/components/Flags";
 import { formatBRL } from "@/lib/utils";
 
 // Zonas internacionais (estimativa em BRL): base + por kg
@@ -103,15 +104,15 @@ export default function ShippingCalculator({ weightGrams }: { weightGrams: numbe
       <div className="mb-3 flex gap-2">
         <button
           onClick={() => { setIntl(false); setResult(null); setError(null); }}
-          className={`flex-1 rounded-lg border px-3 py-2 text-sm ${!intl ? "border-brand bg-brand/15 text-brand" : "border-line text-muted"}`}
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm ${!intl ? "border-brand bg-brand/15 text-brand" : "border-line text-muted"}`}
         >
-          🇧🇷 Brasil
+          <BrazilFlag size={16} /> Brasil
         </button>
         <button
           onClick={() => { setIntl(true); setResult(null); setError(null); }}
-          className={`flex-1 rounded-lg border px-3 py-2 text-sm ${intl ? "border-brand bg-brand/15 text-brand" : "border-line text-muted"}`}
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm ${intl ? "border-brand bg-brand/15 text-brand" : "border-line text-muted"}`}
         >
-          🌐 Internacional
+          <GlobeIcon size={16} /> Internacional
         </button>
       </div>
 

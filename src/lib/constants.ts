@@ -62,55 +62,70 @@ export const POPULAR_NATIONALITIES = [
   "Peru", "Angola", "Cabo Verde", "Rússia", "China", "Grécia",
 ] as const;
 
-/** Opções do designer de vinil (admin) */
+/** Cores do disco (e da borda). `accent` = versão vívida p/ borda e detalhes. */
 export const DISC_COLORS = [
-  { id: "classic", label: "Preto Clássico", ring: "#111111", groove: "#1c1c1c" },
-  { id: "midnight", label: "Azul Meia-Noite", ring: "#0f2436", groove: "#16324a" },
-  { id: "ocean", label: "Azul Oceano", ring: "#0b3a63", groove: "#125089" },
-  { id: "sunset", label: "Laranja Sol", ring: "#7a3d06", groove: "#994c08" },
-  { id: "amber", label: "Âmbar", ring: "#5a3a08", groove: "#8a5a10" },
-  { id: "teal", label: "Verde Névoa", ring: "#0c342f", groove: "#124a42" },
-  { id: "forest", label: "Verde Floresta", ring: "#123a1c", groove: "#1c5a2c" },
-  { id: "smoke", label: "Fumê Translúcido", ring: "#2a2a2e", groove: "#3a3a40" },
-  { id: "clear", label: "Transparente", ring: "#3a4048", groove: "#565e68" },
-  { id: "wine", label: "Vinho", ring: "#3a0f1a", groove: "#511522" },
-  { id: "purple", label: "Roxo", ring: "#2a1240", groove: "#3d1c5c" },
-  { id: "cream", label: "Marfim", ring: "#c9bfa8", groove: "#ddd4c2" },
-  { id: "white", label: "Branco", ring: "#c8ccd0", groove: "#e4e7ea" },
-  { id: "red", label: "Vermelho", ring: "#5a0f12", groove: "#8a181c" },
-  { id: "gold", label: "Ouro", ring: "#6a5010", groove: "#9a7418" },
-  { id: "splatter", label: "Splatter", ring: "#141414", groove: "#1c1c1c" },
+  { id: "classic", label: "Preto Clássico", ring: "#111111", groove: "#1c1c1c", accent: "#e8ecef" },
+  { id: "midnight", label: "Azul Meia-Noite", ring: "#0f2436", groove: "#16324a", accent: "#2f83b4" },
+  { id: "ocean", label: "Azul Oceano", ring: "#0b3a63", groove: "#125089", accent: "#2f9fd6" },
+  { id: "sunset", label: "Laranja Sol", ring: "#7a3d06", groove: "#994c08", accent: "#ff9d2e" },
+  { id: "amber", label: "Âmbar", ring: "#5a3a08", groove: "#8a5a10", accent: "#e0a63a" },
+  { id: "teal", label: "Verde Névoa", ring: "#0c342f", groove: "#124a42", accent: "#26c0d4" },
+  { id: "forest", label: "Verde Floresta", ring: "#123a1c", groove: "#1c5a2c", accent: "#3bb36a" },
+  { id: "smoke", label: "Fumê", ring: "#2a2a2e", groove: "#3a3a40", accent: "#9aa3ad" },
+  { id: "clear", label: "Transparente", ring: "#3a4048", groove: "#565e68", accent: "#cfd6dd" },
+  { id: "wine", label: "Vinho", ring: "#3a0f1a", groove: "#511522", accent: "#b13a52" },
+  { id: "purple", label: "Roxo", ring: "#2a1240", groove: "#3d1c5c", accent: "#9a6cff" },
+  { id: "cream", label: "Marfim", ring: "#c9bfa8", groove: "#ddd4c2", accent: "#d9cca8" },
+  { id: "white", label: "Branco", ring: "#c8ccd0", groove: "#e4e7ea", accent: "#ffffff" },
+  { id: "red", label: "Vermelho", ring: "#5a0f12", groove: "#8a181c", accent: "#e0483c" },
+  { id: "gold", label: "Ouro", ring: "#6a5010", groove: "#9a7418", accent: "#e8c56d" },
+] as const;
+
+/** Estilo/acabamento da superfície do disco */
+export const DISC_STYLES = [
+  { id: "solid", label: "Sólido" },
+  { id: "splatter", label: "Splatter" },
+  { id: "marble", label: "Marmorizado" },
+  { id: "halfhalf", label: "Bicolor" },
+  { id: "galaxy", label: "Galáxia" },
+  { id: "haze", label: "Fumê translúcido" },
 ] as const;
 
 export const LABEL_STYLES = [
   { id: "photo", label: "Foto da Capa" },
   { id: "photo-ring", label: "Foto + Anel" },
   { id: "solid", label: "Cor Sólida" },
+  { id: "gradient", label: "Degradê" },
   { id: "logo", label: "Logo Neblina" },
   { id: "vintage", label: "Vintage (creme)" },
   { id: "dark", label: "Preto Fosco" },
+  { id: "target", label: "Alvo (anéis)" },
 ] as const;
 
+/** Tipos de borda do label */
 export const BORDER_STYLES = [
   { id: "none", label: "Sem borda" },
-  { id: "brand", label: "Anel Laranja" },
-  { id: "mist", label: "Anel Névoa" },
-  { id: "gold", label: "Fino Dourado" },
-  { id: "double", label: "Duplo" },
-  { id: "white", label: "Branco" },
+  { id: "thin", label: "Fina" },
+  { id: "thick", label: "Grossa" },
+  { id: "double", label: "Dupla" },
+  { id: "dashed", label: "Tracejada" },
 ] as const;
 
 export type DiscConfig = {
   color: string;
+  style?: string;
   label: string;
-  border: string;
   labelColor?: string;
+  border: string;
+  borderColor?: string;
 };
 
 export const DEFAULT_DISC_CONFIG: DiscConfig = {
   color: "classic",
+  style: "solid",
   label: "photo-ring",
-  border: "brand",
+  border: "thin",
+  borderColor: "sunset",
 };
 
 /** Categorias das fotos reais do disco */

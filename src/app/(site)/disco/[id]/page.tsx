@@ -8,6 +8,7 @@ import { formatBRL } from "@/lib/utils";
 import Vinyl from "@/components/Vinyl";
 import TrackVinyl from "@/components/TrackVinyl";
 import BuyButtons from "@/components/BuyButtons";
+import GradingHelp from "@/components/GradingHelp";
 import ShippingCalculator from "@/components/ShippingCalculator";
 import PhotoGallery from "@/components/PhotoGallery";
 import Comments from "@/components/Comments";
@@ -155,6 +156,7 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
                 <p className="font-semibold" style={{ color: cq.color }}>{cq.label}</p>
               </div>
             )}
+            {(dq || cq) && <div className="flex items-center"><GradingHelp /></div>}
           </div>
 
           <div className="mt-6">
@@ -218,7 +220,7 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
               <div className="flex flex-wrap gap-2">
                 {contentItems.map((c) => (
                   <span key={c.label} className={`rounded-lg border px-2.5 py-1 text-xs ${c.on ? "border-teal/40 bg-teal/10 text-teal" : "border-line text-faint line-through"}`}>
-                    {c.on ? "✅" : "❌"} {c.label}
+                    {c.on ? "✅ " : ""}{c.label}
                   </span>
                 ))}
               </div>

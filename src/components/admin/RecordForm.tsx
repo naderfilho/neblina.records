@@ -90,12 +90,10 @@ export default function RecordForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Neblina IA
   const [aiBusy, setAiBusy] = useState<"idle" | "identify" | "research">("idle");
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiCost, setAiCost] = useState(0);
 
-  // Crop
   const [cropper, setCropper] = useState<{ file: File; onApply: (b: Blob) => void } | null>(null);
 
   const coverInput = useRef<HTMLInputElement>(null);
@@ -185,7 +183,7 @@ export default function RecordForm({
   async function runIdentify() {
     setAiError(null);
     const b = await coverBase64();
-    if (!b) { setAiError("Envie a foto da capa primeiro (seção Capa & Vinil)."); return; }
+    if (!b) { setAiError("Envie a foto da capa primeiro."); return; }
     setAiBusy("identify");
     try {
       const res = await fetch("/api/ai/identify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageBase64: b.data, mediaType: b.mediaType }) });
@@ -301,38 +299,34 @@ export default function RecordForm({
     }
   }
 
+  const aiCostLine = `IA ${NEBLINA_AI.fullCost}/disco${aiCost > 0 ? ` · gasto US$ ${aiCost.toFixed(3)}` : ""}`;
+
   return (
     <form onSubmit={submit} className="space-y-8 pb-24">
       {error && <p className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</p>}
 
-      {/* Neblina IA */}
-      <section className="rounded-2xl border border-brand/30 bg-brand/5 p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="flex items-center gap-2 font-display text-xl text-ink">
-              <Sparkles size={20} className="text-brand" /> Neblina IA
-            </h2>
-            <p className="mt-0.5 text-sm text-muted">Preenchimento automático. Você pode aceitar ou ajustar tudo depois.</p>
-          </div>
-          <div className="text-right text-xs text-faint">
-            <p>Estimativa: identificar {NEBLINA_AI.identifyCost} · completo {NEBLINA_AI.fullCost} por disco</p>
-            {aiCost > 0 && <p className="text-brand">Gasto nesta sessão: US$ {aiCost.toFixed(3)}</p>}
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <button type="button" onClick={runIdentify} disabled={aiBusy !== "idle"}
-            className="flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm hover:border-brand/50 disabled:opacity-60">
-            {aiBusy === "identify" ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />} Identificar pela foto
+      {/* 1. Capa & Vinil (com Neblina IA) */}
+      <Section title="Capa & Vinil" desc="Envie a foto da capa (ajuste com zoom/recorte) e transforme-a num vinil padronizado para a home.">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <button type="button" onClick={() => coverInput.current?.click()} className="flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm hover:border-brand/50">
+            <ImageIcon size={16} /> {coverPreview ? "Trocar foto da capa" : "Enviar foto da capa"}
           </button>
-          <button type="button" onClick={runResearch} disabled={aiBusy !== "idle"}
-            className="btn-brand flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm disabled:opacity-60">
-            {aiBusy === "research" ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />} Utilizar IA Neblina (pesquisar e preencher tudo)
-          </button>
+          {coverPreview && (
+            <button type="button" onClick={() => { setCoverFile(null); setCoverPreview(null); }} className="text-sm text-faint hover:text-red-400">Remover</button>
+          )}
+          {coverPreview && (
+            <button type="button" onClick={runIdentify} disabled={aiBusy !== "idle"} title={`Neblina IA · identificar ${NEBLINA_AI.identifyCost}/disco`}
+              className="flex items-center gap-1.5 rounded-lg border border-brand/40 bg-brand/10 px-3 py-2 text-xs text-brand hover:bg-brand/15 disabled:opacity-60">
+              {aiBusy === "identify" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} Preencher pela foto (IA)
+            </button>
+          )}
+          <input ref={coverInput} type="file" accept="image/*" hidden onChange={onCover} />
         </div>
-        {aiError && <p className="mt-3 flex items-center gap-1.5 text-sm text-red-400"><Info size={14} /> {aiError}</p>}
-      </section>
+        {aiError && <p className="mb-3 flex items-center gap-1.5 text-xs text-red-400"><Info size={13} /> {aiError}</p>}
+        <VinylDesigner coverUrl={coverPreview} config={discConfig} onChange={setDiscConfig} />
+      </Section>
 
-      {/* Dados principais */}
+      {/* 2. Informações do disco (com formas de pagamento) */}
       <Section title="Informações do disco">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Título *"><input className="ipt" value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
@@ -396,57 +390,18 @@ export default function RecordForm({
         </div>
       </Section>
 
-      {/* Etiquetas */}
-      <Section title="Etiquetas (tags)" desc="Aparecem em cima do disco na home e permitem filtrar (ex: Mais Vendido, Promoção).">
-        <div className="flex flex-wrap items-center gap-2">
-          {allTags.length === 0 && <p className="text-sm text-faint">Nenhuma tag criada ainda.</p>}
-          {allTags.map((t) => {
-            const on = tagIds.includes(t.id);
-            return (
-              <button key={t.id} type="button"
-                onClick={() => setTagIds((ids) => (on ? ids.filter((x) => x !== t.id) : [...ids, t.id]))}
-                className={cn("rounded-full px-3 py-1.5 text-xs font-bold ring-2 transition", on ? "ring-brand" : "ring-transparent opacity-70 hover:opacity-100")}
-                style={{ background: t.bg, color: t.fg }}>
-                {t.label}
-              </button>
-            );
-          })}
-          <Link href="/admin/tags" className="flex items-center gap-1 rounded-full border border-line px-3 py-1.5 text-xs text-muted hover:text-brand">
-            <TagIcon size={13} /> Gerenciar tags
-          </Link>
+      {/* 3. Histórico */}
+      <Section title="Histórico" desc="Contexto, curiosidades e importância do álbum (a Neblina IA preenche pra você no Mercado).">
+        <div className="grid gap-4">
+          {([["context", "Contexto do álbum"], ["curiosities", "Curiosidades"], ["historical_importance", "Importância histórica"], ["career_position", "Posição na carreira"], ["musical_influence", "Influência musical"]] as const).map(([key, label]) => (
+            <Field key={key} label={label}>
+              <textarea className="ipt" rows={2} value={history[key] ?? ""} onChange={(e) => setHistory((h) => ({ ...h, [key]: e.target.value }))} />
+            </Field>
+          ))}
         </div>
       </Section>
 
-      {/* Capa + designer */}
-      <Section title="Capa & Vinil" desc="Envie a foto da capa (ajuste com zoom/recorte) e transforme-a num vinil padronizado para a home.">
-        <div className="mb-5 flex items-center gap-3">
-          <button type="button" onClick={() => coverInput.current?.click()} className="flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm hover:border-brand/50">
-            <ImageIcon size={16} /> {coverPreview ? "Trocar foto da capa" : "Enviar foto da capa"}
-          </button>
-          {coverPreview && (
-            <button type="button" onClick={() => { setCoverFile(null); setCoverPreview(null); }} className="text-sm text-faint hover:text-red-400">Remover</button>
-          )}
-          <input ref={coverInput} type="file" accept="image/*" hidden onChange={onCover} />
-        </div>
-        <VinylDesigner coverUrl={coverPreview} config={discConfig} onChange={setDiscConfig} />
-      </Section>
-
-      {/* Áudio */}
-      <Section title="Áudio da home" desc="Trecho que toca ao passar o mouse no disco (se você não marcar uma faixa como 'home').">
-        <div className="mb-4 flex items-center gap-3">
-          <button type="button" onClick={() => audioInput.current?.click()} className="flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm hover:border-brand/50">
-            <Music size={16} /> {audioPreviewSrc ? "Trocar áudio" : "Enviar áudio"}
-          </button>
-          {audioPreviewSrc && <button type="button" onClick={() => { setAudioFile(null); setAudioUrl(null); }} className="text-sm text-faint hover:text-red-400">Remover</button>}
-          <input ref={audioInput} type="file" accept="audio/*" hidden onChange={onAudio} />
-        </div>
-        {audioPreviewSrc && (
-          <AudioTrimmer url={audioPreviewSrc} start={audioStart} end={audioEnd}
-            onChange={({ start, end }) => { setAudioStart(start); setAudioEnd(end); }} />
-        )}
-      </Section>
-
-      {/* Faixas */}
+      {/* 4. Faixas */}
       <Section title="Faixas — Lado A e Lado B" desc="Viram os sulcos do disco na página: hover mostra o nome, clique toca. Marque qual toca na home.">
         <div className="grid gap-6 md:grid-cols-2">
           {(["A", "B"] as const).map((side) => {
@@ -485,7 +440,38 @@ export default function RecordForm({
         </div>
       </Section>
 
-      {/* Condição */}
+      {/* 5. Áudio da home */}
+      <Section title="Áudio da home" desc="Trecho que toca ao passar o mouse no disco (se você não marcar uma faixa como 'home').">
+        <div className="mb-4 flex items-center gap-3">
+          <button type="button" onClick={() => audioInput.current?.click()} className="flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm hover:border-brand/50">
+            <Music size={16} /> {audioPreviewSrc ? "Trocar áudio" : "Enviar áudio"}
+          </button>
+          {audioPreviewSrc && <button type="button" onClick={() => { setAudioFile(null); setAudioUrl(null); }} className="text-sm text-faint hover:text-red-400">Remover</button>}
+          <input ref={audioInput} type="file" accept="audio/*" hidden onChange={onAudio} />
+        </div>
+        {audioPreviewSrc && (
+          <AudioTrimmer url={audioPreviewSrc} start={audioStart} end={audioEnd}
+            onChange={({ start, end }) => { setAudioStart(start); setAudioEnd(end); }} />
+        )}
+      </Section>
+
+      {/* 6. Conteúdo incluso */}
+      <Section title="Conteúdo incluso" desc="Marque o que acompanha o disco.">
+        <div className="flex flex-wrap gap-2">
+          {([["booklet", "Livreto"], ["insert", "Encarte"], ["poster", "Pôster"], ["sticker", "Sticker"], ["original_sleeve", "Sleeve original"]] as const).map(([key, label]) => {
+            const on = !!content[key];
+            return (
+              <button key={key} type="button"
+                onClick={() => setContent((c) => ({ ...c, [key]: !c[key] }))}
+                className={cn("flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm", on ? "border-teal/50 bg-teal/15 text-teal" : "border-line text-muted hover:text-ink")}>
+                {on && <span>✅</span>} {label}
+              </button>
+            );
+          })}
+        </div>
+      </Section>
+
+      {/* 7. Condição detalhada */}
       <Section title="Condição detalhada">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Riscos"><input className="ipt" value={condition.scratches ?? ""} onChange={(e) => setCondition((c) => ({ ...c, scratches: e.target.value }))} placeholder="Ex: leves na face B" /></Field>
@@ -495,35 +481,16 @@ export default function RecordForm({
         </div>
       </Section>
 
-      {/* Conteúdo incluso */}
-      <Section title="Conteúdo incluso">
-        <div className="flex flex-wrap gap-2">
-          {([["booklet", "Livreto"], ["insert", "Encarte"], ["poster", "Pôster"], ["sticker", "Sticker"], ["original_sleeve", "Sleeve original"]] as const).map(([key, label]) => {
-            const on = !!content[key];
-            return (
-              <button key={key} type="button"
-                onClick={() => setContent((c) => ({ ...c, [key]: !c[key] }))}
-                className={cn("rounded-lg border px-3 py-1.5 text-sm", on ? "border-teal/50 bg-teal/15 text-teal" : "border-line text-muted hover:text-ink")}>
-                {on ? "✅" : "❌"} {label}
-              </button>
-            );
-          })}
-        </div>
-      </Section>
-
-      {/* Histórico */}
-      <Section title="Histórico" desc="Contexto, curiosidades e importância do álbum (a Neblina IA preenche pra você).">
-        <div className="grid gap-4">
-          {([["context", "Contexto do álbum"], ["curiosities", "Curiosidades"], ["historical_importance", "Importância histórica"], ["career_position", "Posição na carreira"], ["musical_influence", "Influência musical"]] as const).map(([key, label]) => (
-            <Field key={key} label={label}>
-              <textarea className="ipt" rows={2} value={history[key] ?? ""} onChange={(e) => setHistory((h) => ({ ...h, [key]: e.target.value }))} />
-            </Field>
-          ))}
-        </div>
-      </Section>
-
-      {/* Mercado */}
+      {/* 8. Mercado (com Neblina IA / Discogs) */}
       <Section title="Mercado">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-faint">Pesquisa no Discogs · {aiCostLine}</p>
+          <button type="button" onClick={runResearch} disabled={aiBusy !== "idle"}
+            className="flex items-center gap-1.5 rounded-lg border border-brand/40 bg-brand/10 px-3 py-2 text-xs text-brand hover:bg-brand/15 disabled:opacity-60">
+            {aiBusy === "research" ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />} Pesquisar no Discogs (IA)
+          </button>
+        </div>
+        {aiError && <p className="flex items-center gap-1.5 text-xs text-red-400"><Info size={13} /> {aiError}</p>}
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Faixa de preço atual"><input className="ipt" value={market.price_range ?? ""} onChange={(e) => setMarket((m) => ({ ...m, price_range: e.target.value }))} /></Field>
           <Field label="Valor médio internacional"><input className="ipt" value={market.avg_international ?? ""} onChange={(e) => setMarket((m) => ({ ...m, avg_international: e.target.value }))} /></Field>
@@ -541,7 +508,28 @@ export default function RecordForm({
         </div>
       </Section>
 
-      {/* Identificação */}
+      {/* 9. Etiquetas */}
+      <Section title="Etiquetas (tags)" desc="Aparecem em cima do disco na home e permitem filtrar (ex: Mais Vendido, Promoção).">
+        <div className="flex flex-wrap items-center gap-2">
+          {allTags.length === 0 && <p className="text-sm text-faint">Nenhuma tag criada ainda.</p>}
+          {allTags.map((t) => {
+            const on = tagIds.includes(t.id);
+            return (
+              <button key={t.id} type="button"
+                onClick={() => setTagIds((ids) => (on ? ids.filter((x) => x !== t.id) : [...ids, t.id]))}
+                className={cn("rounded-full px-3 py-1.5 text-xs font-bold ring-2 transition", on ? "ring-brand" : "ring-transparent opacity-70 hover:opacity-100")}
+                style={{ background: t.bg, color: t.fg }}>
+                {t.label}
+              </button>
+            );
+          })}
+          <Link href="/admin/tags" className="flex items-center gap-1 rounded-full border border-line px-3 py-1.5 text-xs text-muted hover:text-brand">
+            <TagIcon size={13} /> Gerenciar tags
+          </Link>
+        </div>
+      </Section>
+
+      {/* 10. Identificação */}
       <Section title="Identificação">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Matrix Lado A"><input className="ipt" value={ident.matrix_a ?? ""} onChange={(e) => setIdent((i) => ({ ...i, matrix_a: e.target.value }))} /></Field>
@@ -676,8 +664,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <button type="button" onClick={() => onChange(!checked)} className="flex items-center gap-2.5">
-      <span className={cn("relative h-6 w-11 rounded-full transition-colors", checked ? "bg-brand" : "bg-panel-2")}>
-        <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform", checked ? "translate-x-[22px]" : "translate-x-0.5")} />
+      <span className={cn("inline-flex h-6 w-11 shrink-0 items-center rounded-full px-0.5 transition-colors", checked ? "bg-brand" : "bg-panel-2")}>
+        <span className={cn("h-5 w-5 rounded-full bg-white shadow transition-transform duration-200", checked ? "translate-x-5" : "translate-x-0")} />
       </span>
       <span className="text-sm text-ink">{label}</span>
     </button>

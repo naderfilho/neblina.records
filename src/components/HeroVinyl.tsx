@@ -18,6 +18,7 @@ export default function HeroVinyl() {
           config={{ color: "classic", label: "logo", border: "brand" }}
           interactive
           autoSpin
+          noNeedle
           spinDuration={9}
           title="Neblina Records"
         />
@@ -44,9 +45,6 @@ export default function HeroVinyl() {
         <circle cx="76" cy="132" r="4.5" fill="#ff9d2e" />
       </svg>
 
-      <p className="absolute -bottom-7 left-0 right-0 text-center text-xs text-faint">
-        arraste o disco para mixar
-      </p>
     </div>
   );
 }

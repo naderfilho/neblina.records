@@ -19,33 +19,61 @@ type VinylProps = {
   spinDuration?: number;
   /** gira sozinho continuamente (usado no disco do hero) */
   autoSpin?: boolean;
+  /** desativa o cursor-agulha (ex.: hero, que já tem agulha própria) */
+  noNeedle?: boolean;
 };
 
-function bodyStyle(colorId: string): CSSProperties {
+function bodyStyle(colorId: string, styleId?: string): CSSProperties {
   const c = DISC_COLORS.find((x) => x.id === colorId) ?? DISC_COLORS[0];
-  const splatter = colorId === "splatter";
-  return {
-    backgroundImage: [
-      "repeating-radial-gradient(circle at center, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px)",
-      "radial-gradient(circle at 30% 26%, rgba(255,255,255,0.12), transparent 42%)",
-      splatter ? "radial-gradient(circle at 62% 70%, rgba(255,157,46,0.55), transparent 13%)" : "",
-      splatter ? "radial-gradient(circle at 34% 62%, rgba(127,201,221,0.45), transparent 11%)" : "",
-      `radial-gradient(circle at center, ${c.groove} 0%, ${c.ring} 66%, #050505 100%)`,
-    ]
-      .filter(Boolean)
-      .join(","),
-  };
+  const grooves =
+    "repeating-radial-gradient(circle at center, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px)";
+  const sheen = "radial-gradient(circle at 30% 26%, rgba(255,255,255,0.12), transparent 42%)";
+  const base = `radial-gradient(circle at center, ${c.groove} 0%, ${c.ring} 66%, #050505 100%)`;
+
+  if (styleId === "halfhalf") {
+    return { backgroundImage: [grooves, sheen, `linear-gradient(125deg, ${c.groove} 0 50%, ${c.accent} 50% 100%)`].join(",") };
+  }
+
+  const layers: string[] = [grooves, sheen];
+  if (styleId === "splatter") {
+    layers.push(
+      `radial-gradient(circle at 62% 70%, ${c.accent}cc, transparent 12%)`,
+      "radial-gradient(circle at 34% 62%, rgba(127,201,221,0.55), transparent 10%)",
+      "radial-gradient(circle at 72% 32%, rgba(255,255,255,0.4), transparent 8%)",
+      `radial-gradient(circle at 26% 38%, ${c.accent}aa, transparent 9%)`,
+    );
+  } else if (styleId === "marble") {
+    layers.push(
+      `radial-gradient(ellipse at 40% 35%, ${c.accent}55, transparent 45%)`,
+      "radial-gradient(ellipse at 68% 72%, rgba(255,255,255,0.18), transparent 40%)",
+    );
+  } else if (styleId === "galaxy") {
+    layers.push(
+      "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.8), transparent 1.5%)",
+      "radial-gradient(circle at 75% 25%, rgba(255,255,255,0.7), transparent 1.5%)",
+      "radial-gradient(circle at 60% 72%, rgba(255,255,255,0.7), transparent 1.5%)",
+      "radial-gradient(circle at 35% 78%, rgba(255,255,255,0.6), transparent 1.5%)",
+      "radial-gradient(circle at 82% 62%, rgba(154,108,255,0.45), transparent 32%)",
+    );
+  } else if (styleId === "haze") {
+    layers.push("radial-gradient(circle at 50% 50%, rgba(255,255,255,0.16), transparent 62%)");
+  }
+  layers.push(base);
+  return { backgroundImage: layers.join(",") };
 }
 
-function ringColor(border: string): string | undefined {
-  switch (border) {
-    case "brand": return "#ff9d2e";
-    case "mist": return "#26c0d4";
-    case "gold": return "#e8c56d";
-    case "white": return "#e8ecef";
-    case "double": return "#ff9d2e";
-    default: return undefined;
-  }
+function ringColor(cfg: DiscConfig): string | undefined {
+  if (cfg.border === "none") return undefined;
+  const bc = DISC_COLORS.find((x) => x.id === cfg.borderColor);
+  if (bc) return bc.accent;
+  // compatibilidade com discos antigos (border guardava a cor)
+  const legacy: Record<string, string> = { brand: "#ff9d2e", mist: "#26c0d4", gold: "#e8c56d", white: "#e8ecef", double: "#ff9d2e" };
+  return legacy[cfg.border] ?? "#ff9d2e";
+}
+
+function borderType(border: string): string {
+  if (["thin", "thick", "double", "dashed"].includes(border)) return border;
+  return border === "double" ? "double" : "thin"; // legacy
 }
 
 export default function Vinyl({
@@ -60,6 +88,7 @@ export default function Vinyl({
   onOpen,
   spinDuration = 4,
   autoSpin = false,
+  noNeedle = false,
 }: VinylProps) {
   const cfg: DiscConfig = { ...DEFAULT_DISC_CONFIG, ...(config ?? {}) };
   const coarse = useCoarsePointer();
@@ -245,19 +274,16 @@ export default function Vinyl({
       }
     : {};
 
-  const ring = ringColor(cfg.border);
+  const ring = ringColor(cfg);
+  const bType = borderType(cfg.border);
   const showPhoto = cfg.label === "photo" || cfg.label === "photo-ring";
   const isLogo = cfg.label === "logo";
-  const labelBg =
-    cfg.label === "vintage" ? "#e9e0c8" :
-    cfg.label === "dark" ? "#0b0b0b" :
-    isLogo ? "#0b0b0b" :
-    cfg.labelColor ?? "#ff9d2e";
+  const labelColor = cfg.labelColor ?? "#ff9d2e";
 
   return (
     <div
       ref={containerRef}
-      className={cn("relative aspect-square w-full select-none touch-none", interactive && "needle-zone", dragging && "dragging", className)}
+      className={cn("relative aspect-square w-full select-none touch-none", interactive && !noNeedle && "needle-zone", dragging && "dragging", className)}
       aria-label={title}
       {...hoverProps}
       onPointerDown={onPointerDown}
@@ -270,7 +296,7 @@ export default function Vinyl({
       <div
         ref={bodyRef}
         className="absolute inset-0 rounded-full"
-        style={bodyStyle(cfg.color)}
+        style={bodyStyle(cfg.color, cfg.style)}
       >
         <div className="absolute inset-0 rounded-full ring-1 ring-white/10" aria-hidden />
 
@@ -279,24 +305,34 @@ export default function Vinyl({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={coverUrl} alt={title ?? "Capa"} className="h-full w-full object-cover" draggable={false} />
           ) : isLogo ? (
-            <div className="flex h-full w-full items-center justify-center" style={{ background: labelBg }}>
+            <div className="flex h-full w-full items-center justify-center bg-[#0b0b0b]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="Neblina" className="h-[86%] w-[86%] object-contain" draggable={false} />
             </div>
+          ) : cfg.label === "gradient" ? (
+            <div className="h-full w-full" style={{ background: `radial-gradient(circle at 34% 28%, ${labelColor}, rgba(10,10,10,0.9) 130%)` }} />
+          ) : cfg.label === "target" ? (
+            <div className="h-full w-full" style={{ background: `repeating-radial-gradient(circle at center, ${labelColor} 0 6%, #0b0b0b 6% 12%)` }} />
           ) : (
-            <div className="h-full w-full" style={{ background: labelBg }} />
+            <div className="h-full w-full" style={{ background: cfg.label === "vintage" ? "#e9e0c8" : cfg.label === "dark" ? "#0b0b0b" : labelColor }} />
           )}
         </div>
 
         {ring && (
           <div
             className="absolute left-1/2 top-1/2 h-[44%] w-[44%] -translate-x-1/2 -translate-y-1/2 rounded-full"
-            style={{
-              boxShadow:
-                cfg.border === "double"
-                  ? `0 0 0 2px ${ring}, 0 0 0 5px rgba(0,0,0,.5), 0 0 0 7px ${ring}`
-                  : `0 0 0 3px ${ring}, inset 0 0 0 2px rgba(0,0,0,.35)`,
-            }}
+            style={
+              bType === "dashed"
+                ? { border: `3px dashed ${ring}` }
+                : {
+                    boxShadow:
+                      bType === "double"
+                        ? `0 0 0 2px ${ring}, 0 0 0 5px rgba(0,0,0,.5), 0 0 0 7px ${ring}`
+                        : bType === "thick"
+                          ? `0 0 0 5px ${ring}, inset 0 0 0 2px rgba(0,0,0,.35)`
+                          : `0 0 0 3px ${ring}, inset 0 0 0 2px rgba(0,0,0,.35)`,
+                  }
+            }
             aria-hidden
           />
         )}

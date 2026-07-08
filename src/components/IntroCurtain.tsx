@@ -16,11 +16,17 @@ export default function IntroCurtain() {
     document.body.style.overflow = "";
   }
 
+  function startExit() {
+    setExiting(true);
+    // esconde o shell SSR já no início da saída → sem flash da logo no fim
+    document.documentElement.classList.add("intro-seen");
+  }
+
   useEffect(() => {
     if (sessionStorage.getItem(KEY)) return;
     setShow(true);
     document.body.style.overflow = "hidden";
-    const t1 = setTimeout(() => setExiting(true), 3000);
+    const t1 = setTimeout(startExit, 3000);
     const t2 = setTimeout(finish, 3900);
     return () => {
       clearTimeout(t1);
@@ -30,7 +36,7 @@ export default function IntroCurtain() {
   }, []);
 
   function skip() {
-    setExiting(true);
+    startExit();
     setTimeout(finish, 700);
   }
 
@@ -59,9 +65,9 @@ export default function IntroCurtain() {
             <motion.div
               className="relative h-64 w-64 rounded-full vinyl-grooves shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]"
               initial={{ scale: 0.55, opacity: 0, rotate: -40 }}
-              animate={exiting ? { scale: 0.72, opacity: 1, rotate: 360, y: -24 } : { scale: 1, opacity: 1, rotate: 360, y: 0 }}
+              animate={exiting ? { scale: 0.5, opacity: 1, rotate: 360, y: -90 } : { scale: 1, opacity: 1, rotate: 360, y: 0 }}
               transition={{
-                scale: { duration: exiting ? 0.9 : 0.9, ease: exiting ? "easeInOut" : "backOut" },
+                scale: { duration: 0.9, ease: exiting ? "easeInOut" : "backOut" },
                 y: { duration: 0.9, ease: "easeInOut" },
                 opacity: { duration: 0.6 },
                 rotate: { duration: 3.2, ease: "linear", repeat: Infinity },

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ShoppingBag, Check } from "lucide-react";
+import { BrazilFlag, GlobeIcon } from "@/components/Flags";
 import { useCart } from "@/lib/cart";
 import { createClient } from "@/lib/supabase/client";
 import { STORE } from "@/lib/constants";
@@ -54,14 +55,14 @@ export default function BuyButtons({ id, title, artist, price, coverUrl }: Props
           onClick={buyWhatsApp}
           className="btn-brand flex flex-1 items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm"
         >
-          <span className="text-lg leading-none">🇧🇷</span> Comprar pelo WhatsApp
+          <BrazilFlag size={18} /> Comprar pelo WhatsApp
         </button>
         <button
           onClick={buyTelegram}
           className="flex flex-1 items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-semibold text-white"
           style={{ background: "linear-gradient(180deg,#2fb7ee,#229ED9)", boxShadow: "0 10px 30px -8px rgba(34,158,217,.5)" }}
         >
-          <span className="text-lg leading-none">🌐</span> Comprar pelo Telegram
+          <GlobeIcon size={18} /> Comprar pelo Telegram
         </button>
       </div>
 

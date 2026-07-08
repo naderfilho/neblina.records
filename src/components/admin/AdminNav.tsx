@@ -28,8 +28,8 @@ export default function AdminNav() {
   }
 
   return (
-    <aside className="flex w-full shrink-0 flex-col border-b border-line bg-bg-soft md:h-screen md:w-64 md:border-b-0 md:border-r">
-      <div className="sticky top-0">
+    <aside className="w-full shrink-0 border-b border-line bg-bg-soft md:sticky md:top-0 md:h-screen md:w-64 md:self-start md:overflow-y-auto md:border-b-0 md:border-r">
+      <div>
         <Link href="/admin" className="flex items-center gap-2.5 px-5 py-5">
           <Image src="/logo.png" alt="Neblina" width={40} height={40} className="h-10 w-10 object-contain" />
           <div className="leading-none">
