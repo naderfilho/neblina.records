@@ -13,7 +13,7 @@ export default function HeroVinyl() {
       />
 
       {/* disco interativo (arraste para mixar) */}
-      <div className="absolute inset-[8%]">
+      <div id="hero-vinyl-disc" className="absolute inset-[8%]">
         <Vinyl
           config={{ color: "classic", label: "logo", border: "brand" }}
           interactive

@@ -81,6 +81,44 @@ export const DISC_COLORS = [
   { id: "gold", label: "Ouro", ring: "#6a5010", groove: "#9a7418", accent: "#e8c56d" },
 ] as const;
 
+const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+function clamp255(n: number) {
+  return Math.max(0, Math.min(255, Math.round(n)));
+}
+
+/** Escurece (amt<0) ou clareia (amt>0) uma cor hex. amt em -1..1 */
+export function shadeHex(hex: string, amt: number): string {
+  const h = hex.replace("#", "");
+  const f = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const r = parseInt(f.slice(0, 2), 16);
+  const g = parseInt(f.slice(2, 4), 16);
+  const b = parseInt(f.slice(4, 6), 16);
+  if ([r, g, b].some((v) => Number.isNaN(v))) return hex;
+  const t = amt < 0 ? 0 : 255;
+  const p = Math.abs(amt);
+  const to = (v: number) => clamp255((t - v) * p + v).toString(16).padStart(2, "0");
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+
+/** Resolve a cor do disco a partir de um id de preset OU de um hex custom (#rrggbb). */
+export function resolveDiscColor(color?: string): { ring: string; groove: string; accent: string } {
+  if (color && HEX_RE.test(color)) {
+    return { ring: shadeHex(color, -0.5), groove: shadeHex(color, -0.05), accent: shadeHex(color, 0.15) };
+  }
+  const c = DISC_COLORS.find((x) => x.id === color) ?? DISC_COLORS[0];
+  return { ring: c.ring, groove: c.groove, accent: c.accent };
+}
+
+/** Resolve a cor da borda a partir de um id de preset OU de um hex custom. */
+export function resolveBorderColor(color?: string): string {
+  if (color && HEX_RE.test(color)) return color;
+  const c = DISC_COLORS.find((x) => x.id === color);
+  if (c) return c.accent;
+  const legacy: Record<string, string> = { brand: "#ff9d2e", mist: "#26c0d4", gold: "#e8c56d", white: "#e8ecef", sunset: "#ff9d2e" };
+  return legacy[color ?? ""] ?? "#ff9d2e";
+}
+
 /** Estilo/acabamento da superfície do disco */
 export const DISC_STYLES = [
   { id: "solid", label: "Sólido" },

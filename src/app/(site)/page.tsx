@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import IntroCurtain from "@/components/IntroCurtain";
 import RecordGrid from "@/components/RecordGrid";
 import HeroVinyl from "@/components/HeroVinyl";
-import MountainsScene from "@/components/MountainsScene";
 import type { RecordItem, Tag } from "@/lib/types";
 
 export const revalidate = 0;
@@ -30,7 +29,6 @@ export default async function HomePage() {
 
       {/* HERO */}
       <section className="relative overflow-hidden">
-        <MountainsScene className="opacity-90" />
         <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-6 pb-16 pt-14 md:grid-cols-2 md:pb-24 md:pt-20">
           <div className="fade-up">
             <h1 className="font-display text-5xl font-extrabold leading-[0.98] text-ink md:text-6xl lg:text-7xl">
@@ -38,8 +36,7 @@ export default async function HomePage() {
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
               Explore uma seleção cuidadosamente escolhida de discos de vinil, dos grandes clássicos que
-              marcaram gerações às edições mais raras. Mais do que uma loja, este é um lugar para descobrir,
-              colecionar e redescobrir álbuns que continuam emocionando apaixonados por música e colecionadores.
+              marcaram gerações às edições mais raras.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="#acervo" className="btn-brand inline-flex items-center gap-2 rounded-xl px-7 py-4 text-sm">

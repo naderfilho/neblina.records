@@ -56,12 +56,15 @@ export async function POST(req: Request) {
     }
 
     const client = anthropic();
+    // max_tokens generoso: o pensamento adaptativo + os resumos da busca web
+    // consomem o orçamento antes do JSON final (todas as faixas + histórico +
+    // mercado). Com pouco orçamento o JSON vinha truncado e a pesquisa falhava.
     const msg = await client.messages.create({
       model: AI_MODEL,
-      max_tokens: 6000,
+      max_tokens: 16000,
       thinking: { type: "adaptive" },
       output_config: { effort: "low" },
-      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 4 } as never],
+      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 5 } as never],
       messages: [{ role: "user", content: prompt(title, artist, year) }],
     });
 
@@ -69,7 +72,23 @@ export async function POST(req: Request) {
       .filter((b) => b.type === "text")
       .map((b) => ("text" in b ? b.text : ""))
       .join("\n");
-    const data = extractJson(text);
+
+    if (!text.trim()) {
+      return NextResponse.json(
+        { error: "A IA não retornou dados. Tente novamente." },
+        { status: 502 },
+      );
+    }
+
+    let data: unknown;
+    try {
+      data = extractJson(text);
+    } catch {
+      return NextResponse.json(
+        { error: "A IA respondeu, mas o resultado veio incompleto. Tente novamente." },
+        { status: 502 },
+      );
+    }
     const costUsd = estimateCostUsd(AI_MODEL, msg.usage);
 
     return NextResponse.json({ ok: true, data, costUsd });

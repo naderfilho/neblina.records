@@ -2,14 +2,13 @@
 
 import { useMemo, useRef, useState } from "react";
 import { Play, Pause } from "lucide-react";
-import { DISC_COLORS, type DiscConfig, DEFAULT_DISC_CONFIG } from "@/lib/constants";
+import { type DiscConfig, DEFAULT_DISC_CONFIG, resolveDiscColor } from "@/lib/constants";
 import { claimAudio, releaseAudio } from "@/lib/audio-bus";
 import type { Track } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function ring(colorId: string) {
-  const c = DISC_COLORS.find((x) => x.id === colorId) ?? DISC_COLORS[0];
-  return c;
+  return resolveDiscColor(colorId);
 }
 
 function Face({
@@ -168,8 +167,8 @@ export default function TrackVinyl({
       {/* disco com flip 3D */}
       <div className="relative aspect-square w-full" style={{ perspective: "1400px" }}>
         <div
-          className="relative h-full w-full transition-transform duration-[900ms]"
-          style={{ transformStyle: "preserve-3d", transform: side === "B" ? "rotateY(180deg)" : "rotateY(0deg)", transitionTimingFunction: "cubic-bezier(0.6,0.05,0.2,1)" }}
+          className="relative h-full w-full transition-transform duration-[1500ms]"
+          style={{ transformStyle: "preserve-3d", transform: side === "B" ? "rotateY(180deg)" : "rotateY(0deg)", transitionTimingFunction: "cubic-bezier(0.33, 0, 0.15, 1)" }}
         >
           {/* sombra */}
           <div className="absolute inset-[5%] rounded-full bg-black/60 blur-xl" style={{ backfaceVisibility: "hidden" }} aria-hidden />

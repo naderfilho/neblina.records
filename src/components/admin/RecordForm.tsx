@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Image as ImageIcon, Music, X, Plus, Trash2, Loader2, Save, Crop,
-  Type, Heading, Quote, ListTree, GripVertical, Sparkles, Wand2, Star, Info, Tag as TagIcon,
+  Type, Heading, Quote, ListTree, GripVertical, Sparkles, Star, Info, Check, Tag as TagIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFile } from "@/lib/upload";
@@ -180,11 +180,36 @@ export default function RecordForm({
     if (val !== undefined && val !== null && val !== "") setter(val);
   }
 
-  async function runIdentify() {
+  function applyResearch(d: {
+    genre?: string; nationality?: string; label_company?: string; format?: string;
+    description?: string; year?: number | null;
+    history?: HistoryInfo; market?: MarketInfo; identification?: IdentificationInfo;
+    tracks?: { side?: string; title?: string }[];
+  }) {
+    fill(setGenre, d.genre); fill(setNationality, d.nationality); fill(setLabelCompany, d.label_company);
+    fill(setFormat, d.format); fill(setDescription, d.description);
+    fill(setYear, d.year != null ? String(d.year) : undefined);
+    if (d.history) setHistory((h) => ({ ...h, ...d.history }));
+    if (d.market) setMarket((m) => ({ ...m, ...d.market }));
+    if (d.identification) setIdent((i) => ({ ...i, ...d.identification }));
+    if (Array.isArray(d.tracks) && d.tracks.length) {
+      setTracks(d.tracks.map((t) => ({
+        id: crypto.randomUUID(), side: t.side === "B" ? "B" : "A", title: t.title || "Faixa", audioUrl: null,
+      })));
+    }
+  }
+
+  // Neblina IA — identifica pela foto E pesquisa histórico/mercado/faixas de uma vez.
+  async function runNeblinaIA() {
     setAiError(null);
     const b = await coverBase64();
     if (!b) { setAiError("Envie a foto da capa primeiro."); return; }
+
+    // Fase 1 — identificação pela capa
     setAiBusy("identify");
+    let idTitle = title.trim();
+    let idArtist = artist.trim();
+    let idYear = year;
     try {
       const res = await fetch("/api/ai/identify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageBase64: b.data, mediaType: b.mediaType }) });
       const j = await res.json();
@@ -195,33 +220,34 @@ export default function RecordForm({
       fill(setYear, d.year != null ? String(d.year) : undefined);
       fill(setLabelCompany, d.label_company); fill(setDescription, d.description);
       if (typeof j.costUsd === "number") setAiCost((c) => c + j.costUsd);
-    } catch (e) { setAiError(e instanceof Error ? e.message : "Erro"); }
-    finally { setAiBusy("idle"); }
-  }
+      if (d.title) idTitle = String(d.title).trim();
+      if (d.artist) idArtist = String(d.artist).trim();
+      if (d.year != null) idYear = String(d.year);
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : "Erro ao identificar a capa.");
+      setAiBusy("idle");
+      return;
+    }
 
-  async function runResearch() {
-    setAiError(null);
-    if (!title.trim() || !artist.trim()) { setAiError("Preencha título e artista (ou identifique pela foto) antes."); return; }
+    if (!idTitle || !idArtist) {
+      setAiBusy("idle");
+      setAiError("Não consegui identificar título e artista pela capa. Preencha-os e tente de novo.");
+      return;
+    }
+
+    // Fase 2 — pesquisa completa (histórico, mercado, faixas A/B)
     setAiBusy("research");
     try {
-      const res = await fetch("/api/ai/research", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, artist, year }) });
+      const res = await fetch("/api/ai/research", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: idTitle, artist: idArtist, year: idYear }) });
       const j = await res.json();
-      if (!res.ok) throw new Error(j.error || "Erro na IA");
-      const d = j.data ?? {};
-      fill(setGenre, d.genre); fill(setNationality, d.nationality); fill(setLabelCompany, d.label_company);
-      fill(setFormat, d.format); fill(setDescription, d.description);
-      fill(setYear, d.year != null ? String(d.year) : undefined);
-      if (d.history) setHistory((h) => ({ ...h, ...d.history }));
-      if (d.market) setMarket((m) => ({ ...m, ...d.market }));
-      if (d.identification) setIdent((i) => ({ ...i, ...d.identification }));
-      if (Array.isArray(d.tracks) && d.tracks.length) {
-        setTracks(d.tracks.map((t: { side?: string; title?: string }) => ({
-          id: crypto.randomUUID(), side: t.side === "B" ? "B" : "A", title: t.title || "Faixa", audioUrl: null,
-        })));
-      }
+      if (!res.ok) throw new Error(j.error || "Erro na pesquisa da IA");
+      applyResearch(j.data ?? {});
       if (typeof j.costUsd === "number") setAiCost((c) => c + j.costUsd);
-    } catch (e) { setAiError(e instanceof Error ? e.message : "Erro"); }
-    finally { setAiBusy("idle"); }
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : "Erro na pesquisa da IA");
+    } finally {
+      setAiBusy("idle");
+    }
   }
 
   async function submit(e: React.FormEvent) {
@@ -315,9 +341,10 @@ export default function RecordForm({
             <button type="button" onClick={() => { setCoverFile(null); setCoverPreview(null); }} className="text-sm text-faint hover:text-red-400">Remover</button>
           )}
           {coverPreview && (
-            <button type="button" onClick={runIdentify} disabled={aiBusy !== "idle"} title={`Neblina IA · identificar ${NEBLINA_AI.identifyCost}/disco`}
-              className="flex items-center gap-1.5 rounded-lg border border-brand/40 bg-brand/10 px-3 py-2 text-xs text-brand hover:bg-brand/15 disabled:opacity-60">
-              {aiBusy === "identify" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} Preencher pela foto (IA)
+            <button type="button" onClick={runNeblinaIA} disabled={aiBusy !== "idle"} title={`Neblina IA · identifica a capa e pesquisa ficha, histórico, mercado e faixas · ${NEBLINA_AI.fullCost}/disco`}
+              className="flex items-center gap-1.5 rounded-lg border border-brand/40 bg-brand/10 px-3 py-2 text-xs font-semibold text-brand hover:bg-brand/15 disabled:opacity-60">
+              {aiBusy !== "idle" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              {aiBusy === "identify" ? "Identificando capa…" : aiBusy === "research" ? "Pesquisando dados…" : "Neblina IA"}
             </button>
           )}
           <input ref={coverInput} type="file" accept="image/*" hidden onChange={onCover} />
@@ -391,7 +418,7 @@ export default function RecordForm({
       </Section>
 
       {/* 3. Histórico */}
-      <Section title="Histórico" desc="Contexto, curiosidades e importância do álbum (a Neblina IA preenche pra você no Mercado).">
+      <Section title="Histórico" desc="Contexto, curiosidades e importância do álbum. A Neblina IA (lá em cima) preenche tudo isto pra você.">
         <div className="grid gap-4">
           {([["context", "Contexto do álbum"], ["curiosities", "Curiosidades"], ["historical_importance", "Importância histórica"], ["career_position", "Posição na carreira"], ["musical_influence", "Influência musical"]] as const).map(([key, label]) => (
             <Field key={key} label={label}>
@@ -463,8 +490,8 @@ export default function RecordForm({
             return (
               <button key={key} type="button"
                 onClick={() => setContent((c) => ({ ...c, [key]: !c[key] }))}
-                className={cn("flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm", on ? "border-teal/50 bg-teal/15 text-teal" : "border-line text-muted hover:text-ink")}>
-                {on && <span>✅</span>} {label}
+                className={cn("flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm", on ? "border-brand/40 bg-brand/10 text-ink" : "border-line text-muted hover:text-ink")}>
+                {on && <Check size={14} className="text-brand" strokeWidth={3} />} {label}
               </button>
             );
           })}
@@ -481,15 +508,9 @@ export default function RecordForm({
         </div>
       </Section>
 
-      {/* 8. Mercado (com Neblina IA / Discogs) */}
-      <Section title="Mercado">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-faint">Pesquisa no Discogs · {aiCostLine}</p>
-          <button type="button" onClick={runResearch} disabled={aiBusy !== "idle"}
-            className="flex items-center gap-1.5 rounded-lg border border-brand/40 bg-brand/10 px-3 py-2 text-xs text-brand hover:bg-brand/15 disabled:opacity-60">
-            {aiBusy === "research" ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />} Pesquisar no Discogs (IA)
-          </button>
-        </div>
+      {/* 8. Mercado (preenchido pela Neblina IA) */}
+      <Section title="Mercado" desc="A Neblina IA (lá em cima) preenche estes valores automaticamente. Ajuste se precisar.">
+        <p className="text-xs text-faint">{aiCostLine}</p>
         {aiError && <p className="flex items-center gap-1.5 text-xs text-red-400"><Info size={13} /> {aiError}</p>}
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Faixa de preço atual"><input className="ipt" value={market.price_range ?? ""} onChange={(e) => setMarket((m) => ({ ...m, price_range: e.target.value }))} /></Field>

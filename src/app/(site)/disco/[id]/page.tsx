@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Disc3, Eye, Music2 } from "lucide-react";
+import { ArrowLeft, Disc3, Eye, Music2, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { QUALITY_META } from "@/lib/constants";
@@ -143,20 +143,20 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* qualidade */}
-          <div className="mt-5 flex flex-wrap gap-3">
+          <div className="mt-5 flex flex-wrap items-center gap-2">
             {dq && (
-              <div className="rounded-xl border border-line bg-panel px-4 py-2">
-                <p className="text-[10px] uppercase tracking-wider text-faint">Qualidade do disco</p>
-                <p className="font-semibold" style={{ color: dq.color }}>{dq.label}</p>
+              <div className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-panel px-2.5 py-1">
+                <span className="text-[9px] uppercase tracking-wider text-faint">Disco</span>
+                <span className="text-xs font-semibold" style={{ color: dq.color }}>{dq.label}</span>
               </div>
             )}
             {cq && (
-              <div className="rounded-xl border border-line bg-panel px-4 py-2">
-                <p className="text-[10px] uppercase tracking-wider text-faint">Qualidade da capa</p>
-                <p className="font-semibold" style={{ color: cq.color }}>{cq.label}</p>
+              <div className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-panel px-2.5 py-1">
+                <span className="text-[9px] uppercase tracking-wider text-faint">Capa</span>
+                <span className="text-xs font-semibold" style={{ color: cq.color }}>{cq.label}</span>
               </div>
             )}
-            {(dq || cq) && <div className="flex items-center"><GradingHelp /></div>}
+            {(dq || cq) && <GradingHelp />}
           </div>
 
           <div className="mt-6">
@@ -219,8 +219,18 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
               <p className="mb-2 text-xs uppercase tracking-wider text-faint">Conteúdo incluso</p>
               <div className="flex flex-wrap gap-2">
                 {contentItems.map((c) => (
-                  <span key={c.label} className={`rounded-lg border px-2.5 py-1 text-xs ${c.on ? "border-teal/40 bg-teal/10 text-teal" : "border-line text-faint line-through"}`}>
-                    {c.on ? "✅ " : ""}{c.label}
+                  <span
+                    key={c.label}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs ${
+                      c.on ? "border-brand/30 bg-brand/10 text-ink" : "border-line text-faint line-through"
+                    }`}
+                  >
+                    {c.on && (
+                      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand/20 text-brand">
+                        <Check size={11} strokeWidth={3} />
+                      </span>
+                    )}
+                    {c.label}
                   </span>
                 ))}
               </div>
@@ -253,24 +263,9 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
-      {/* histórico */}
-      {historyRows.length > 0 && (
-        <section className="mt-16">
-          <h2 className="mb-5 font-display text-2xl text-ink">Histórico</h2>
-          <div className="grid gap-5 md:grid-cols-2">
-            {historyRows.map((h) => (
-              <div key={h.label} className="rounded-2xl border border-line bg-panel p-5">
-                <p className="mb-1 text-sm font-semibold text-brand">{h.label}</p>
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">{h.value}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* mercado */}
+      {/* mercado (antes do histórico) */}
       {hasMarket && (
-        <section className="mt-12">
+        <section className="mt-16">
           <h2 className="mb-5 font-display text-2xl text-ink">Mercado</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {market.price_range && <MarketCard label="Faixa de preço atual" value={market.price_range} />}
@@ -284,6 +279,21 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
                 </p>
               </div>
             ) : null}
+          </div>
+        </section>
+      )}
+
+      {/* histórico */}
+      {historyRows.length > 0 && (
+        <section className="mt-12">
+          <h2 className="mb-5 font-display text-2xl text-ink">Histórico</h2>
+          <div className="grid gap-5 md:grid-cols-2">
+            {historyRows.map((h) => (
+              <div key={h.label} className="rounded-2xl border border-line bg-panel p-5">
+                <p className="mb-1 text-sm font-semibold text-brand">{h.label}</p>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">{h.value}</p>
+              </div>
+            ))}
           </div>
         </section>
       )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { DISC_COLORS, type DiscConfig, DEFAULT_DISC_CONFIG } from "@/lib/constants";
+import { type DiscConfig, DEFAULT_DISC_CONFIG, resolveDiscColor, resolveBorderColor } from "@/lib/constants";
 import { claimAudio, releaseAudio } from "@/lib/audio-bus";
 import { useCoarsePointer } from "@/lib/use-coarse-pointer";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,7 @@ type VinylProps = {
 };
 
 function bodyStyle(colorId: string, styleId?: string): CSSProperties {
-  const c = DISC_COLORS.find((x) => x.id === colorId) ?? DISC_COLORS[0];
+  const c = resolveDiscColor(colorId);
   const grooves =
     "repeating-radial-gradient(circle at center, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px)";
   const sheen = "radial-gradient(circle at 30% 26%, rgba(255,255,255,0.12), transparent 42%)";
@@ -64,11 +64,7 @@ function bodyStyle(colorId: string, styleId?: string): CSSProperties {
 
 function ringColor(cfg: DiscConfig): string | undefined {
   if (cfg.border === "none") return undefined;
-  const bc = DISC_COLORS.find((x) => x.id === cfg.borderColor);
-  if (bc) return bc.accent;
-  // compatibilidade com discos antigos (border guardava a cor)
-  const legacy: Record<string, string> = { brand: "#ff9d2e", mist: "#26c0d4", gold: "#e8c56d", white: "#e8ecef", double: "#ff9d2e" };
-  return legacy[cfg.border] ?? "#ff9d2e";
+  return resolveBorderColor(cfg.borderColor ?? cfg.border);
 }
 
 function borderType(border: string): string {
