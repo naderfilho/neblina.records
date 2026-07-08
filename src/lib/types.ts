@@ -29,6 +29,58 @@ export type Track = {
   audio_url: string | null;
 };
 
+export type ConditionInfo = {
+  scratches?: string;
+  noise?: string;
+  warp?: string;
+  marks?: string;
+};
+
+export type IncludedContent = {
+  booklet?: boolean;
+  insert?: boolean;
+  poster?: boolean;
+  sticker?: boolean;
+  original_sleeve?: boolean;
+};
+
+export type HistoryInfo = {
+  context?: string;
+  curiosities?: string;
+  historical_importance?: string;
+  career_position?: string;
+  musical_influence?: string;
+};
+
+export type MarketInfo = {
+  price_range?: string;
+  avg_international?: string;
+  avg_brazil?: string;
+  rarity?: number; // 0-5
+};
+
+export type IdentificationInfo = {
+  matrix_a?: string;
+  matrix_b?: string;
+  label_code?: string;
+  series?: string;
+};
+
+export type SaleInfo = {
+  availability?: string;
+  warranty?: string;
+  return_policy?: string;
+};
+
+export type Tag = {
+  id: string;
+  label: string;
+  bg: string;
+  fg: string;
+  style: string;
+  created_at?: string;
+};
+
 export type RecordItem = {
   id: string;
   title: string;
@@ -49,6 +101,14 @@ export type RecordItem = {
   audio_end: number | null;
   tracks: Track[];
   home_track_id: string | null;
+  condition: ConditionInfo;
+  included_content: IncludedContent;
+  history: HistoryInfo;
+  market: MarketInfo;
+  identification: IdentificationInfo;
+  sale_info: SaleInfo;
+  tag_ids: string[];
+  sort_order: number;
   extra_blocks: ExtraBlock[];
   year: number | null;
   catalog_number: string | null;
@@ -65,6 +125,7 @@ export type RecordPhoto = {
   id: string;
   record_id: string;
   url: string;
+  category: string;
   sort_order: number;
   created_at: string;
 };

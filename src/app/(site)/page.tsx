@@ -5,19 +5,24 @@ import IntroCurtain from "@/components/IntroCurtain";
 import RecordGrid from "@/components/RecordGrid";
 import HeroVinyl from "@/components/HeroVinyl";
 import MountainsScene from "@/components/MountainsScene";
-import type { RecordItem } from "@/lib/types";
+import type { RecordItem, Tag } from "@/lib/types";
 
 export const revalidate = 0;
 
 export default async function HomePage() {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("records")
-    .select("*")
-    .eq("is_published", true)
-    .order("created_at", { ascending: false });
+  const [{ data }, { data: tagData }] = await Promise.all([
+    supabase
+      .from("records")
+      .select("*")
+      .eq("is_published", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
+    supabase.from("tags").select("*"),
+  ]);
 
   const records = (data ?? []) as RecordItem[];
+  const tags = (tagData ?? []) as Tag[];
 
   return (
     <>
@@ -77,7 +82,7 @@ export default async function HomePage() {
             </p>
           </div>
         ) : (
-          <RecordGrid records={records} />
+          <RecordGrid records={records} tags={tags} />
         )}
       </section>
     </>

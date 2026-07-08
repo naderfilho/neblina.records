@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Check } from "lucide-react";
 import Vinyl from "@/components/Vinyl";
+import TagBadge from "@/components/TagBadge";
 import { useCart } from "@/lib/cart";
 import { QUALITY_META } from "@/lib/constants";
 import { formatBRL } from "@/lib/utils";
-import type { RecordItem } from "@/lib/types";
+import type { RecordItem, Tag } from "@/lib/types";
 
-export default function RecordCard({ record }: { record: RecordItem }) {
+export default function RecordCard({ record, tags = [] }: { record: RecordItem; tags?: Tag[] }) {
   const router = useRouter();
   const cart = useCart();
   const inCart = cart.has(record.id);
@@ -53,6 +54,15 @@ export default function RecordCard({ record }: { record: RecordItem }) {
         >
           {inCart ? <Check size={16} /> : <Plus size={18} />}
         </button>
+
+        {/* etiquetas */}
+        {tags.length > 0 && (
+          <div className="pointer-events-none absolute left-1 top-1 z-10 flex flex-col items-start gap-1">
+            {tags.slice(0, 2).map((t) => (
+              <TagBadge key={t.id} tag={t} size="sm" />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-3 w-full px-1 text-center">

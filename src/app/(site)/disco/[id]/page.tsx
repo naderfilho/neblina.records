@@ -44,7 +44,48 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
     { label: "Gravadora", value: r.label_company },
     { label: "Nº de catálogo", value: r.catalog_number },
     { label: "Peso", value: r.weight_grams ? `${r.weight_grams} g` : null },
+    { label: "Matrix Lado A", value: r.identification?.matrix_a || null },
+    { label: "Matrix Lado B", value: r.identification?.matrix_b || null },
+    { label: "Label Code", value: r.identification?.label_code || null },
+    { label: "Série", value: r.identification?.series || null },
   ];
+
+  const condition = r.condition ?? {};
+  const content = r.included_content ?? {};
+  const history = r.history ?? {};
+  const market = r.market ?? {};
+  const sale = r.sale_info ?? {};
+
+  const conditionRows = [
+    { label: "Riscos", value: condition.scratches },
+    { label: "Chiados", value: condition.noise },
+    { label: "Empenamento", value: condition.warp },
+    { label: "Marcas", value: condition.marks },
+  ].filter((x) => x.value);
+
+  const contentItems = [
+    { label: "Livreto", on: content.booklet },
+    { label: "Encarte", on: content.insert },
+    { label: "Pôster", on: content.poster },
+    { label: "Sticker", on: content.sticker },
+    { label: "Sleeve original", on: content.original_sleeve },
+  ].filter((x) => x.on !== undefined);
+
+  const historyRows = [
+    { label: "Contexto", value: history.context },
+    { label: "Curiosidades", value: history.curiosities },
+    { label: "Importância histórica", value: history.historical_importance },
+    { label: "Posição na carreira", value: history.career_position },
+    { label: "Influência musical", value: history.musical_influence },
+  ].filter((x) => x.value);
+
+  const saleRows = [
+    { label: "Disponibilidade", value: sale.availability },
+    { label: "Garantia", value: sale.warranty },
+    { label: "Devolução", value: sale.return_policy },
+  ].filter((x) => x.value);
+
+  const hasMarket = market.price_range || market.avg_international || market.avg_brazil || market.rarity;
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
@@ -155,6 +196,50 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
             </dl>
           </div>
 
+          {/* condição detalhada */}
+          {conditionRows.length > 0 && (
+            <div className="mt-6 rounded-2xl border border-line bg-panel p-5">
+              <h2 className="mb-3 font-display text-lg text-ink">Condição detalhada</h2>
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
+                {conditionRows.map((s) => (
+                  <div key={s.label} className="flex flex-col">
+                    <dt className="text-[11px] uppercase tracking-wider text-faint">{s.label}</dt>
+                    <dd className="text-sm text-ink">{s.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+
+          {/* conteúdo incluso */}
+          {contentItems.length > 0 && (
+            <div className="mt-6">
+              <p className="mb-2 text-xs uppercase tracking-wider text-faint">Conteúdo incluso</p>
+              <div className="flex flex-wrap gap-2">
+                {contentItems.map((c) => (
+                  <span key={c.label} className={`rounded-lg border px-2.5 py-1 text-xs ${c.on ? "border-teal/40 bg-teal/10 text-teal" : "border-line text-faint line-through"}`}>
+                    {c.on ? "✅" : "❌"} {c.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* informações para venda */}
+          {saleRows.length > 0 && (
+            <div className="mt-6 rounded-2xl border border-line bg-panel p-5">
+              <h2 className="mb-3 font-display text-lg text-ink">Informações para venda</h2>
+              <dl className="space-y-2">
+                {saleRows.map((s) => (
+                  <div key={s.label} className="flex justify-between gap-4 text-sm">
+                    <dt className="text-faint">{s.label}</dt>
+                    <dd className="text-right text-ink">{s.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+
           {/* blocos livres do admin */}
           {Array.isArray(r.extra_blocks) && r.extra_blocks.length > 0 && (
             <div className="mt-6 space-y-4">
@@ -165,6 +250,41 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
           )}
         </div>
       </div>
+
+      {/* histórico */}
+      {historyRows.length > 0 && (
+        <section className="mt-16">
+          <h2 className="mb-5 font-display text-2xl text-ink">Histórico</h2>
+          <div className="grid gap-5 md:grid-cols-2">
+            {historyRows.map((h) => (
+              <div key={h.label} className="rounded-2xl border border-line bg-panel p-5">
+                <p className="mb-1 text-sm font-semibold text-brand">{h.label}</p>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">{h.value}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* mercado */}
+      {hasMarket && (
+        <section className="mt-12">
+          <h2 className="mb-5 font-display text-2xl text-ink">Mercado</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {market.price_range && <MarketCard label="Faixa de preço atual" value={market.price_range} />}
+            {market.avg_international && <MarketCard label="Média internacional" value={market.avg_international} />}
+            {market.avg_brazil && <MarketCard label="Média no Brasil" value={market.avg_brazil} />}
+            {market.rarity ? (
+              <div className="card p-5">
+                <p className="text-[11px] uppercase tracking-wider text-faint">Raridade</p>
+                <p className="mt-1 text-xl text-brand">
+                  {"★".repeat(market.rarity)}<span className="text-faint">{"☆".repeat(5 - market.rarity)}</span>
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      )}
 
       {/* fotos reais */}
       {photos && photos.length > 0 && (
@@ -181,6 +301,15 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
         userName={profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() : null}
         isAdmin={profile?.role === "admin"}
       />
+    </div>
+  );
+}
+
+function MarketCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="card p-5">
+      <p className="text-[11px] uppercase tracking-wider text-faint">{label}</p>
+      <p className="mt-1 font-display text-xl text-ink">{value}</p>
     </div>
   );
 }

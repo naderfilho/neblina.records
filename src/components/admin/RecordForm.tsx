@@ -1,24 +1,28 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Upload, Image as ImageIcon, Music, X, Plus, Trash2, Loader2, Save,
-  Type, Heading, Quote, ListTree, GripVertical,
+  Image as ImageIcon, Music, X, Plus, Trash2, Loader2, Save, Crop,
+  Type, Heading, Quote, ListTree, GripVertical, Sparkles, Wand2, Star, Info, Tag as TagIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFile } from "@/lib/upload";
 import {
   QUALITY_GRADES, QUALITY_META, RECORD_FORMATS, PAYMENT_METHODS, DEFAULT_DISC_CONFIG,
-  type DiscConfig,
+  PHOTO_CATEGORIES, NEBLINA_AI, type DiscConfig,
 } from "@/lib/constants";
-import type { RecordItem, RecordPhoto, ExtraBlock } from "@/lib/types";
+import type {
+  RecordItem, RecordPhoto, ExtraBlock, Tag,
+  ConditionInfo, IncludedContent, HistoryInfo, MarketInfo, IdentificationInfo, SaleInfo,
+} from "@/lib/types";
 import VinylDesigner from "@/components/admin/VinylDesigner";
 import AudioTrimmer from "@/components/admin/AudioTrimmer";
+import ImageCropper from "@/components/admin/ImageCropper";
 import { cn } from "@/lib/utils";
 
-type PhotoItem = { id: string; url: string; file?: File };
-
+type PhotoItem = { id: string; url: string; category: string; file?: File };
 type Suggestions = { genres: string[]; nationalities: string[]; artists: string[] };
 
 export default function RecordForm({
@@ -49,14 +53,23 @@ export default function RecordForm({
   const [description, setDescription] = useState(record?.description ?? "");
   const [published, setPublished] = useState(record?.is_published ?? true);
   const [featured, setFeatured] = useState(record?.is_featured ?? false);
-  const [payments, setPayments] = useState<string[]>(record?.payment_methods ?? ["Pix", "Dinheiro"]);
+  const [payments, setPayments] = useState<string[]>(record?.payment_methods ?? ["Pix (Brasil)"]);
   const [discConfig, setDiscConfig] = useState<DiscConfig>(record?.disc_config ?? DEFAULT_DISC_CONFIG);
+
+  const [condition, setCondition] = useState<ConditionInfo>(record?.condition ?? {});
+  const [content, setContent] = useState<IncludedContent>(record?.included_content ?? {});
+  const [history, setHistory] = useState<HistoryInfo>(record?.history ?? {});
+  const [market, setMarket] = useState<MarketInfo>(record?.market ?? {});
+  const [ident, setIdent] = useState<IdentificationInfo>(record?.identification ?? {});
+  const [sale, setSale] = useState<SaleInfo>(record?.sale_info ?? {});
+  const [tagIds, setTagIds] = useState<string[]>(record?.tag_ids ?? []);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
 
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(record?.cover_image_url ?? null);
 
   const [photos, setPhotos] = useState<PhotoItem[]>(
-    existingPhotos.map((p) => ({ id: p.id, url: p.url })),
+    existingPhotos.map((p) => ({ id: p.id, url: p.url, category: p.category ?? "outro" })),
   );
 
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -70,13 +83,6 @@ export default function RecordForm({
   );
   const [homeTrackId, setHomeTrackId] = useState<string | null>(record?.home_track_id ?? null);
 
-  function addTrack(side: "A" | "B") {
-    setTracks((t) => [...t, { id: crypto.randomUUID(), side, title: "", audioUrl: null }]);
-  }
-  function onTrackAudio(id: string, file: File) {
-    setTracks((t) => t.map((x) => (x.id === id ? { ...x, file, audioUrl: URL.createObjectURL(file) } : x)));
-  }
-
   const [blocks, setBlocks] = useState<ExtraBlock[]>(
     Array.isArray(record?.extra_blocks) ? (record!.extra_blocks as ExtraBlock[]) : [],
   );
@@ -84,29 +90,70 @@ export default function RecordForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Neblina IA
+  const [aiBusy, setAiBusy] = useState<"idle" | "identify" | "research">("idle");
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiCost, setAiCost] = useState(0);
+
+  // Crop
+  const [cropper, setCropper] = useState<{ file: File; onApply: (b: Blob) => void } | null>(null);
+
   const coverInput = useRef<HTMLInputElement>(null);
   const photosInput = useRef<HTMLInputElement>(null);
   const audioInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    createClient().from("tags").select("*").order("created_at").then(({ data }) => {
+      if (data) setAllTags(data as Tag[]);
+    });
+  }, []);
 
   const audioPreviewSrc = useMemo(
     () => (audioFile ? URL.createObjectURL(audioFile) : audioUrl),
     [audioFile, audioUrl],
   );
 
+  function addTrack(side: "A" | "B") {
+    setTracks((t) => [...t, { id: crypto.randomUUID(), side, title: "", audioUrl: null }]);
+  }
+  function onTrackAudio(id: string, file: File) {
+    setTracks((t) => t.map((x) => (x.id === id ? { ...x, file, audioUrl: URL.createObjectURL(file) } : x)));
+  }
+
   function onCover(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
-    setCoverFile(f);
-    setCoverPreview(URL.createObjectURL(f));
+    setCropper({
+      file: f,
+      onApply: (blob) => {
+        setCoverFile(new File([blob], "cover.jpg", { type: "image/jpeg" }));
+        setCoverPreview(URL.createObjectURL(blob));
+      },
+    });
+    e.target.value = "";
   }
 
   function onPhotos(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     setPhotos((prev) => [
       ...prev,
-      ...files.map((f) => ({ id: crypto.randomUUID(), url: URL.createObjectURL(f), file: f })),
+      ...files.map((f) => ({ id: crypto.randomUUID(), url: URL.createObjectURL(f), category: "outro", file: f })),
     ]);
     e.target.value = "";
+  }
+
+  async function cropPhoto(p: PhotoItem) {
+    let file = p.file;
+    if (!file) {
+      try { const resp = await fetch(p.url); const blob = await resp.blob(); file = new File([blob], "photo.jpg", { type: blob.type || "image/jpeg" }); }
+      catch { return; }
+    }
+    setCropper({
+      file,
+      onApply: (blob) => {
+        setPhotos((prev) => prev.map((x) => (x.id === p.id ? { ...x, file: new File([blob], "photo.jpg", { type: "image/jpeg" }), url: URL.createObjectURL(blob) } : x)));
+      },
+    });
   }
 
   function onAudio(e: React.ChangeEvent<HTMLInputElement>) {
@@ -122,31 +169,83 @@ export default function RecordForm({
     setBlocks((b) => [...b, { id: crypto.randomUUID(), type, content: "", title: "", key: "", value: "" }]);
   }
 
+  // ---- Neblina IA ----
+  async function coverBase64(): Promise<{ data: string; mediaType: string } | null> {
+    const src = coverFile ?? (coverPreview ? await fetch(coverPreview).then((r) => r.blob()).catch(() => null) : null);
+    if (!src) return null;
+    const dataUrl = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(src); });
+    const [meta, b64] = dataUrl.split(",");
+    return { data: b64, mediaType: meta.match(/data:(.*?);/)?.[1] || "image/jpeg" };
+  }
+
+  function fill<T>(setter: (v: T) => void, val: T | undefined | null) {
+    if (val !== undefined && val !== null && val !== "") setter(val);
+  }
+
+  async function runIdentify() {
+    setAiError(null);
+    const b = await coverBase64();
+    if (!b) { setAiError("Envie a foto da capa primeiro (seção Capa & Vinil)."); return; }
+    setAiBusy("identify");
+    try {
+      const res = await fetch("/api/ai/identify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageBase64: b.data, mediaType: b.mediaType }) });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Erro na IA");
+      const d = j.data ?? {};
+      fill(setTitle, d.title); fill(setArtist, d.artist); fill(setGenre, d.genre);
+      fill(setNationality, d.nationality); fill(setFormat, d.format);
+      fill(setYear, d.year != null ? String(d.year) : undefined);
+      fill(setLabelCompany, d.label_company); fill(setDescription, d.description);
+      if (typeof j.costUsd === "number") setAiCost((c) => c + j.costUsd);
+    } catch (e) { setAiError(e instanceof Error ? e.message : "Erro"); }
+    finally { setAiBusy("idle"); }
+  }
+
+  async function runResearch() {
+    setAiError(null);
+    if (!title.trim() || !artist.trim()) { setAiError("Preencha título e artista (ou identifique pela foto) antes."); return; }
+    setAiBusy("research");
+    try {
+      const res = await fetch("/api/ai/research", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, artist, year }) });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Erro na IA");
+      const d = j.data ?? {};
+      fill(setGenre, d.genre); fill(setNationality, d.nationality); fill(setLabelCompany, d.label_company);
+      fill(setFormat, d.format); fill(setDescription, d.description);
+      fill(setYear, d.year != null ? String(d.year) : undefined);
+      if (d.history) setHistory((h) => ({ ...h, ...d.history }));
+      if (d.market) setMarket((m) => ({ ...m, ...d.market }));
+      if (d.identification) setIdent((i) => ({ ...i, ...d.identification }));
+      if (Array.isArray(d.tracks) && d.tracks.length) {
+        setTracks(d.tracks.map((t: { side?: string; title?: string }) => ({
+          id: crypto.randomUUID(), side: t.side === "B" ? "B" : "A", title: t.title || "Faixa", audioUrl: null,
+        })));
+      }
+      if (typeof j.costUsd === "number") setAiCost((c) => c + j.costUsd);
+    } catch (e) { setAiError(e instanceof Error ? e.message : "Erro"); }
+    finally { setAiBusy("idle"); }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!title.trim() || !artist.trim()) {
-      setError("Título e artista são obrigatórios.");
-      return;
-    }
+    if (!title.trim() || !artist.trim()) { setError("Título e artista são obrigatórios."); return; }
     setSaving(true);
     const supabase = createClient();
 
     try {
-      // uploads
       let coverUrlFinal = coverPreview;
       if (coverFile) coverUrlFinal = await uploadFile("covers", coverFile, "cover-");
 
       let audioUrlFinal = audioUrl;
       if (audioFile) audioUrlFinal = await uploadFile("audio", audioFile, "audio-");
 
-      const photoUrls: string[] = [];
+      const finalPhotos: { url: string; category: string }[] = [];
       for (const p of photos) {
-        if (p.file) photoUrls.push(await uploadFile("record-photos", p.file, "photo-"));
-        else photoUrls.push(p.url);
+        const url = p.file ? await uploadFile("record-photos", p.file, "photo-") : p.url;
+        finalPhotos.push({ url, category: p.category || "outro" });
       }
 
-      // upload das faixas
       const finalTracks: { id: string; side: "A" | "B"; title: string; audio_url: string | null }[] = [];
       for (const t of tracks) {
         let url = t.audioUrl;
@@ -156,30 +255,22 @@ export default function RecordForm({
       const homeTrack = finalTracks.find((t) => t.id === homeTrackId);
 
       const payload = {
-        title: title.trim(),
-        artist: artist.trim(),
-        genre: genre.trim() || null,
-        nationality: nationality.trim() || null,
-        format: format || null,
-        weight_grams: weight ? parseFloat(weight) : null,
-        disc_quality: discQuality || null,
-        cover_quality: coverQuality || null,
-        price: price ? parseFloat(price) : 0,
-        year: year ? parseInt(year) : null,
-        label_company: labelCompany.trim() || null,
-        catalog_number: catalog.trim() || null,
-        stock_qty: stock ? parseInt(stock) : 1,
-        description: description.trim() || null,
-        is_published: published,
-        is_featured: featured,
-        payment_methods: payments,
-        disc_config: discConfig,
+        title: title.trim(), artist: artist.trim(),
+        genre: genre.trim() || null, nationality: nationality.trim() || null,
+        format: format || null, weight_grams: weight ? parseFloat(weight) : null,
+        disc_quality: discQuality || null, cover_quality: coverQuality || null,
+        price: price ? parseFloat(price) : 0, year: year ? parseInt(year) : null,
+        label_company: labelCompany.trim() || null, catalog_number: catalog.trim() || null,
+        stock_qty: stock ? parseInt(stock) : 1, description: description.trim() || null,
+        is_published: published, is_featured: featured,
+        payment_methods: payments, disc_config: discConfig,
         cover_image_url: coverUrlFinal,
         audio_url: homeTrack?.audio_url ?? audioUrlFinal,
-        audio_start: audioStart,
-        audio_end: audioEnd,
-        tracks: finalTracks,
-        home_track_id: homeTrackId,
+        audio_start: audioStart, audio_end: audioEnd,
+        tracks: finalTracks, home_track_id: homeTrackId,
+        condition, included_content: content, history, market,
+        identification: ident, sale_info: sale, tag_ids: tagIds,
+        sort_order: record?.sort_order ?? 0,
         extra_blocks: blocks,
       };
 
@@ -193,12 +284,11 @@ export default function RecordForm({
         recordId = data.id;
       }
 
-      // sincroniza fotos (apaga e recria)
       if (recordId) {
         await supabase.from("record_photos").delete().eq("record_id", recordId);
-        if (photoUrls.length) {
+        if (finalPhotos.length) {
           await supabase.from("record_photos").insert(
-            photoUrls.map((url, i) => ({ record_id: recordId, url, sort_order: i })),
+            finalPhotos.map((p, i) => ({ record_id: recordId, url: p.url, category: p.category, sort_order: i })),
           );
         }
       }
@@ -214,6 +304,33 @@ export default function RecordForm({
   return (
     <form onSubmit={submit} className="space-y-8 pb-24">
       {error && <p className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</p>}
+
+      {/* Neblina IA */}
+      <section className="rounded-2xl border border-brand/30 bg-brand/5 p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 font-display text-xl text-ink">
+              <Sparkles size={20} className="text-brand" /> Neblina IA
+            </h2>
+            <p className="mt-0.5 text-sm text-muted">Preenchimento automático. Você pode aceitar ou ajustar tudo depois.</p>
+          </div>
+          <div className="text-right text-xs text-faint">
+            <p>Estimativa: identificar {NEBLINA_AI.identifyCost} · completo {NEBLINA_AI.fullCost} por disco</p>
+            {aiCost > 0 && <p className="text-brand">Gasto nesta sessão: US$ {aiCost.toFixed(3)}</p>}
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button type="button" onClick={runIdentify} disabled={aiBusy !== "idle"}
+            className="flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm hover:border-brand/50 disabled:opacity-60">
+            {aiBusy === "identify" ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />} Identificar pela foto
+          </button>
+          <button type="button" onClick={runResearch} disabled={aiBusy !== "idle"}
+            className="btn-brand flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm disabled:opacity-60">
+            {aiBusy === "research" ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />} Utilizar IA Neblina (pesquisar e preencher tudo)
+          </button>
+        </div>
+        {aiError && <p className="mt-3 flex items-center gap-1.5 text-sm text-red-400"><Info size={14} /> {aiError}</p>}
+      </section>
 
       {/* Dados principais */}
       <Section title="Informações do disco">
@@ -241,13 +358,13 @@ export default function RecordForm({
           <Field label="Gravadora"><input className="ipt" value={labelCompany} onChange={(e) => setLabelCompany(e.target.value)} /></Field>
           <Field label="Nº de catálogo"><input className="ipt" value={catalog} onChange={(e) => setCatalog(e.target.value)} /></Field>
           <Field label="Estoque"><input className="ipt" type="number" value={stock} onChange={(e) => setStock(e.target.value)} /></Field>
-          <Field label="Qualidade do disco">
+          <Field label="Qualidade do disco (Goldmine)">
             <select className="ipt" value={discQuality} onChange={(e) => setDiscQuality(e.target.value)}>
               <option value="">—</option>
               {QUALITY_GRADES.map((q) => <option key={q} value={q}>{QUALITY_META[q].label}</option>)}
             </select>
           </Field>
-          <Field label="Qualidade da capa">
+          <Field label="Qualidade da capa (Goldmine)">
             <select className="ipt" value={coverQuality} onChange={(e) => setCoverQuality(e.target.value)}>
               <option value="">—</option>
               {QUALITY_GRADES.map((q) => <option key={q} value={q}>{QUALITY_META[q].label}</option>)}
@@ -264,15 +381,9 @@ export default function RecordForm({
           <p className="mb-2 text-xs uppercase tracking-wider text-muted">Formas de pagamento</p>
           <div className="flex flex-wrap gap-2">
             {PAYMENT_METHODS.map((m) => (
-              <button
-                key={m}
-                type="button"
+              <button key={m} type="button"
                 onClick={() => setPayments((p) => (p.includes(m) ? p.filter((x) => x !== m) : [...p, m]))}
-                className={cn(
-                  "rounded-lg border px-3 py-1.5 text-xs",
-                  payments.includes(m) ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:text-ink",
-                )}
-              >
+                className={cn("rounded-lg border px-3 py-1.5 text-xs", payments.includes(m) ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:text-ink")}>
                 {m}
               </button>
             ))}
@@ -285,16 +396,35 @@ export default function RecordForm({
         </div>
       </Section>
 
+      {/* Etiquetas */}
+      <Section title="Etiquetas (tags)" desc="Aparecem em cima do disco na home e permitem filtrar (ex: Mais Vendido, Promoção).">
+        <div className="flex flex-wrap items-center gap-2">
+          {allTags.length === 0 && <p className="text-sm text-faint">Nenhuma tag criada ainda.</p>}
+          {allTags.map((t) => {
+            const on = tagIds.includes(t.id);
+            return (
+              <button key={t.id} type="button"
+                onClick={() => setTagIds((ids) => (on ? ids.filter((x) => x !== t.id) : [...ids, t.id]))}
+                className={cn("rounded-full px-3 py-1.5 text-xs font-bold ring-2 transition", on ? "ring-brand" : "ring-transparent opacity-70 hover:opacity-100")}
+                style={{ background: t.bg, color: t.fg }}>
+                {t.label}
+              </button>
+            );
+          })}
+          <Link href="/admin/tags" className="flex items-center gap-1 rounded-full border border-line px-3 py-1.5 text-xs text-muted hover:text-brand">
+            <TagIcon size={13} /> Gerenciar tags
+          </Link>
+        </div>
+      </Section>
+
       {/* Capa + designer */}
-      <Section title="Capa & Vinil" desc="Envie a foto da capa e transforme-a num vinil padronizado para a home.">
+      <Section title="Capa & Vinil" desc="Envie a foto da capa (ajuste com zoom/recorte) e transforme-a num vinil padronizado para a home.">
         <div className="mb-5 flex items-center gap-3">
           <button type="button" onClick={() => coverInput.current?.click()} className="flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm hover:border-brand/50">
             <ImageIcon size={16} /> {coverPreview ? "Trocar foto da capa" : "Enviar foto da capa"}
           </button>
           {coverPreview && (
-            <button type="button" onClick={() => { setCoverFile(null); setCoverPreview(null); }} className="text-sm text-faint hover:text-red-400">
-              Remover
-            </button>
+            <button type="button" onClick={() => { setCoverFile(null); setCoverPreview(null); }} className="text-sm text-faint hover:text-red-400">Remover</button>
           )}
           <input ref={coverInput} type="file" accept="image/*" hidden onChange={onCover} />
         </div>
@@ -302,33 +432,22 @@ export default function RecordForm({
       </Section>
 
       {/* Áudio */}
-      <Section title="Áudio da música" desc="O trecho toca quando passam o mouse (ou tocam) no disco.">
+      <Section title="Áudio da home" desc="Trecho que toca ao passar o mouse no disco (se você não marcar uma faixa como 'home').">
         <div className="mb-4 flex items-center gap-3">
           <button type="button" onClick={() => audioInput.current?.click()} className="flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm hover:border-brand/50">
             <Music size={16} /> {audioPreviewSrc ? "Trocar áudio" : "Enviar áudio"}
           </button>
-          {audioPreviewSrc && (
-            <button type="button" onClick={() => { setAudioFile(null); setAudioUrl(null); }} className="text-sm text-faint hover:text-red-400">
-              Remover
-            </button>
-          )}
+          {audioPreviewSrc && <button type="button" onClick={() => { setAudioFile(null); setAudioUrl(null); }} className="text-sm text-faint hover:text-red-400">Remover</button>}
           <input ref={audioInput} type="file" accept="audio/*" hidden onChange={onAudio} />
         </div>
         {audioPreviewSrc && (
-          <AudioTrimmer
-            url={audioPreviewSrc}
-            start={audioStart}
-            end={audioEnd}
-            onChange={({ start, end }) => { setAudioStart(start); setAudioEnd(end); }}
-          />
+          <AudioTrimmer url={audioPreviewSrc} start={audioStart} end={audioEnd}
+            onChange={({ start, end }) => { setAudioStart(start); setAudioEnd(end); }} />
         )}
       </Section>
 
       {/* Faixas */}
-      <Section
-        title="Faixas — Lado A e Lado B"
-        desc="Cadastre as músicas de cada lado. Elas viram os sulcos do disco na página do disco: passar o mouse mostra o nome e o clique toca. Marque qual faixa toca na home."
-      >
+      <Section title="Faixas — Lado A e Lado B" desc="Viram os sulcos do disco na página: hover mostra o nome, clique toca. Marque qual toca na home.">
         <div className="grid gap-6 md:grid-cols-2">
           {(["A", "B"] as const).map((side) => {
             const sideTracks = tracks.filter((t) => t.side === side);
@@ -336,11 +455,7 @@ export default function RecordForm({
               <div key={side}>
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="font-display text-lg text-ink">Lado {side}</h3>
-                  <button
-                    type="button"
-                    onClick={() => addTrack(side)}
-                    className="flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-xs text-muted hover:border-brand/50 hover:text-brand"
-                  >
+                  <button type="button" onClick={() => addTrack(side)} className="flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-xs text-muted hover:border-brand/50 hover:text-brand">
                     <Plus size={14} /> Faixa
                   </button>
                 </div>
@@ -349,28 +464,16 @@ export default function RecordForm({
                   {sideTracks.map((t, idx) => (
                     <div key={t.id} className="flex items-center gap-2 rounded-lg border border-line bg-bg-soft p-2">
                       <span className="w-4 text-center text-xs text-faint">{idx + 1}</span>
-                      <input
-                        className="ipt flex-1"
-                        placeholder="Nome da faixa"
-                        value={t.title}
-                        onChange={(e) => setTracks((ts) => ts.map((x) => (x.id === t.id ? { ...x, title: e.target.value } : x)))}
-                      />
-                      <label
-                        className={`flex cursor-pointer items-center gap-1 rounded-lg border px-2 py-1.5 text-xs ${t.audioUrl ? "border-teal/50 text-teal" : "border-line text-muted hover:text-brand"}`}
-                        title={t.audioUrl ? "Áudio enviado" : "Enviar áudio"}
-                      >
+                      <input className="ipt flex-1" placeholder="Nome da faixa" value={t.title}
+                        onChange={(e) => setTracks((ts) => ts.map((x) => (x.id === t.id ? { ...x, title: e.target.value } : x)))} />
+                      <label className={`flex cursor-pointer items-center gap-1 rounded-lg border px-2 py-1.5 text-xs ${t.audioUrl ? "border-teal/50 text-teal" : "border-line text-muted hover:text-brand"}`} title={t.audioUrl ? "Áudio enviado" : "Enviar áudio"}>
                         <Music size={13} />
                         <input type="file" accept="audio/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onTrackAudio(t.id, f); }} />
                       </label>
                       <label className="flex items-center gap-1 text-[11px] text-muted" title="Toca na home">
-                        <input type="radio" name="hometrack" checked={homeTrackId === t.id} onChange={() => setHomeTrackId(t.id)} className="accent-brand" />
-                        home
+                        <input type="radio" name="hometrack" checked={homeTrackId === t.id} onChange={() => setHomeTrackId(t.id)} className="accent-brand" /> home
                       </label>
-                      <button
-                        type="button"
-                        onClick={() => { setTracks((ts) => ts.filter((x) => x.id !== t.id)); if (homeTrackId === t.id) setHomeTrackId(null); }}
-                        className="text-faint hover:text-red-400"
-                      >
+                      <button type="button" onClick={() => { setTracks((ts) => ts.filter((x) => x.id !== t.id)); if (homeTrackId === t.id) setHomeTrackId(null); }} className="text-faint hover:text-red-400">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -382,27 +485,106 @@ export default function RecordForm({
         </div>
       </Section>
 
-      {/* Fotos reais */}
-      <Section title="Fotos reais do disco" desc="Aparecem apenas na página do disco, não na home.">
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
-          {photos.map((p) => (
-            <div key={p.id} className="group relative aspect-square overflow-hidden rounded-xl border border-line">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.url} alt="" className="h-full w-full object-cover" />
-              <button
-                type="button"
-                onClick={() => setPhotos((prev) => prev.filter((x) => x.id !== p.id))}
-                className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white opacity-0 group-hover:opacity-100"
-              >
-                <X size={14} />
+      {/* Condição */}
+      <Section title="Condição detalhada">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Riscos"><input className="ipt" value={condition.scratches ?? ""} onChange={(e) => setCondition((c) => ({ ...c, scratches: e.target.value }))} placeholder="Ex: leves na face B" /></Field>
+          <Field label="Chiados"><input className="ipt" value={condition.noise ?? ""} onChange={(e) => setCondition((c) => ({ ...c, noise: e.target.value }))} placeholder="Ex: baixo, só no início" /></Field>
+          <Field label="Empenamento"><input className="ipt" value={condition.warp ?? ""} onChange={(e) => setCondition((c) => ({ ...c, warp: e.target.value }))} placeholder="Ex: nenhum" /></Field>
+          <Field label="Marcas"><input className="ipt" value={condition.marks ?? ""} onChange={(e) => setCondition((c) => ({ ...c, marks: e.target.value }))} placeholder="Ex: escrita na capa" /></Field>
+        </div>
+      </Section>
+
+      {/* Conteúdo incluso */}
+      <Section title="Conteúdo incluso">
+        <div className="flex flex-wrap gap-2">
+          {([["booklet", "Livreto"], ["insert", "Encarte"], ["poster", "Pôster"], ["sticker", "Sticker"], ["original_sleeve", "Sleeve original"]] as const).map(([key, label]) => {
+            const on = !!content[key];
+            return (
+              <button key={key} type="button"
+                onClick={() => setContent((c) => ({ ...c, [key]: !c[key] }))}
+                className={cn("rounded-lg border px-3 py-1.5 text-sm", on ? "border-teal/50 bg-teal/15 text-teal" : "border-line text-muted hover:text-ink")}>
+                {on ? "✅" : "❌"} {label}
               </button>
+            );
+          })}
+        </div>
+      </Section>
+
+      {/* Histórico */}
+      <Section title="Histórico" desc="Contexto, curiosidades e importância do álbum (a Neblina IA preenche pra você).">
+        <div className="grid gap-4">
+          {([["context", "Contexto do álbum"], ["curiosities", "Curiosidades"], ["historical_importance", "Importância histórica"], ["career_position", "Posição na carreira"], ["musical_influence", "Influência musical"]] as const).map(([key, label]) => (
+            <Field key={key} label={label}>
+              <textarea className="ipt" rows={2} value={history[key] ?? ""} onChange={(e) => setHistory((h) => ({ ...h, [key]: e.target.value }))} />
+            </Field>
+          ))}
+        </div>
+      </Section>
+
+      {/* Mercado */}
+      <Section title="Mercado">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Faixa de preço atual"><input className="ipt" value={market.price_range ?? ""} onChange={(e) => setMarket((m) => ({ ...m, price_range: e.target.value }))} /></Field>
+          <Field label="Valor médio internacional"><input className="ipt" value={market.avg_international ?? ""} onChange={(e) => setMarket((m) => ({ ...m, avg_international: e.target.value }))} /></Field>
+          <Field label="Valor médio no Brasil"><input className="ipt" value={market.avg_brazil ?? ""} onChange={(e) => setMarket((m) => ({ ...m, avg_brazil: e.target.value }))} /></Field>
+        </div>
+        <div>
+          <p className="mb-1.5 text-xs uppercase tracking-wider text-muted">Raridade</p>
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button key={n} type="button" onClick={() => setMarket((m) => ({ ...m, rarity: n }))}>
+                <Star size={24} className={n <= (market.rarity ?? 0) ? "fill-brand text-brand" : "text-faint"} />
+              </button>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      {/* Identificação */}
+      <Section title="Identificação">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Matrix Lado A"><input className="ipt" value={ident.matrix_a ?? ""} onChange={(e) => setIdent((i) => ({ ...i, matrix_a: e.target.value }))} /></Field>
+          <Field label="Matrix Lado B"><input className="ipt" value={ident.matrix_b ?? ""} onChange={(e) => setIdent((i) => ({ ...i, matrix_b: e.target.value }))} /></Field>
+          <Field label="Label Code"><input className="ipt" value={ident.label_code ?? ""} onChange={(e) => setIdent((i) => ({ ...i, label_code: e.target.value }))} /></Field>
+          <Field label="Série"><input className="ipt" value={ident.series ?? ""} onChange={(e) => setIdent((i) => ({ ...i, series: e.target.value }))} /></Field>
+        </div>
+      </Section>
+
+      {/* Fotos reais */}
+      <Section title="Fotos reais do disco" desc="Aparecem na página do disco. Escolha a categoria de cada foto e ajuste com o recorte.">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+          {photos.map((p) => (
+            <div key={p.id} className="space-y-1.5">
+              <div className="group relative aspect-square overflow-hidden rounded-xl border border-line">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.url} alt="" className="h-full w-full object-cover" />
+                <button type="button" onClick={() => cropPhoto(p)} className="absolute left-1 top-1 rounded-full bg-black/70 p-1.5 text-white opacity-0 group-hover:opacity-100" title="Recortar">
+                  <Crop size={13} />
+                </button>
+                <button type="button" onClick={() => setPhotos((prev) => prev.filter((x) => x.id !== p.id))} className="absolute right-1 top-1 rounded-full bg-black/70 p-1.5 text-white opacity-0 group-hover:opacity-100">
+                  <X size={13} />
+                </button>
+              </div>
+              <select className="ipt !py-1.5 text-xs" value={p.category}
+                onChange={(e) => setPhotos((prev) => prev.map((x) => (x.id === p.id ? { ...x, category: e.target.value } : x)))}>
+                {PHOTO_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+              </select>
             </div>
           ))}
           <button type="button" onClick={() => photosInput.current?.click()} className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-line text-faint hover:border-brand/50 hover:text-brand">
-            <Plus size={20} />
-            <span className="text-xs">Adicionar</span>
+            <Plus size={20} /><span className="text-xs">Adicionar</span>
           </button>
           <input ref={photosInput} type="file" accept="image/*" multiple hidden onChange={onPhotos} />
+        </div>
+      </Section>
+
+      {/* Informações para venda */}
+      <Section title="Informações para venda">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Disponibilidade"><input className="ipt" value={sale.availability ?? ""} onChange={(e) => setSale((s) => ({ ...s, availability: e.target.value }))} placeholder="Ex: Pronta entrega" /></Field>
+          <Field label="Garantia"><input className="ipt" value={sale.warranty ?? ""} onChange={(e) => setSale((s) => ({ ...s, warranty: e.target.value }))} placeholder="Ex: 7 dias" /></Field>
+          <Field label="Política de devolução"><input className="ipt" value={sale.return_policy ?? ""} onChange={(e) => setSale((s) => ({ ...s, return_policy: e.target.value }))} /></Field>
         </div>
       </Section>
 
@@ -425,10 +607,8 @@ export default function RecordForm({
                 )}
                 {b.type === "spec" ? (
                   <div className="grid grid-cols-2 gap-2">
-                    <input className="ipt" placeholder="Campo (ex: Prensagem)" value={b.key}
-                      onChange={(e) => setBlocks((bl) => bl.map((x) => x.id === b.id ? { ...x, key: e.target.value } : x))} />
-                    <input className="ipt" placeholder="Valor (ex: Alemanha, 2020)" value={b.value}
-                      onChange={(e) => setBlocks((bl) => bl.map((x) => x.id === b.id ? { ...x, value: e.target.value } : x))} />
+                    <input className="ipt" placeholder="Campo" value={b.key} onChange={(e) => setBlocks((bl) => bl.map((x) => x.id === b.id ? { ...x, key: e.target.value } : x))} />
+                    <input className="ipt" placeholder="Valor" value={b.value} onChange={(e) => setBlocks((bl) => bl.map((x) => x.id === b.id ? { ...x, value: e.target.value } : x))} />
                   </div>
                 ) : b.type !== "heading" ? (
                   <textarea className="ipt" rows={2} placeholder={b.type === "quote" ? "Citação…" : "Texto…"} value={b.content}
@@ -453,6 +633,14 @@ export default function RecordForm({
           </button>
         </div>
       </div>
+
+      {cropper && (
+        <ImageCropper
+          file={cropper.file}
+          onCancel={() => setCropper(null)}
+          onDone={(blob) => { cropper.onApply(blob); setCropper(null); }}
+        />
+      )}
 
       <style jsx global>{`
         .ipt {

@@ -3,8 +3,9 @@
 import { useMemo, useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import RecordCard from "@/components/RecordCard";
+import TagBadge from "@/components/TagBadge";
 import { QUALITY_GRADES, QUALITY_META, POPULAR_GENRES, POPULAR_NATIONALITIES } from "@/lib/constants";
-import type { RecordItem } from "@/lib/types";
+import type { RecordItem, Tag } from "@/lib/types";
 
 function uniqueSorted(values: (string | null)[]): string[] {
   return Array.from(new Set(values.filter((v): v is string => !!v && v.trim() !== ""))).sort(
@@ -18,9 +19,10 @@ type Filters = {
   nationality: string;
   artist: string;
   quality: string;
+  tag: string;
 };
 
-const EMPTY: Filters = { q: "", genre: "", nationality: "", artist: "", quality: "" };
+const EMPTY: Filters = { q: "", genre: "", nationality: "", artist: "", quality: "", tag: "" };
 
 function Select({
   value,
@@ -49,9 +51,16 @@ function Select({
   );
 }
 
-export default function RecordGrid({ records }: { records: RecordItem[] }) {
+export default function RecordGrid({ records, tags = [] }: { records: RecordItem[]; tags?: Tag[] }) {
   const [f, setF] = useState<Filters>(EMPTY);
   const [showFilters, setShowFilters] = useState(false);
+
+  const tagMap = useMemo(() => new Map(tags.map((t) => [t.id, t])), [tags]);
+  // só mostra filtro de tags que existem em algum disco publicado
+  const usedTags = useMemo(() => {
+    const ids = new Set(records.flatMap((r) => r.tag_ids ?? []));
+    return tags.filter((t) => ids.has(t.id));
+  }, [records, tags]);
 
   const genres = useMemo(
     () => uniqueSorted([...records.map((r) => r.genre), ...POPULAR_GENRES]),
@@ -77,6 +86,7 @@ export default function RecordGrid({ records }: { records: RecordItem[] }) {
       if (f.nationality && r.nationality !== f.nationality) return false;
       if (f.artist && r.artist !== f.artist) return false;
       if (f.quality && r.disc_quality !== f.quality) return false;
+      if (f.tag && !(r.tag_ids ?? []).includes(f.tag)) return false;
       if (q && !`${r.title} ${r.artist} ${r.genre ?? ""} ${r.label_company ?? ""}`.toLowerCase().includes(q))
         return false;
       return true;
@@ -167,6 +177,24 @@ export default function RecordGrid({ records }: { records: RecordItem[] }) {
         )}
       </div>
 
+      {/* filtro por etiquetas */}
+      {usedTags.length > 0 && (
+        <div className="mb-6 flex flex-wrap gap-2">
+          <button
+            onClick={() => setF((s) => ({ ...s, tag: "" }))}
+            className={`rounded-full border px-3 py-1.5 text-xs ${f.tag === "" ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:text-ink"}`}
+          >
+            Todos
+          </button>
+          {usedTags.map((t) => (
+            <button key={t.id} onClick={() => setF((s) => ({ ...s, tag: s.tag === t.id ? "" : t.id }))}
+              className={`rounded-full transition ${f.tag === t.id ? "ring-2 ring-brand" : "opacity-80 hover:opacity-100"}`}>
+              <TagBadge tag={t} size="md" />
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* contador */}
       <p className="mb-5 text-sm text-muted">
         {filtered.length} {filtered.length === 1 ? "disco" : "discos"}
@@ -181,7 +209,11 @@ export default function RecordGrid({ records }: { records: RecordItem[] }) {
       ) : (
         <div className="grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {filtered.map((r) => (
-            <RecordCard key={r.id} record={r} />
+            <RecordCard
+              key={r.id}
+              record={r}
+              tags={(r.tag_ids ?? []).map((id) => tagMap.get(id)).filter((t): t is Tag => !!t)}
+            />
           ))}
         </div>
       )}

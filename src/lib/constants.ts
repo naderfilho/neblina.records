@@ -113,6 +113,26 @@ export const DEFAULT_DISC_CONFIG: DiscConfig = {
   border: "brand",
 };
 
+/** Categorias das fotos reais do disco */
+export const PHOTO_CATEGORIES = [
+  { id: "frente", label: "Frente (capa)" },
+  { id: "contracapa", label: "Contracapa" },
+  { id: "disco_a", label: "Disco lado A" },
+  { id: "disco_b", label: "Disco lado B" },
+  { id: "livreto", label: "Livreto" },
+  { id: "encarte", label: "Encarte" },
+  { id: "runout", label: "Runout (matriz)" },
+  { id: "lombada", label: "Lombada" },
+  { id: "danos", label: "Detalhes de danos" },
+  { id: "outro", label: "Outro" },
+] as const;
+
+/** Neblina IA — estimativa de custo por disco (mostrada no admin) */
+export const NEBLINA_AI = {
+  identifyCost: "~US$ 0,02",
+  fullCost: "~US$ 0,12",
+} as const;
+
 /** Estilos de etiqueta/tag exibidas em cima do disco na home */
 export const TAG_PRESETS = [
   { id: "bestseller", label: "Mais Vendido", bg: "#ff9d2e", fg: "#241304" },

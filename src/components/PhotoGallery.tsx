@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
+import { PHOTO_CATEGORIES } from "@/lib/constants";
 import type { RecordPhoto } from "@/lib/types";
+
+const CAT_LABEL = Object.fromEntries(PHOTO_CATEGORIES.map((c) => [c.id, c.label]));
 
 export default function PhotoGallery({ photos }: { photos: RecordPhoto[] }) {
   const [active, setActive] = useState<string | null>(null);
@@ -21,9 +24,14 @@ export default function PhotoGallery({ photos }: { photos: RecordPhoto[] }) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={p.url}
-              alt="Foto do disco"
+              alt={CAT_LABEL[p.category] ?? "Foto do disco"}
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
+            {p.category && p.category !== "outro" && (
+              <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1.5 py-0.5 text-[10px] text-white">
+                {CAT_LABEL[p.category] ?? p.category}
+              </span>
+            )}
           </button>
         ))}
       </div>
