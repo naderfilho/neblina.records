@@ -53,20 +53,23 @@ export default function HomeMiniPlayer({ song }: { song: HomeSong }) {
   }
 
   return (
-    <div className="flex flex-col items-end gap-1.5">
-      {song.tag && <TagBadge tag={song.tag} size="sm" />}
-
-      <div className="max-w-[180px] rounded-xl bg-black/50 px-2.5 py-1.5 text-right backdrop-blur-sm sm:max-w-[200px]">
-        <p className="truncate text-xs font-semibold leading-tight text-ink">{song.trackTitle}</p>
-        <Link href={`/disco/${song.recordId}`} className="block truncate text-[10px] leading-tight text-mist transition-colors hover:text-brand">
-          {song.recordTitle} — {song.artist}
-        </Link>
+    <>
+      {/* info + etiqueta: em cima do disco (centralizado) */}
+      <div className="pointer-events-none absolute left-1/2 top-[11%] z-20 flex -translate-x-1/2 flex-col items-center gap-1.5">
+        {song.tag && <TagBadge tag={song.tag} size="sm" />}
+        <div className="pointer-events-auto max-w-[220px] rounded-xl bg-black/50 px-3 py-1.5 text-center backdrop-blur-sm">
+          <p className="truncate text-[13px] font-semibold leading-tight text-ink">{song.trackTitle}</p>
+          <Link href={`/disco/${song.recordId}`} className="block truncate text-[11px] leading-tight text-mist transition-colors hover:text-brand">
+            {song.recordTitle} — {song.artist}
+          </Link>
+        </div>
       </div>
 
+      {/* play/pause: canto superior direito do disco */}
       <button
         onClick={toggle}
         aria-label={playing ? "Pausar" : "Tocar"}
-        className="btn-brand flex h-9 w-9 items-center justify-center rounded-full shadow-lg"
+        className="btn-brand absolute right-[3%] top-[3%] z-20 flex h-9 w-9 items-center justify-center rounded-full shadow-lg"
       >
         {playing ? <Pause size={16} /> : <Play size={16} className="ml-0.5" />}
       </button>
@@ -80,6 +83,6 @@ export default function HomeMiniPlayer({ song }: { song: HomeSong }) {
         crossOrigin="anonymous"
         onEnded={() => { const a = audioRef.current; if (!a) return; if (song.audioStart) a.currentTime = song.audioStart; }}
       />
-    </div>
+    </>
   );
 }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Play, Pause, SkipBack, SkipForward, Hand, Disc3, ArrowDownToLine,
-  Volume2, Waves, X, ListMusic,
+  Volume2, Waves, X, ListMusic, BookOpen,
 } from "lucide-react";
 import Vinyl from "@/components/Vinyl";
 import { resolveDiscColor, resolveBorderColor, DEFAULT_DISC_CONFIG, type DiscConfig } from "@/lib/constants";
@@ -448,6 +448,9 @@ export default function Audioteca({ records }: { records: RecordItem[] }) {
 
               {disc ? (
                 <>
+                  {disc.is_gatefold && disc.gatefold_image_url && (
+                    <GatefoldCover cover={disc.cover_image_url || ""} inner={disc.gatefold_image_url} />
+                  )}
                   <p className="font-display text-lg leading-tight text-ink">{entry?.track.title}</p>
                   <Link href={`/disco/${disc.id}`} className="text-sm text-muted hover:text-brand">{disc.title} — {disc.artist}</Link>
 
@@ -594,6 +597,34 @@ function SoundControl({ label, icon, value, min, max, step, onChange, display }:
   );
 }
 
+/* ---------- capa gatefold que abre e fecha ---------- */
+function GatefoldCover({ cover, inner }: { cover: string; inner: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mb-3">
+      <div className="relative h-24" style={{ width: open ? "12rem" : "6rem", transition: "width .8s cubic-bezier(0.5,0,0.2,1)", perspective: "1000px" }}>
+        {/* arte interna (spread) revelada */}
+        <div className="absolute left-0 top-0 h-24 overflow-hidden rounded-md border border-black/40" style={{ width: "12rem", opacity: open ? 1 : 0, transition: "opacity .6s .2s" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={inner} alt="" className="h-24 w-48 max-w-none object-cover" />
+        </div>
+        {/* capa frontal que abre como um livro */}
+        <button type="button" onClick={() => setOpen((o) => !o)} aria-label={open ? "Fechar capa" : "Abrir capa gatefold"}
+          className="absolute left-0 top-0 h-24 w-24 overflow-hidden rounded-md border border-black/50 shadow-xl"
+          style={{ transformOrigin: "left center", transform: open ? "rotateY(-158deg)" : "rotateY(0deg)", transition: "transform .9s cubic-bezier(0.5,0,0.2,1)" }}>
+          {cover ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={cover} alt="" className="h-full w-full object-cover" />
+          ) : <div className="h-full w-full bg-panel" />}
+        </button>
+      </div>
+      <button type="button" onClick={() => setOpen((o) => !o)} className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-brand hover:underline">
+        <BookOpen size={12} /> {open ? "Fechar capa" : "Abrir capa (gatefold)"}
+      </button>
+    </div>
+  );
+}
+
 /* ============================================================
    Estante — hover/toque: o disco sai da capa; arrasta pela ponta
    ============================================================ */
@@ -639,6 +670,11 @@ function Shelf({
                     <img src={r.cover_image_url} alt="" className="h-full w-full object-cover" draggable={false} />
                   ) : <div className="flex h-full w-full items-center justify-center bg-panel text-faint"><Disc3 size={24} /></div>}
                   <div className="absolute inset-y-0 right-0 w-2 bg-gradient-to-l from-black/50 to-transparent" />
+                  {r.is_gatefold && (
+                    <span className="absolute bottom-1 left-1 flex items-center gap-0.5 rounded bg-black/70 px-1 py-0.5 text-[8px] font-bold tracking-wide text-brand">
+                      <BookOpen size={9} /> GATEFOLD
+                    </span>
+                  )}
                 </button>
                 {queuedN > 0 && <span className="absolute -right-1 -top-1 z-10 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-black">{queuedN}</span>}
               </div>

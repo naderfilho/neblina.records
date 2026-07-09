@@ -68,6 +68,10 @@ export default function RecordForm({
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(record?.cover_image_url ?? null);
 
+  const [isGatefold, setIsGatefold] = useState(record?.is_gatefold ?? false);
+  const [gatefoldFile, setGatefoldFile] = useState<File | null>(null);
+  const [gatefoldPreview, setGatefoldPreview] = useState<string | null>(record?.gatefold_image_url ?? null);
+
   const [photos, setPhotos] = useState<PhotoItem[]>(
     existingPhotos.map((p) => ({ id: p.id, url: p.url, category: p.category ?? "outro" })),
   );
@@ -97,6 +101,7 @@ export default function RecordForm({
   const [cropper, setCropper] = useState<{ file: File; onApply: (b: Blob) => void } | null>(null);
 
   const coverInput = useRef<HTMLInputElement>(null);
+  const gatefoldInput = useRef<HTMLInputElement>(null);
   const photosInput = useRef<HTMLInputElement>(null);
   const audioInput = useRef<HTMLInputElement>(null);
 
@@ -167,6 +172,14 @@ export default function RecordForm({
     setAudioUrl(null);
     setAudioStart(0);
     setAudioEnd(null);
+  }
+
+  function onGatefold(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setGatefoldFile(f);
+    setGatefoldPreview(URL.createObjectURL(f));
+    e.target.value = "";
   }
 
   function addBlock(type: ExtraBlock["type"]) {
@@ -267,6 +280,9 @@ export default function RecordForm({
       let coverUrlFinal = coverPreview;
       if (coverFile) coverUrlFinal = await uploadFile("covers", coverFile, "cover-");
 
+      let gatefoldUrlFinal = gatefoldPreview;
+      if (gatefoldFile) gatefoldUrlFinal = await uploadFile("covers", gatefoldFile, "gatefold-");
+
       let audioUrlFinal = audioUrl;
       if (audioFile) audioUrlFinal = await uploadFile("audio", audioFile, "audio-");
 
@@ -295,6 +311,8 @@ export default function RecordForm({
         is_published: published, is_featured: featured,
         payment_methods: payments, disc_config: discConfig,
         cover_image_url: coverUrlFinal,
+        is_gatefold: isGatefold,
+        gatefold_image_url: isGatefold ? gatefoldUrlFinal : null,
         audio_url: homeTrack?.audio_url ?? audioUrlFinal,
         audio_start: audioStart, audio_end: audioEnd,
         tracks: finalTracks, home_track_id: homeTrackId,
@@ -337,8 +355,8 @@ export default function RecordForm({
     <form onSubmit={submit} className="space-y-8 pb-24">
       {error && <p className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</p>}
 
-      {/* 1. Capa & Vinil (com Neblina IA) */}
-      <Section title="Capa & Vinil" desc="Envie a foto da capa (ajuste com zoom/recorte) e transforme-a num vinil padronizado para a home.">
+      {/* 1. Capa (com Neblina IA + gatefold) */}
+      <Section title="Capa" desc="A capa aparece na Audioteca (na estante e no toca-discos) e pode virar o centro do vinil.">
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <button type="button" onClick={() => coverInput.current?.click()} className="flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm hover:border-brand/50">
             <ImageIcon size={16} /> {coverPreview ? "Trocar foto da capa" : "Enviar foto da capa"}
@@ -356,6 +374,39 @@ export default function RecordForm({
           <input ref={coverInput} type="file" accept="image/*" hidden onChange={onCover} />
         </div>
         {aiError && <p className="mb-3 flex items-center gap-1.5 text-xs text-red-400"><Info size={13} /> {aiError}</p>}
+
+        {coverPreview && (
+          <div className="mb-2 flex items-start gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={coverPreview} alt="Prévia da capa" className="h-28 w-28 shrink-0 rounded-lg border border-line object-cover" />
+            <p className="text-xs text-faint">Esta é a capa exibida na Audioteca. Para usá-la como centro do vinil, escolha o estilo de centro “Foto da Capa” na seção Vinil.</p>
+          </div>
+        )}
+
+        {/* Gatefold */}
+        <div className="mt-3 rounded-xl border border-line bg-bg-soft p-4">
+          <Toggle label="Capa dupla (Gatefold)" checked={isGatefold} onChange={setIsGatefold} />
+          {isGatefold && (
+            <div className="mt-4 space-y-3">
+              <p className="text-xs text-muted">Envie a arte interna completa (aberta). Na Audioteca a capa deste disco abre e fecha revelando essa arte.</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <button type="button" onClick={() => gatefoldInput.current?.click()} className="flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm hover:border-brand/50">
+                  <ImageIcon size={16} /> {gatefoldPreview ? "Trocar arte interna" : "Enviar arte interna (aberta)"}
+                </button>
+                {gatefoldPreview && <button type="button" onClick={() => { setGatefoldFile(null); setGatefoldPreview(null); }} className="text-sm text-faint hover:text-red-400">Remover</button>}
+                <input ref={gatefoldInput} type="file" accept="image/*" hidden onChange={onGatefold} />
+              </div>
+              {gatefoldPreview && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={gatefoldPreview} alt="Arte interna (gatefold)" className="max-h-44 w-full max-w-xl rounded-lg border border-line object-cover" />
+              )}
+            </div>
+          )}
+        </div>
+      </Section>
+
+      {/* 1b. Vinil */}
+      <Section title="Vinil" desc="Personalize o vinil que aparece na home e na Audioteca (cor, estilo, centro e borda).">
         <VinylDesigner coverUrl={coverPreview} config={discConfig} onChange={setDiscConfig} />
       </Section>
 

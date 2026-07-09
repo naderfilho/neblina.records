@@ -95,6 +95,8 @@ export type RecordItem = {
   payment_methods: string[];
   description: string | null;
   cover_image_url: string | null;
+  is_gatefold: boolean;
+  gatefold_image_url: string | null;
   disc_config: DiscConfig;
   audio_url: string | null;
   audio_start: number;
