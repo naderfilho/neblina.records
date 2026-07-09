@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Save, Search, Plus, Check, Music, Disc3 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { logAction } from "@/lib/audit";
 import TagBadge from "@/components/TagBadge";
 import AudioTrimmer from "@/components/admin/AudioTrimmer";
 import { cn } from "@/lib/utils";
@@ -70,6 +71,7 @@ export default function MusicaHomePage() {
       .from("site_settings")
       .update({ home_record_id: homeRecordId, home_track_id: homeTrackId, home_tag_id: homeTagId, home_track_start: trackStart, home_track_end: trackEnd, updated_at: new Date().toISOString() })
       .eq("id", "main");
+    logAction("home_music", "musica_home", homeRecordId, selected.r?.title ?? null, { faixa: selected.t?.title ?? null });
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search, Disc3, Check, HelpCircle, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { logAction } from "@/lib/audit";
 import { AUDIOTECA_TIERS, type AudiotecaTier } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -23,9 +24,11 @@ export default function AdminAudiotecaPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function setTier(id: string, tier: AudiotecaTier) {
+    const rec = records.find((r) => r.id === id);
     setRecords((rs) => rs.map((r) => (r.id === id ? { ...r, audioteca_tier: tier } : r)));
     setSavingId(id);
     await supabase.from("records").update({ audioteca_tier: tier }).eq("id", id);
+    logAction("tier", "audioteca", id, rec?.title ?? null, { nivel: tier });
     setSavingId(null);
   }
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Eye, EyeOff, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { logAction } from "@/lib/audit";
 import { formatBRL } from "@/lib/utils";
 import type { RecordItem } from "@/lib/types";
 
@@ -22,6 +23,7 @@ export default function AdminRecordsTable({ records }: { records: RecordItem[] }
     setBusy(r.id);
     const supabase = createClient();
     await supabase.from("records").update({ is_published: !r.is_published }).eq("id", r.id);
+    logAction("update", "record", r.id, r.title, { alteracoes: { Publicado: [r.is_published, !r.is_published] } });
     setItems((prev) => prev.map((x) => (x.id === r.id ? { ...x, is_published: !x.is_published } : x)));
     setBusy(null);
   }
@@ -33,6 +35,7 @@ export default function AdminRecordsTable({ records }: { records: RecordItem[] }
     const { error } = await supabase.from("records").delete().eq("id", r.id);
     setBusy(null);
     if (!error) {
+      logAction("delete", "record", r.id, r.title, {});
       setItems((prev) => prev.filter((x) => x.id !== r.id));
       router.refresh();
     } else {

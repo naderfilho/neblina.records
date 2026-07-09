@@ -20,6 +20,7 @@ import type {
 import VinylDesigner from "@/components/admin/VinylDesigner";
 import AudioTrimmer from "@/components/admin/AudioTrimmer";
 import ImageCropper from "@/components/admin/ImageCropper";
+import { logAction } from "@/lib/audit";
 import { cn } from "@/lib/utils";
 
 type PhotoItem = { id: string; url: string; category: string; file?: File };
@@ -350,6 +351,26 @@ export default function RecordForm({
         const { data, error } = await supabase.from("records").insert(payload).select("id").single();
         if (error) throw error;
         recordId = data.id;
+      }
+
+      // histórico de ações
+      if (isEdit && record) {
+        const changes: Record<string, [unknown, unknown]> = {};
+        const cmp = (label: string, before: unknown, after: unknown) => {
+          if (String(before ?? "") !== String(after ?? "")) changes[label] = [before ?? null, after ?? null];
+        };
+        cmp("Título", record.title, payload.title);
+        cmp("Artista", record.artist, payload.artist);
+        cmp("Estilo", record.genre, payload.genre);
+        cmp("Preço", record.price, payload.price);
+        cmp("Ano", record.year, payload.year);
+        cmp("Estoque", record.stock_qty, payload.stock_qty);
+        cmp("Publicado", record.is_published, payload.is_published);
+        cmp("Destaque", record.is_featured, payload.is_featured);
+        cmp("Vendido", record.sold, payload.sold);
+        logAction("update", "record", record.id, payload.title, { alteracoes: changes });
+      } else if (recordId) {
+        logAction("create", "record", recordId, payload.title, {});
       }
 
       if (recordId) {

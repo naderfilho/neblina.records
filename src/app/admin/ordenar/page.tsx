@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Save, Loader2, Check, GripVertical } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { logAction } from "@/lib/audit";
 import { formatBRL } from "@/lib/utils";
 import Vinyl from "@/components/Vinyl";
 import type { RecordItem } from "@/lib/types";
@@ -44,6 +45,7 @@ export default function AdminOrdenarPage() {
     setSaving(true);
     setSaved(false);
     await Promise.all(items.map((r, i) => supabase.from("records").update({ sort_order: i }).eq("id", r.id)));
+    logAction("reorder", "order", null, "Ordem dos discos da home", { total: items.length, ordem: items.slice(0, 8).map((r) => r.title) });
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);

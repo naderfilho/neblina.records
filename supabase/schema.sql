@@ -404,6 +404,39 @@ drop policy if exists avatars_auth_write on storage.objects;
 create policy avatars_auth_write on storage.objects for insert with check (bucket_id = 'avatars' and auth.role() = 'authenticated');
 drop policy if exists avatars_auth_update on storage.objects;
 create policy avatars_auth_update on storage.objects for update using (bucket_id = 'avatars' and auth.role() = 'authenticated');
+
+-- ============================================================================
+--  Histórico de ações (auditoria dos admins)
+-- ============================================================================
+create table if not exists public.audit_log (
+  id           uuid primary key default gen_random_uuid(),
+  actor_id     uuid references public.profiles(id) on delete set null,
+  actor_name   text,
+  action       text not null,
+  entity       text not null,
+  entity_id    uuid,
+  entity_label text,
+  details      jsonb not null default '{}'::jsonb,
+  created_at   timestamptz not null default now()
+);
+create index if not exists audit_log_created_idx on public.audit_log (created_at desc);
+alter table public.audit_log enable row level security;
+drop policy if exists audit_admin_read on public.audit_log;
+create policy audit_admin_read on public.audit_log for select using (public.is_admin());
+
+create or replace function public.log_action(
+  p_action text, p_entity text, p_entity_id uuid, p_entity_label text, p_details jsonb default '{}'::jsonb
+) returns void
+language plpgsql security definer set search_path = public as $$
+declare v_name text;
+begin
+  if not public.is_admin() then return; end if;
+  select nullif(trim(coalesce(first_name,'') || ' ' || coalesce(last_name,'')), '')
+    into v_name from public.profiles where id = auth.uid();
+  insert into public.audit_log (actor_id, actor_name, action, entity, entity_id, entity_label, details)
+  values (auth.uid(), coalesce(v_name, (select email from public.profiles where id = auth.uid())),
+          p_action, p_entity, p_entity_id, p_entity_label, coalesce(p_details, '{}'::jsonb));
+end $$;
 alter table public.record_photos add column if not exists category text not null default 'outro';
 create index if not exists records_sort_idx on public.records (sort_order asc, created_at desc);
 

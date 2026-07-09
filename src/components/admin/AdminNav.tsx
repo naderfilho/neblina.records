@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Disc3, Users, CalendarDays, Store, LogOut, Tag, ArrowUpDown, Music, Headphones } from "lucide-react";
+import { LayoutDashboard, Disc3, Users, CalendarDays, Store, LogOut, Tag, ArrowUpDown, Music, Headphones, History } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +16,7 @@ const LINKS = [
   { href: "/admin/tags", label: "Tags", icon: Tag },
   { href: "/admin/usuarios", label: "Usuários", icon: Users },
   { href: "/admin/eventos", label: "Eventos", icon: CalendarDays },
+  { href: "/admin/historico", label: "Histórico", icon: History },
 ];
 
 export default function AdminNav() {
