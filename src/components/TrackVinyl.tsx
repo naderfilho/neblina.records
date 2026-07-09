@@ -21,6 +21,7 @@ function Face({
   playingId,
   onHover,
   onPlay,
+  grooveDisabled,
 }: {
   tracks: Track[];
   coverUrl?: string | null;
@@ -30,6 +31,7 @@ function Face({
   playingId: string | null;
   onHover: (id: string | null) => void;
   onPlay: (t: Track) => void;
+  grooveDisabled?: boolean;
 }) {
   const c = ring(cfg.color);
   const N = Math.max(tracks.length, 1);
@@ -48,7 +50,7 @@ function Face({
         }}
       >
         {/* sulcos = faixas (SVG) */}
-        <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
+        <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" style={{ pointerEvents: grooveDisabled ? "none" : undefined }}>
           {tracks.map((t, i) => {
             const rC = R_OUT - (i + 0.5) * bw;
             const isHover = hoverId === t.id;
@@ -123,6 +125,7 @@ export default function TrackVinyl({
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const discRef = useRef<HTMLDivElement | null>(null);
+  const armSvgRef = useRef<SVGSVGElement | null>(null);
 
   const [armDrag, setArmDrag] = useState(false);
   const [armAngle, setArmAngle] = useState<number | null>(null);
@@ -146,40 +149,69 @@ export default function TrackVinyl({
     a.play().then(() => setPlayingId(t.id)).catch(() => {});
   }
 
-  /* ---------- agulha arrastável ---------- */
-  function cueFromPointer(clientX: number, clientY: number): { track: Track | null; angle: number } | null {
-    const el = discRef.current?.getBoundingClientRect();
-    if (!el) return null;
-    const cx = el.left + el.width / 2;
-    const cy = el.top + el.height / 2;
-    const dist = Math.hypot(clientX - cx, clientY - cy);
-    const rNorm = (dist / (el.width / 2)) * 50;
+  /* ---------- agulha arrastável (física real de braço de toca-discos) ---------- */
+  const R_OUT = 47.5, R_IN = 23;
+  const ARM_MIN = 4, ARM_MAX = 40;
+
+  // ângulo de descanso = sulco da faixa que está tocando (ou berço)
+  function grooveAngle(list: Track[], id: string | null): number | null {
+    if (!id) return null;
+    const N = list.length;
+    const i = list.findIndex((t) => t.id === id);
+    if (i < 0 || N === 0) return null;
+    const bw = (R_OUT - R_IN) / N;
+    const rC = R_OUT - (i + 0.5) * bw;
+    return Math.max(8, Math.min(34, 10 + ((R_OUT - rC) / (R_OUT - R_IN)) * 24));
+  }
+
+  function computeArm(clientX: number, clientY: number): { deg: number; track: Track | null } | null {
+    const svg = armSvgRef.current?.getBoundingClientRect();
+    const dz = discRef.current?.getBoundingClientRect();
+    if (!svg || !dz) return null;
+    const pivotX = svg.left + (176 / 200) * svg.width;
+    const pivotY = svg.top + (24 / 200) * svg.height;
+    const ox = ((78 - 176) / 200) * svg.width;
+    const oy = ((128 - 24) / 200) * svg.height;
+    const base = Math.atan2(oy, ox);
+    let deg = ((Math.atan2(clientY - pivotY, clientX - pivotX) - base) * 180) / Math.PI;
+    deg = ((((deg + 180) % 360) + 360) % 360) - 180;
+    deg = Math.max(ARM_MIN, Math.min(ARM_MAX, deg));
+    const rad = (deg * Math.PI) / 180;
+    const tipX = pivotX + ox * Math.cos(rad) - oy * Math.sin(rad);
+    const tipY = pivotY + ox * Math.sin(rad) + oy * Math.cos(rad);
+    const cx = dz.left + dz.width / 2;
+    const cy = dz.top + dz.height / 2;
+    const vinylR = dz.width / 2; // vinil ocupa todo o discRef
+    const rNorm = (Math.hypot(tipX - cx, tipY - cy) / vinylR) * 50;
     const list = side === "A" ? sideA : sideB;
     const N = list.length;
-    const R_OUT = 47.5, R_IN = 23;
-    if (!N) return { track: null, angle: 6 };
-    const bw = (R_OUT - R_IN) / N;
-    if (rNorm < R_IN - 2 || rNorm > R_OUT + 4) return { track: null, angle: rNorm > R_OUT ? 4 : 34 };
-    let i = Math.floor((R_OUT - rNorm) / bw);
-    i = Math.max(0, Math.min(N - 1, i));
-    const angle = 10 + ((R_OUT - rNorm) / (R_OUT - R_IN)) * 24;
-    return { track: list[i], angle: Math.max(8, Math.min(34, angle)) };
+    let track: Track | null = null;
+    if (N && rNorm >= R_IN - 3 && rNorm <= R_OUT + 4) {
+      const bw = (R_OUT - R_IN) / N;
+      let i = Math.floor((R_OUT - rNorm) / bw);
+      i = Math.max(0, Math.min(N - 1, i));
+      track = list[i];
+    }
+    return { deg, track };
   }
 
   useEffect(() => {
     if (!armDrag) return;
     const move = (e: PointerEvent) => {
-      const c = cueFromPointer(e.clientX, e.clientY);
-      if (c) { setArmAngle(c.angle); setHoverId(c.track?.id ?? null); }
+      e.preventDefault();
+      const c = computeArm(e.clientX, e.clientY);
+      if (!c) return;
+      setArmAngle(c.deg);
+      setHoverId(c.track?.id ?? null);
     };
     const up = (e: PointerEvent) => {
-      const c = cueFromPointer(e.clientX, e.clientY);
+      const c = computeArm(e.clientX, e.clientY);
       setArmDrag(false);
       setArmAngle(null);
       setHoverId(null);
       if (c?.track) play(c.track);
     };
-    window.addEventListener("pointermove", move);
+    window.addEventListener("pointermove", move, { passive: false });
     window.addEventListener("pointerup", up);
     document.body.style.userSelect = "none";
     return () => {
@@ -224,32 +256,33 @@ export default function TrackVinyl({
 
           {/* Lado A (frente) */}
           <div className="absolute inset-0" style={{ backfaceVisibility: "hidden" }}>
-            <Face tracks={sideA} coverUrl={coverUrl} cfg={cfg} side="A" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} />
+            <Face tracks={sideA} coverUrl={coverUrl} cfg={cfg} side="A" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
           </div>
 
           {/* Lado B (verso) */}
           <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-            <Face tracks={sideB} coverUrl={coverUrl} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} />
+            <Face tracks={sideB} coverUrl={coverUrl} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
           </div>
         </div>
 
         {/* braço/agulha — arraste até o sulco pra tocar */}
-        <svg viewBox="0 0 200 200" className="pointer-events-none absolute -right-3 -top-3 z-30 h-[54%] w-[54%] touch-none drop-shadow-xl">
+        <svg ref={armSvgRef} viewBox="0 0 200 200" className="pointer-events-none absolute -right-3 -top-3 z-30 h-[54%] w-[54%] touch-none drop-shadow-xl">
           <defs>
             <linearGradient id="tv-arm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#eef1f4" /><stop offset="1" stopColor="#59636e" /></linearGradient>
           </defs>
           <g
             style={{
               transformOrigin: "176px 24px",
-              transform: `rotate(${armDrag && armAngle != null ? armAngle : (playingId ? 31 : 6)}deg)`,
+              transform: `rotate(${armDrag && armAngle != null ? armAngle : (grooveAngle(side === "A" ? sideA : sideB, playingId) ?? (playingId ? 31 : 6))}deg)`,
               transition: armDrag ? "none" : "transform 1s cubic-bezier(0.5,0,0.2,1)",
               pointerEvents: "auto",
               cursor: armDrag ? "grabbing" : "grab",
+              touchAction: "none",
             }}
-            onPointerDown={(e) => { e.preventDefault(); setArmDrag(true); }}
+            onPointerDown={(e) => { e.preventDefault(); (e.target as Element).setPointerCapture?.(e.pointerId); setArmDrag(true); }}
           >
-            <line x1="176" y1="24" x2="76" y2="132" stroke="transparent" strokeWidth="46" strokeLinecap="round" />
-            <circle cx="76" cy="132" r="30" fill="transparent" />
+            <line x1="176" y1="24" x2="70" y2="138" stroke="transparent" strokeWidth="64" strokeLinecap="round" />
+            <circle cx="76" cy="132" r="42" fill="transparent" />
             <circle cx="176" cy="24" r="14" fill="#2a2118" stroke="#3a444e" strokeWidth="2" />
             <circle cx="176" cy="24" r="6" fill="#ff9d2e" />
             <line x1="176" y1="24" x2="78" y2="128" stroke="url(#tv-arm)" strokeWidth="8" strokeLinecap="round" />

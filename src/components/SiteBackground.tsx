@@ -67,15 +67,30 @@ export default function SiteBackground() {
             <stop offset="1" stopColor="#0d1b2a" />
           </linearGradient>
         </defs>
-        {/* montanhas arredondadas (colinas), como na logo — não pontiagudas */}
+        {/* montanhas angulares e recortadas, replicando a geometria da logo
+            (cume dominante à esquerda + serra irregular ao fundo) */}
+        {/* serra do fundo (teal claro) — muitos picos afiados e irregulares */}
         <g className="sbg-layer sbg-layer-back">
-          <path d="M0 600 C 160 540 320 540 460 600 C 620 668 760 668 920 600 C 1080 540 1240 540 1440 608 L1440 900 L0 900 Z" fill="url(#sbg-m1)" opacity="0.55" />
+          <path
+            d="M0 560 L118 476 L206 540 L300 452 L392 520 L470 430 L560 512 L648 372 L742 486 L836 424 L946 520 L1052 452 L1168 536 L1288 470 L1382 512 L1440 486 L1440 900 L0 900 Z"
+            fill="url(#sbg-m1)"
+            opacity="0.5"
+          />
         </g>
+        {/* serra média (azul) — picos afiados um pouco à frente */}
         <g className="sbg-layer sbg-layer-mid">
-          <path d="M0 682 C 200 620 380 620 540 682 C 720 748 880 748 1060 682 C 1220 632 1340 632 1440 676 L1440 900 L0 900 Z" fill="url(#sbg-m2)" opacity="0.85" />
+          <path
+            d="M0 648 L172 560 L292 632 L470 512 L610 604 L742 528 L904 620 L1058 540 L1214 626 L1330 568 L1440 616 L1440 900 L0 900 Z"
+            fill="url(#sbg-m2)"
+            opacity="0.85"
+          />
         </g>
+        {/* cume dominante à frente (navy) — grande pico afiado à esquerda, como na logo */}
         <g className="sbg-layer sbg-layer-front">
-          <path d="M0 762 C 220 700 420 700 600 762 C 800 822 980 822 1180 762 C 1320 720 1400 720 1440 752 L1440 900 L0 900 Z" fill="url(#sbg-m3)" />
+          <path
+            d="M0 726 L96 690 L360 548 L556 706 L690 636 L900 726 L1060 654 L1210 720 L1332 664 L1440 704 L1440 900 L0 900 Z"
+            fill="url(#sbg-m3)"
+          />
         </g>
       </svg>
 

@@ -65,13 +65,18 @@ export default function HomeMiniPlayer({ song }: { song: HomeSong }) {
         </div>
       </div>
 
-      {/* play/pause: canto superior direito do disco */}
+      {/* play/pause: dentro do disco, centralizado sobre a logo — transparente */}
       <button
         onClick={toggle}
         aria-label={playing ? "Pausar" : "Tocar"}
-        className="btn-brand absolute right-[3%] top-[3%] z-20 flex h-9 w-9 items-center justify-center rounded-full shadow-lg"
+        className="group absolute left-1/2 top-1/2 z-30 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/20 text-white/90 shadow-[0_2px_10px_rgba(0,0,0,0.5)] backdrop-blur-[1px] transition hover:scale-105 hover:border-white/40 hover:bg-black/35"
+        style={{ WebkitTapHighlightColor: "transparent" }}
       >
-        {playing ? <Pause size={16} /> : <Play size={16} className="ml-0.5" />}
+        {playing ? (
+          <Pause size={20} className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+        ) : (
+          <Play size={20} className="ml-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+        )}
       </button>
 
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}

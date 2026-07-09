@@ -25,11 +25,11 @@ function fmt(s: number) {
 
 /* ---------- disco no prato: estilo do disc_config + sulcos reativos ---------- */
 function PlatterFace({
-  tracks, coverUrl, cfg, side, hoverId, playingId, onHover, onPlay,
+  tracks, coverUrl, cfg, side, hoverId, playingId, onHover, onPlay, grooveDisabled,
 }: {
   tracks: Track[]; coverUrl?: string | null; cfg: DiscConfig; side: "A" | "B";
   hoverId: string | null; playingId: string | null;
-  onHover: (id: string | null) => void; onPlay: (t: Track) => void;
+  onHover: (id: string | null) => void; onPlay: (t: Track) => void; grooveDisabled?: boolean;
 }) {
   const c = resolveDiscColor(cfg.color);
   const ring = cfg.border !== "none" ? resolveBorderColor(cfg.borderColor ?? cfg.border) : undefined;
@@ -49,7 +49,7 @@ function PlatterFace({
           backgroundImage: `repeating-radial-gradient(circle at center, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px), radial-gradient(circle at 30% 26%, rgba(255,255,255,0.12), transparent 42%), radial-gradient(circle at center, ${c.groove} 0%, ${c.ring} 66%, #050505 100%)`,
         }}
       >
-        <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
+        <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" style={{ pointerEvents: grooveDisabled ? "none" : undefined }}>
           {tracks.map((t, i) => {
             const rC = R_OUT - (i + 0.5) * bw;
             const isHover = hoverId === t.id;
@@ -134,6 +134,8 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const crackleRef = useRef<HTMLAudioElement | null>(null);
   const dropRef = useRef<HTMLDivElement | null>(null);
+  const armSvgRef = useRef<SVGSVGElement | null>(null);
+  const liveArmRef = useRef(4);
   const acRef = useRef<AudioContext | null>(null);
   const bassRef = useRef<BiquadFilterNode | null>(null);
   const trebleRef = useRef<BiquadFilterNode | null>(null);
@@ -297,41 +299,77 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
     }
   }
 
-  /* ---------- agulha arrastável: mapeia o raio do ponteiro -> faixa ---------- */
-  function cueFromPointer(clientX: number, clientY: number): { track: Track | null; angle: number } | null {
+  /* ---------- agulha arrastável (física real de braço de toca-discos) ----------
+     O braço gira em torno do pivô e a ponta (estilete) percorre um arco. Enquanto
+     arrasta, o braço aponta continuamente para o cursor (fica "colado" na mão) e a
+     faixa é escolhida pelo raio em que o estilete pousa. Ao soltar sobre um sulco,
+     a agulha fica pousada nele. */
+  const R_OUT = 47, R_IN = 24.5;
+  const ARM_MIN = 4, ARM_MAX = 40;
+
+  // ângulo de descanso do braço = sulco da faixa que está tocando (ou berço)
+  function grooveAngle(list: Track[], id: string | null): number | null {
+    if (!id) return null;
+    const N = list.length;
+    const i = list.findIndex((t) => t.id === id);
+    if (i < 0 || N === 0) return null;
+    const bw = (R_OUT - R_IN) / N;
+    const rC = R_OUT - (i + 0.5) * bw;
+    return Math.max(8, Math.min(34, 10 + ((R_OUT - rC) / (R_OUT - R_IN)) * 24));
+  }
+
+  function computeArm(clientX: number, clientY: number): { deg: number; track: Track | null } | null {
+    const svg = armSvgRef.current?.getBoundingClientRect();
     const dz = dropRef.current?.getBoundingClientRect();
-    if (!dz) return null;
+    if (!svg || !dz) return null;
+    // pivô do braço (viewBox 176,24) e offset base do estilete (78,128) em coords de tela
+    const pivotX = svg.left + (176 / 200) * svg.width;
+    const pivotY = svg.top + (24 / 200) * svg.height;
+    const ox = ((78 - 176) / 200) * svg.width;
+    const oy = ((128 - 24) / 200) * svg.height;
+    const base = Math.atan2(oy, ox);
+    // ângulo para o braço apontar ao cursor (mantém a agulha "na mão")
+    let deg = ((Math.atan2(clientY - pivotY, clientX - pivotX) - base) * 180) / Math.PI;
+    deg = ((((deg + 180) % 360) + 360) % 360) - 180;
+    deg = Math.max(ARM_MIN, Math.min(ARM_MAX, deg));
+    // posição do estilete nesse ângulo -> raio a partir do centro do disco
+    const rad = (deg * Math.PI) / 180;
+    const tipX = pivotX + ox * Math.cos(rad) - oy * Math.sin(rad);
+    const tipY = pivotY + ox * Math.sin(rad) + oy * Math.cos(rad);
     const cx = dz.left + dz.width / 2;
     const cy = dz.top + dz.height / 2;
-    const dist = Math.hypot(clientX - cx, clientY - cy);
-    const discR = (dz.width / 2) * 0.8; // vinil = inset-[10%] do prato
-    const rNorm = (dist / discR) * 50; // escala 0..50 (viewBox do sulco)
+    const vinylR = (dz.width / 2) * 0.8; // vinil = inset-[10%] do prato
+    const rNorm = (Math.hypot(tipX - cx, tipY - cy) / vinylR) * 50;
     const list = platterSide === "A" ? sideA : sideB;
     const N = list.length;
-    const R_OUT = 47, R_IN = 24.5;
-    if (!N) return { track: null, angle: 6 };
-    const bw = (R_OUT - R_IN) / N;
-    if (rNorm < R_IN - 2 || rNorm > R_OUT + 4) return { track: null, angle: rNorm > R_OUT ? 4 : 34 };
-    let i = Math.floor((R_OUT - rNorm) / bw);
-    i = Math.max(0, Math.min(N - 1, i));
-    const angle = 10 + ((R_OUT - rNorm) / (R_OUT - R_IN)) * 24;
-    return { track: list[i], angle: Math.max(8, Math.min(34, angle)) };
+    let track: Track | null = null;
+    if (N && rNorm >= R_IN - 3 && rNorm <= R_OUT + 4) {
+      const bw = (R_OUT - R_IN) / N;
+      let i = Math.floor((R_OUT - rNorm) / bw);
+      i = Math.max(0, Math.min(N - 1, i));
+      track = list[i];
+    }
+    return { deg, track };
   }
 
   useEffect(() => {
     if (!armDrag) return;
     const move = (e: PointerEvent) => {
-      const c = cueFromPointer(e.clientX, e.clientY);
-      if (c) { setArmAngle(c.angle); setHoverId(c.track?.id ?? null); }
+      e.preventDefault();
+      const c = computeArm(e.clientX, e.clientY);
+      if (!c) return;
+      liveArmRef.current = c.deg;
+      setArmAngle(c.deg);
+      setHoverId(c.track?.id ?? null);
     };
     const up = (e: PointerEvent) => {
-      const c = cueFromPointer(e.clientX, e.clientY);
+      const c = computeArm(e.clientX, e.clientY);
       setArmDrag(false);
       setArmAngle(null);
       setHoverId(null);
-      if (c?.track) selectTrack(c.track);
+      if (c?.track) selectTrack(c.track); // pousa no sulco e toca (braço fica no sulco via grooveAngle)
     };
-    window.addEventListener("pointermove", move);
+    window.addEventListener("pointermove", move, { passive: false });
     window.addEventListener("pointerup", up);
     document.body.style.userSelect = "none";
     return () => {
@@ -451,28 +489,48 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
       {/* ================= DECK ================= */}
       <div className="mx-auto max-w-3xl">
         <div
-          className="relative overflow-hidden rounded-t-[60px] rounded-b-[28px] border border-black/60 p-5 pt-7 md:p-8 md:pt-9"
+          className="jb-cabinet relative overflow-hidden border border-black/70 px-6 pb-6 pt-6 md:px-10 md:pb-8"
           style={{
-            background: "linear-gradient(155deg, #2a2018 0%, #1a130d 46%, #0c0906 100%)",
-            boxShadow: "0 60px 100px -50px rgba(0,0,0,0.95), inset 0 1px 0 rgba(255,255,255,0.06)",
+            borderRadius: "78px 78px 26px 26px",
+            background:
+              "radial-gradient(140% 80% at 50% -10%, #5a3f24 0%, #3a2818 34%, #241811 60%, #130d08 100%)",
+            boxShadow:
+              "0 70px 120px -55px rgba(0,0,0,0.95), inset 0 2px 0 rgba(255,220,170,0.12), inset 0 0 60px rgba(0,0,0,0.55)",
           }}
         >
-          <div className="pointer-events-none absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "repeating-linear-gradient(93deg, #fff 0 1px, transparent 1px 8px)" }} />
-          {/* brilho do arco (jukebox) */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-24" style={{ background: "radial-gradient(120% 90% at 50% 0%, rgba(255,157,46,0.22), rgba(38,192,212,0.10) 45%, transparent 72%)" }} />
+          {/* moldura cromada dourada */}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{ borderRadius: "78px 78px 26px 26px", boxShadow: "inset 0 0 0 2px rgba(226,192,128,0.45), inset 0 0 0 6px rgba(0,0,0,0.55), inset 0 0 0 7px rgba(226,192,128,0.15)" }}
+          />
+          {/* veios de madeira sutis */}
+          <div className="pointer-events-none absolute inset-0 opacity-[0.10]" style={{ background: "repeating-linear-gradient(97deg, rgba(0,0,0,0.6) 0 2px, transparent 2px 11px)" }} />
+          {/* brilho quente da coroa */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-32" style={{ background: "radial-gradient(120% 100% at 50% -8%, rgba(255,184,96,0.30), rgba(38,192,212,0.08) 46%, transparent 74%)" }} />
 
-          {/* marquee estilo jukebox */}
-          <div className="relative mb-5 flex items-center justify-center gap-3">
-            <span className="flex gap-1">{[0, 1, 2, 3].map((i) => (
-              <span key={i} className="h-2 w-2 rounded-full" style={{ background: i % 2 ? "#26c0d4" : "#ff9d2e", boxShadow: `0 0 8px ${i % 2 ? "#26c0d4" : "#ff9d2e"}`, animation: `jb 1.2s ${i * 0.15}s ease-in-out infinite alternate` }} />
-            ))}</span>
-            <span className="font-display text-xs tracking-[0.35em] text-brand/85 sm:text-sm">NEBLINA JUKEBOX</span>
-            <span className="flex gap-1">{[0, 1, 2, 3].map((i) => (
-              <span key={i} className="h-2 w-2 rounded-full" style={{ background: i % 2 ? "#ff9d2e" : "#26c0d4", boxShadow: `0 0 8px ${i % 2 ? "#ff9d2e" : "#26c0d4"}`, animation: `jb 1.2s ${i * 0.15}s ease-in-out infinite alternate` }} />
-            ))}</span>
+          {/* tubos de neon (bubbler) laterais — clássico de jukebox */}
+          <div className="jb-tube jb-tube-l" aria-hidden />
+          <div className="jb-tube jb-tube-r" aria-hidden />
+
+          {/* coroa / cabeçalho iluminado */}
+          <div className="relative z-10 mb-6 flex flex-col items-center">
+            <span
+              className="font-display text-lg leading-none tracking-[0.5em] sm:text-xl"
+              style={{
+                background: "linear-gradient(180deg,#ffe6b8 0%,#ff9d2e 55%,#c56f17 100%)",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+                filter: "drop-shadow(0 1px 8px rgba(255,157,46,0.5))",
+              }}
+            >
+              NEBLINA
+            </span>
+            <span className="mt-1 text-[10px] font-semibold tracking-[0.44em] text-mist/70">JUKEBOX</span>
+            <span className="mt-3 h-px w-44 max-w-[70%]" style={{ background: "linear-gradient(90deg, transparent, rgba(255,157,46,0.55), rgba(38,192,212,0.4), transparent)" }} />
           </div>
 
-          <div className="relative flex flex-col items-center gap-6 sm:flex-row sm:items-start">
+          <div className="relative z-10 flex flex-col items-center gap-6 sm:flex-row sm:items-start">
             {/* prato */}
             <div className="relative w-full max-w-[300px]">
               <div
@@ -494,10 +552,10 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
                         style={{ transformStyle: "preserve-3d", transform: side === "B" ? "rotateY(180deg)" : "rotateY(0deg)", transitionTimingFunction: "cubic-bezier(0.45,0,0.15,1)" }}
                       >
                         <div className="absolute inset-0" style={{ backfaceVisibility: "hidden" }}>
-                          <PlatterFace tracks={sideA} coverUrl={disc.cover_image_url} cfg={cfg} side="A" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={selectTrack} />
+                          <PlatterFace tracks={sideA} coverUrl={disc.cover_image_url} cfg={cfg} side="A" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={selectTrack} grooveDisabled={armDrag} />
                         </div>
                         <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                          <PlatterFace tracks={sideB} coverUrl={disc.cover_image_url} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={selectTrack} />
+                          <PlatterFace tracks={sideB} coverUrl={disc.cover_image_url} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={selectTrack} grooveDisabled={armDrag} />
                         </div>
                       </div>
                     </div>
@@ -511,23 +569,30 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
               </div>
 
               {/* braço / agulha — arraste até o sulco pra tocar */}
-              <svg viewBox="0 0 200 200" className="pointer-events-none absolute -right-2 -top-2 z-30 h-[52%] w-[52%] touch-none drop-shadow-xl">
+              <svg ref={armSvgRef} viewBox="0 0 200 200" className="pointer-events-none absolute -right-2 -top-2 z-30 h-[52%] w-[52%] touch-none drop-shadow-xl">
                 <defs>
                   <linearGradient id="ata-arm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#eef1f4" /><stop offset="1" stopColor="#59636e" /></linearGradient>
                 </defs>
                 <g
                   style={{
                     transformOrigin: "176px 24px",
-                    transform: `rotate(${armDrag && armAngle != null ? armAngle : (playing || crackling ? 31 : 4)}deg)`,
+                    transform: `rotate(${armDrag && armAngle != null ? armAngle : (grooveAngle(side === "A" ? sideA : sideB, playingId) ?? ((playing || crackling) ? 31 : 4))}deg)`,
                     transition: armDrag ? "none" : "transform 1s cubic-bezier(0.5,0,0.2,1)",
-                    pointerEvents: "auto",
+                    pointerEvents: disc ? "auto" : "none",
                     cursor: armDrag ? "grabbing" : "grab",
+                    touchAction: "none",
                   }}
-                  onPointerDown={(e) => { e.preventDefault(); if (disc) setArmDrag(true); }}
+                  onPointerDown={(e) => {
+                    if (!disc) return;
+                    e.preventDefault();
+                    (e.target as Element).setPointerCapture?.(e.pointerId);
+                    liveArmRef.current = armAngle ?? 4;
+                    setArmDrag(true);
+                  }}
                 >
-                  {/* área de pega larga (transparente) */}
-                  <line x1="176" y1="24" x2="76" y2="132" stroke="transparent" strokeWidth="46" strokeLinecap="round" />
-                  <circle cx="76" cy="132" r="30" fill="transparent" />
+                  {/* área de pega larga (transparente) — fácil de agarrar */}
+                  <line x1="176" y1="24" x2="70" y2="138" stroke="transparent" strokeWidth="64" strokeLinecap="round" />
+                  <circle cx="76" cy="132" r="42" fill="transparent" />
                   <circle cx="176" cy="24" r="14" fill="#2a2118" stroke="#3a444e" strokeWidth="2" />
                   <circle cx="176" cy="24" r="6" fill="#ff9d2e" />
                   <line x1="176" y1="24" x2="78" y2="128" stroke="url(#ata-arm)" strokeWidth="8" strokeLinecap="round" />
@@ -618,7 +683,7 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
           </div>
 
           {/* ---- controles de som (premium) ---- */}
-          <div className="relative mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="relative z-10 mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <SoundControl label="Volume" icon={<Volume2 size={14} />} value={volume} min={0} max={1} step={0.01} onChange={setVolume} display={`${Math.round(volume * 100)}%`} />
             <SoundControl label="Graves" value={bass} min={-12} max={12} step={1} onChange={setBass} display={`${bass > 0 ? "+" : ""}${bass} dB`} />
             <SoundControl label="Agudos" value={treble} min={-12} max={12} step={1} onChange={setTreble} display={`${treble > 0 ? "+" : ""}${treble} dB`} />
@@ -682,8 +747,50 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
       <style jsx>{`
         .ata-spin { animation: ata-rot 3.2s linear infinite; }
         @keyframes ata-rot { to { transform: rotate(360deg); } }
-        @keyframes jb { from { opacity: 0.35; } to { opacity: 1; } }
-        @media (prefers-reduced-motion: reduce) { .ata-spin { animation: none; } }
+
+        /* tubos de neon (bubbler) laterais */
+        .jb-tube {
+          position: absolute;
+          top: 88px;
+          bottom: 96px;
+          width: 8px;
+          border-radius: 999px;
+          background: linear-gradient(180deg,
+            rgba(255,206,140,0.95) 0%,
+            rgba(255,140,70,0.65) 34%,
+            rgba(120,205,225,0.6) 70%,
+            rgba(150,225,240,0.92) 100%);
+          box-shadow:
+            0 0 10px rgba(255,168,86,0.55),
+            0 0 22px rgba(80,200,230,0.35),
+            inset 0 0 6px rgba(255,255,255,0.75);
+          opacity: 0.9;
+        }
+        .jb-tube-l { left: 16px; }
+        .jb-tube-r { right: 16px; }
+        .jb-tube::after {
+          content: "";
+          position: absolute;
+          left: -3px;
+          right: -3px;
+          height: 22px;
+          border-radius: 999px;
+          background: radial-gradient(circle, rgba(255,255,255,0.95), transparent 68%);
+          animation: jb-bubble 5.5s ease-in-out infinite;
+        }
+        .jb-tube-r::after { animation-delay: 2.6s; }
+        @keyframes jb-bubble {
+          0% { top: 86%; opacity: 0; }
+          12% { opacity: 0.9; }
+          88% { opacity: 0.9; }
+          100% { top: -4%; opacity: 0; }
+        }
+        @media (min-width: 640px) { .jb-tube { width: 10px; } .jb-tube-l { left: 22px; } .jb-tube-r { right: 22px; } }
+        @media (max-width: 520px) { .jb-tube { display: none; } }
+        @media (prefers-reduced-motion: reduce) {
+          .ata-spin { animation: none; }
+          .jb-tube::after { animation: none; opacity: 0; }
+        }
       `}</style>
     </div>
   );
