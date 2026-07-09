@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Play, Pause, SkipBack, SkipForward, Hand, Disc3, ArrowDownToLine,
-  Volume2, Waves, X, ListMusic, BookOpen, Plus,
+  Volume2, Waves, X, ListMusic, BookOpen, Plus, Lock,
 } from "lucide-react";
 import Vinyl from "@/components/Vinyl";
 import { resolveDiscColor, resolveBorderColor, DEFAULT_DISC_CONFIG, type DiscConfig } from "@/lib/constants";
@@ -97,8 +97,12 @@ function PlatterFace({
   );
 }
 
-export default function Audioteca({ records }: { records: RecordItem[] }) {
+export default function Audioteca({ records, isLoggedIn }: { records: RecordItem[]; isLoggedIn: boolean }) {
   const coarse = useCoarsePointer();
+
+  // acesso por nível: público (todos), membros (logado), signature (em breve)
+  const canAccess = (rec: RecordItem) =>
+    rec.audioteca_tier === "public" || (rec.audioteca_tier === "members" && isLoggedIn);
 
   const [queue, setQueue] = useState<RecordItem[]>([]);
   const [pos, setPos] = useState(-1);
@@ -289,6 +293,7 @@ export default function Audioteca({ records }: { records: RecordItem[] }) {
 
   /* ---------- fila ---------- */
   function place(rec: RecordItem) {
+    if (!canAccess(rec)) return;
     setQueue((q) => {
       const newIdx = q.length;
       // se nada estiver tocando, o disco recém-colocado vai pro prato
@@ -579,7 +584,7 @@ export default function Audioteca({ records }: { records: RecordItem[] }) {
           <Hand size={16} className="text-brand" />
           {coarse ? "Clique para o disco sair da capa. Arraste o disco até o prato." : "Passe o mouse para o disco sair da capa. Segure e leve até o prato."}
         </div>
-        <Shelf records={records} coarse={coarse} openId={openId} setOpenId={setOpenId} onGrab={startDrag} onQueue={place} queuedIds={queue.map((q) => q.id)} />
+        <Shelf records={records} coarse={coarse} openId={openId} setOpenId={setOpenId} onGrab={startDrag} onQueue={place} canAccess={canAccess} queuedIds={queue.map((q) => q.id)} />
       </div>
 
       {/* disco fantasma sendo arrastado */}
@@ -669,11 +674,11 @@ function GatefoldCover({ cover, inner, dir }: { cover: string; inner: string; di
    Estante — hover/toque: o disco sai da capa; arrasta pela ponta
    ============================================================ */
 function Shelf({
-  records, coarse, openId, setOpenId, onGrab, onQueue, queuedIds,
+  records, coarse, openId, setOpenId, onGrab, onQueue, canAccess, queuedIds,
 }: {
   records: RecordItem[]; coarse: boolean; openId: string | null;
   setOpenId: (id: string | null) => void; onGrab: (r: RecordItem, e: React.PointerEvent) => void;
-  onQueue: (r: RecordItem) => void; queuedIds: string[];
+  onQueue: (r: RecordItem) => void; canAccess: (r: RecordItem) => boolean; queuedIds: string[];
 }) {
   if (records.length === 0) {
     return <p className="rounded-2xl border border-dashed border-line py-14 text-center text-muted">Nenhum disco no acervo ainda.</p>;
@@ -682,28 +687,30 @@ function Shelf({
     <div className="relative">
       <div className="flex items-end gap-4 overflow-x-auto px-2 pb-6 pt-4" style={{ scrollbarWidth: "thin" }}>
         {records.map((r) => {
-          const open = openId === r.id;
+          const locked = !canAccess(r);
+          const open = openId === r.id && !locked;
           const queuedN = queuedIds.filter((id) => id === r.id).length;
+          const lockReason = r.audioteca_tier === "signature" ? "Signature · em breve" : "Entre para ouvir";
           return (
             <div
               key={r.id}
               className="relative shrink-0"
-              onPointerEnter={() => { if (!coarse) setOpenId(r.id); }}
+              onPointerEnter={() => { if (!coarse && !locked) setOpenId(r.id); }}
               onPointerLeave={() => { if (!coarse) setOpenId(null); }}
             >
-              <div className="relative h-28 w-40">
+              <div className={cn("relative h-28 w-40 transition", locked && "opacity-70 grayscale")}>
                 {/* disco atrás — sai da capa; a ponta (à direita) é a alça de arraste */}
                 <div
                   className={cn("absolute left-0 top-0 h-28 w-28 transition-transform duration-500 ease-out", open ? "cursor-grab active:cursor-grabbing" : "")}
                   style={{ transform: open ? "translateX(46%) rotate(5deg)" : "translateX(4%)" }}
-                  onPointerDown={(e) => { if (open) onGrab(r, e); }}
+                  onPointerDown={(e) => { if (open && !locked) onGrab(r, e); }}
                 >
                   <Vinyl config={r.disc_config} coverUrl={r.cover_image_url} interactive={false} noNeedle title="" />
                 </div>
                 {/* capa (sleeve) na frente */}
                 <button
                   type="button"
-                  onClick={() => { if (coarse) setOpenId(open ? null : r.id); }}
+                  onClick={() => { if (coarse && !locked) setOpenId(open ? null : r.id); }}
                   className="absolute left-0 top-0 h-28 w-28 overflow-hidden rounded-md border border-black/50 shadow-xl"
                 >
                   {r.cover_image_url ? (
@@ -711,23 +718,31 @@ function Shelf({
                     <img src={r.cover_image_url} alt="" className="h-full w-full object-cover" draggable={false} />
                   ) : <div className="flex h-full w-full items-center justify-center bg-panel text-faint"><Disc3 size={24} /></div>}
                   <div className="absolute inset-y-0 right-0 w-2 bg-gradient-to-l from-black/50 to-transparent" />
-                  {r.is_gatefold && (
+                  {locked && <div className="absolute inset-0 bg-black/45" />}
+                  {r.is_gatefold && !locked && (
                     <span className="absolute bottom-1 left-1 flex items-center gap-0.5 rounded bg-black/70 px-1 py-0.5 text-[8px] font-bold tracking-wide text-brand">
                       <BookOpen size={9} /> GATEFOLD
                     </span>
                   )}
                 </button>
-                {/* adicionar à fila (bom p/ mobile, sem precisar arrastar) */}
-                <button
-                  type="button"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => { e.stopPropagation(); onQueue(r); }}
-                  aria-label="Adicionar à fila"
-                  title="Adicionar à fila"
-                  className="absolute left-1 top-1 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-brand text-black shadow-lg transition-transform hover:scale-110"
-                >
-                  <Plus size={14} />
-                </button>
+
+                {locked ? (
+                  <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 text-center">
+                    <Lock size={18} className="text-white/90" />
+                    <span className="rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-semibold text-white">{lockReason}</span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => { e.stopPropagation(); onQueue(r); }}
+                    aria-label="Adicionar à fila"
+                    title="Adicionar à fila"
+                    className="absolute left-1 top-1 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-brand text-black shadow-lg transition-transform hover:scale-110"
+                  >
+                    <Plus size={14} />
+                  </button>
+                )}
                 {queuedN > 0 && <span className="absolute -right-1 -top-1 z-10 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-black">{queuedN}</span>}
               </div>
               <span className="mt-1 line-clamp-1 w-28 text-[11px] text-muted">{r.title}</span>

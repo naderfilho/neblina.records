@@ -189,6 +189,14 @@ export const NEBLINA_AI = {
   fullCost: "~US$ 0,12",
 } as const;
 
+/** Níveis de acesso do disco na Audioteca */
+export const AUDIOTECA_TIERS = [
+  { id: "public", label: "Público", short: "Público", desc: "Disponível para todos, mesmo sem conta." },
+  { id: "members", label: "Membros", short: "Membros", desc: "Disponível para usuários cadastrados." },
+  { id: "signature", label: "Neblina Signature", short: "Signature", desc: "Nosso clube de assinaturas, em breve." },
+] as const;
+export type AudiotecaTier = (typeof AUDIOTECA_TIERS)[number]["id"];
+
 /** Estilos de etiqueta/tag exibidas em cima do disco na home */
 export const TAG_PRESETS = [
   { id: "bestseller", label: "Mais Vendido", bg: "#ff9d2e", fg: "#241304" },

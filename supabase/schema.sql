@@ -372,6 +372,7 @@ alter table public.records add column if not exists sort_order int not null defa
 alter table public.records add column if not exists is_gatefold boolean not null default false;
 alter table public.records add column if not exists gatefold_image_url text;
 alter table public.records add column if not exists gatefold_dir text not null default 'side';  -- 'side' | 'down'
+alter table public.records add column if not exists audioteca_tier text not null default 'public';  -- 'public' | 'members' | 'signature'
 alter table public.record_photos add column if not exists category text not null default 'outro';
 create index if not exists records_sort_idx on public.records (sort_order asc, created_at desc);
 

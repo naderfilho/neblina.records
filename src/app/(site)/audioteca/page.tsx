@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getSessionProfile } from "@/lib/auth";
 import Audioteca from "@/components/Audioteca";
 import type { RecordItem } from "@/lib/types";
 
@@ -11,14 +12,18 @@ export const metadata = {
 
 export default async function AudiotecaPage() {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("records")
-    .select("id,title,artist,cover_image_url,disc_config,tracks,audio_url,audio_start,audio_end,is_gatefold,gatefold_image_url,gatefold_dir")
-    .eq("is_published", true)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: false });
+  const [{ data }, { profile }] = await Promise.all([
+    supabase
+      .from("records")
+      .select("id,title,artist,cover_image_url,disc_config,tracks,audio_url,audio_start,audio_end,is_gatefold,gatefold_image_url,gatefold_dir,audioteca_tier")
+      .eq("is_published", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
+    getSessionProfile(),
+  ]);
 
   const records = (data ?? []) as RecordItem[];
+  const isLoggedIn = !!profile;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 md:px-6">
@@ -30,7 +35,7 @@ export default async function AudiotecaPage() {
         </p>
       </div>
 
-      <Audioteca records={records} />
+      <Audioteca records={records} isLoggedIn={isLoggedIn} />
     </div>
   );
 }

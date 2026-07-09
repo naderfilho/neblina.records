@@ -98,6 +98,7 @@ export type RecordItem = {
   is_gatefold: boolean;
   gatefold_image_url: string | null;
   gatefold_dir: "side" | "down";
+  audioteca_tier: "public" | "members" | "signature";
   disc_config: DiscConfig;
   audio_url: string | null;
   audio_start: number;
