@@ -28,8 +28,11 @@ create table if not exists public.admin_emails (
   created_at timestamptz not null default now()
 );
 
--- Admin principal solicitado
-insert into public.admin_emails (email) values ('admin@example.com')
+-- Admins
+insert into public.admin_emails (email) values
+  ('admin@example.com'),
+  ('admin2@example.com'),
+  ('admin3@example.com')
 on conflict (email) do nothing;
 
 -- ----------------------------------------------------------------------------

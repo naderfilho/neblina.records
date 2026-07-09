@@ -25,13 +25,16 @@ export const QUALITY_META: Record<QualityGrade, { label: string; color: string }
 
 export const RECORD_FORMATS = [
   "LP",
+  "LP Duplo",
   "EP",
   'Single 7"',
   "Compacto",
+  "Promo de Rádio",
   "78 RPM",
   "CD",
   "Box Set",
   "Picture Disc",
+  "Coletânea",
 ] as const;
 
 /** Formas de pagamento (com região) */

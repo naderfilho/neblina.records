@@ -67,14 +67,15 @@ export default function SiteBackground() {
             <stop offset="1" stopColor="#0d1b2a" />
           </linearGradient>
         </defs>
+        {/* montanhas arredondadas (colinas), como na logo — não pontiagudas */}
         <g className="sbg-layer sbg-layer-back">
-          <path d="M0 620 L200 505 L360 585 L540 470 L720 575 L920 490 L1140 585 L1320 505 L1440 560 L1440 900 L0 900 Z" fill="url(#sbg-m1)" opacity="0.55" />
+          <path d="M0 600 C 160 540 320 540 460 600 C 620 668 760 668 920 600 C 1080 540 1240 540 1440 608 L1440 900 L0 900 Z" fill="url(#sbg-m1)" opacity="0.55" />
         </g>
         <g className="sbg-layer sbg-layer-mid">
-          <path d="M0 690 L240 575 L450 670 L660 560 L880 665 L1100 575 L1300 670 L1440 620 L1440 900 L0 900 Z" fill="url(#sbg-m2)" opacity="0.85" />
+          <path d="M0 682 C 200 620 380 620 540 682 C 720 748 880 748 1060 682 C 1220 632 1340 632 1440 676 L1440 900 L0 900 Z" fill="url(#sbg-m2)" opacity="0.85" />
         </g>
         <g className="sbg-layer sbg-layer-front">
-          <path d="M0 770 L280 660 L520 760 L780 640 L1020 750 L1260 655 L1440 730 L1440 900 L0 900 Z" fill="url(#sbg-m3)" />
+          <path d="M0 762 C 220 700 420 700 600 762 C 800 822 980 822 1180 762 C 1320 720 1400 720 1440 752 L1440 900 L0 900 Z" fill="url(#sbg-m3)" />
         </g>
       </svg>
 

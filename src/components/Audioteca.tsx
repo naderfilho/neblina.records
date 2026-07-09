@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Play, Pause, SkipBack, SkipForward, Hand, Disc3, ArrowDownToLine,
-  Volume2, Waves, X, ListMusic, BookOpen,
+  Volume2, Waves, X, ListMusic, BookOpen, Plus,
 } from "lucide-react";
 import Vinyl from "@/components/Vinyl";
 import { resolveDiscColor, resolveBorderColor, DEFAULT_DISC_CONFIG, type DiscConfig } from "@/lib/constants";
@@ -112,6 +112,10 @@ export default function Audioteca({ records }: { records: RecordItem[] }) {
   const [overDrop, setOverDrop] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
 
+  // disco no prato (independe da reproducao — mostra mesmo sem faixas com audio)
+  const [platterDi, setPlatterDi] = useState(-1);
+  const [platterSide, setPlatterSide] = useState<"A" | "B">("A");
+
   // controles de som
   const [volume, setVolume] = useState(0.9);
   const [bass, setBass] = useState(0);
@@ -141,8 +145,8 @@ export default function Audioteca({ records }: { records: RecordItem[] }) {
   }, [queue]);
 
   const entry = pos >= 0 && pos < playlist.length ? playlist[pos] : null;
-  const disc = entry ? queue[entry.di] : null;
-  const side = entry?.side ?? "A";
+  const disc = platterDi >= 0 && platterDi < queue.length ? queue[platterDi] : null;
+  const side = platterSide;
   const cfg: DiscConfig = { ...DEFAULT_DISC_CONFIG, ...(disc?.disc_config ?? {}) };
   const tracks = disc?.tracks ?? [];
   const sideA = useMemo(() => tracks.filter((t) => t.side === "A"), [tracks]);
@@ -152,7 +156,11 @@ export default function Audioteca({ records }: { records: RecordItem[] }) {
   const caption = hoverId
     ? tracks.find((t) => t.id === hoverId)?.title
     : disc
-      ? crackling ? "a agulha desceu…" : entry?.track.title
+      ? crackling
+        ? "a agulha desceu…"
+        : entry && entry.di === platterDi
+          ? entry.track.title
+          : "Passe o mouse nos sulcos e clique para tocar"
       : coarse
         ? "Toque num disco na estante para começar"
         : "Arraste um disco até o prato para começar";
@@ -212,6 +220,8 @@ export default function Audioteca({ records }: { records: RecordItem[] }) {
     if (bass !== 0 || treble !== 0) ensureEqGraph();
     if (acRef.current?.state === "suspended") acRef.current.resume();
     setPos(newPos);
+    setPlatterDi(e.di);
+    setPlatterSide(e.side);
 
     const newDisc = e.di !== lastDiscRef.current;
     lastDiscRef.current = e.di;
@@ -245,11 +255,17 @@ export default function Audioteca({ records }: { records: RecordItem[] }) {
       return;
     }
     if (crackling) return;
-    if (pos < 0 && playlist.length) { playAt(0); return; }
-    if (pos >= 0) {
-      if (acRef.current?.state === "suspended") acRef.current.resume();
-      a.play().then(() => { setPlaying(true); if (fade) rampVolume(volume, 400); }).catch(() => {});
+    // precisa carregar? (nada tocando ainda, ou o áudio nunca recebeu fonte)
+    if (pos < 0 || !a.currentSrc) {
+      let start = pos;
+      if (start < 0) start = platterDi >= 0 ? playlist.findIndex((e) => e.di === platterDi) : -1;
+      if (start < 0 && playlist.length) start = 0;
+      if (start >= 0) playAt(start);
+      return;
     }
+    // retoma
+    if (acRef.current?.state === "suspended") acRef.current.resume();
+    a.play().then(() => { setPlaying(true); if (fade) rampVolume(volume, 400); }).catch(() => {});
   }
 
   function next() { if (playlist.length) playAt((pos + 1 + playlist.length) % playlist.length); }
@@ -259,30 +275,35 @@ export default function Audioteca({ records }: { records: RecordItem[] }) {
     if (playlist.length) playAt((pos - 1 + playlist.length) % playlist.length);
   }
   function selectTrack(t: Track) {
-    const i = playlist.findIndex((e) => e.track.id === t.id && e.di === entry?.di);
+    const i = playlist.findIndex((e) => e.track.id === t.id && e.di === platterDi);
     if (i >= 0) playAt(i);
   }
   function flipTo(s: "A" | "B") {
-    if (!disc || s === side) return;
-    const i = playlist.findIndex((e) => e.di === entry?.di && e.side === s);
-    if (i >= 0) playAt(i);
+    if (!disc || s === platterSide) return;
+    setPlatterSide(s);
+    if (playing || crackling) {
+      const i = playlist.findIndex((e) => e.di === platterDi && e.side === s);
+      if (i >= 0) playAt(i);
+    }
   }
 
   /* ---------- fila ---------- */
   function place(rec: RecordItem) {
     setQueue((q) => {
-      const nq = [...q, rec];
+      const newIdx = q.length;
+      // se nada estiver tocando, o disco recém-colocado vai pro prato
       if (pos < 0) {
-        // primeiro disco: carrega no prato (sem tocar até o play)
-        setTimeout(() => setPos((p) => (p < 0 ? 0 : p)), 0);
+        setPlatterDi(newIdx);
+        setPlatterSide("A");
         lastDiscRef.current = null;
       }
-      return nq;
+      return [...q, rec];
     });
   }
   function removeFromQueue(di: number) {
     const curTrackId = entry?.track.id ?? null;
     setQueue((q) => q.filter((_, i) => i !== di));
+    setPlatterDi((p) => (di === p ? -1 : di < p ? p - 1 : p));
     // re-sincroniza a posição pela faixa atual
     setTimeout(() => {
       setPos((p) => {
@@ -558,7 +579,7 @@ export default function Audioteca({ records }: { records: RecordItem[] }) {
           <Hand size={16} className="text-brand" />
           {coarse ? "Clique para o disco sair da capa. Arraste o disco até o prato." : "Passe o mouse para o disco sair da capa. Segure e leve até o prato."}
         </div>
-        <Shelf records={records} coarse={coarse} openId={openId} setOpenId={setOpenId} onGrab={startDrag} queuedIds={queue.map((q) => q.id)} />
+        <Shelf records={records} coarse={coarse} openId={openId} setOpenId={setOpenId} onGrab={startDrag} onQueue={place} queuedIds={queue.map((q) => q.id)} />
       </div>
 
       {/* disco fantasma sendo arrastado */}
@@ -648,10 +669,11 @@ function GatefoldCover({ cover, inner, dir }: { cover: string; inner: string; di
    Estante — hover/toque: o disco sai da capa; arrasta pela ponta
    ============================================================ */
 function Shelf({
-  records, coarse, openId, setOpenId, onGrab, queuedIds,
+  records, coarse, openId, setOpenId, onGrab, onQueue, queuedIds,
 }: {
   records: RecordItem[]; coarse: boolean; openId: string | null;
-  setOpenId: (id: string | null) => void; onGrab: (r: RecordItem, e: React.PointerEvent) => void; queuedIds: string[];
+  setOpenId: (id: string | null) => void; onGrab: (r: RecordItem, e: React.PointerEvent) => void;
+  onQueue: (r: RecordItem) => void; queuedIds: string[];
 }) {
   if (records.length === 0) {
     return <p className="rounded-2xl border border-dashed border-line py-14 text-center text-muted">Nenhum disco no acervo ainda.</p>;
@@ -694,6 +716,17 @@ function Shelf({
                       <BookOpen size={9} /> GATEFOLD
                     </span>
                   )}
+                </button>
+                {/* adicionar à fila (bom p/ mobile, sem precisar arrastar) */}
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); onQueue(r); }}
+                  aria-label="Adicionar à fila"
+                  title="Adicionar à fila"
+                  className="absolute left-1 top-1 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-brand text-black shadow-lg transition-transform hover:scale-110"
+                >
+                  <Plus size={14} />
                 </button>
                 {queuedN > 0 && <span className="absolute -right-1 -top-1 z-10 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-black">{queuedN}</span>}
               </div>

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import RecordCard from "@/components/RecordCard";
 import TagBadge from "@/components/TagBadge";
-import { QUALITY_GRADES, QUALITY_META, POPULAR_GENRES, POPULAR_NATIONALITIES } from "@/lib/constants";
+import { QUALITY_GRADES, QUALITY_META, POPULAR_GENRES, POPULAR_NATIONALITIES, RECORD_FORMATS } from "@/lib/constants";
 import type { RecordItem, Tag } from "@/lib/types";
 
 function uniqueSorted(values: (string | null)[]): string[] {
@@ -18,11 +18,12 @@ type Filters = {
   genre: string;
   nationality: string;
   artist: string;
+  format: string;
   quality: string;
   tag: string;
 };
 
-const EMPTY: Filters = { q: "", genre: "", nationality: "", artist: "", quality: "", tag: "" };
+const EMPTY: Filters = { q: "", genre: "", nationality: "", artist: "", format: "", quality: "", tag: "" };
 
 function Select({
   value,
@@ -70,6 +71,10 @@ export default function RecordGrid({ records, tags = [] }: { records: RecordItem
     () => uniqueSorted([...records.map((r) => r.nationality), ...POPULAR_NATIONALITIES]),
     [records],
   );
+  const formats = useMemo(
+    () => uniqueSorted([...records.map((r) => r.format), ...RECORD_FORMATS]),
+    [records],
+  );
 
   // Artistas dependem do estilo/nacionalidade selecionados
   const artists = useMemo(() => {
@@ -85,6 +90,7 @@ export default function RecordGrid({ records, tags = [] }: { records: RecordItem
       if (f.genre && r.genre !== f.genre) return false;
       if (f.nationality && r.nationality !== f.nationality) return false;
       if (f.artist && r.artist !== f.artist) return false;
+      if (f.format && r.format !== f.format) return false;
       if (f.quality && r.disc_quality !== f.quality) return false;
       if (f.tag && !(r.tag_ids ?? []).includes(f.tag)) return false;
       if (q && !`${r.title} ${r.artist} ${r.genre ?? ""} ${r.label_company ?? ""}`.toLowerCase().includes(q))
@@ -150,6 +156,15 @@ export default function RecordGrid({ records, tags = [] }: { records: RecordItem
                 onChange={(v) => setF((s) => ({ ...s, artist: v }))}
                 options={artists}
                 placeholder="Todos os artistas"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs uppercase tracking-wider text-muted">Tipo de disco</label>
+              <Select
+                value={f.format}
+                onChange={(v) => setF((s) => ({ ...s, format: v }))}
+                options={formats}
+                placeholder="Todos os tipos"
               />
             </div>
             <div>
