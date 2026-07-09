@@ -9,6 +9,7 @@ export type Profile = {
   email: string | null;
   phone: string | null;
   role: UserRole;
+  avatar_url: string | null;
   created_at: string;
   last_login_at: string | null;
 };
@@ -121,6 +122,12 @@ export type RecordItem = {
   stock_qty: number;
   is_published: boolean;
   is_featured: boolean;
+  sold: boolean;
+  sold_channel: string | null;
+  sold_to_user_id: string | null;
+  sold_to_name: string | null;
+  sold_at: string | null;
+  sold_note: string | null;
   created_at: string;
   updated_at: string;
 };

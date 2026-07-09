@@ -65,6 +65,14 @@ export default function RecordForm({
   const [tagIds, setTagIds] = useState<string[]>(record?.tag_ids ?? []);
   const [allTags, setAllTags] = useState<Tag[]>([]);
 
+  // registro de venda
+  const [sold, setSold] = useState(record?.sold ?? false);
+  const [soldChannel, setSoldChannel] = useState(record?.sold_channel ?? "");
+  const [soldToUserId, setSoldToUserId] = useState<string | null>(record?.sold_to_user_id ?? null);
+  const [soldToName, setSoldToName] = useState(record?.sold_to_name ?? "");
+  const [soldNote, setSoldNote] = useState(record?.sold_note ?? "");
+  const [users, setUsers] = useState<{ id: string; first_name: string | null; last_name: string | null; email: string | null }[]>([]);
+
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(record?.cover_image_url ?? null);
 
@@ -107,10 +115,14 @@ export default function RecordForm({
   const audioInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    createClient().from("tags").select("*").order("created_at").then(({ data }) => {
+    const supabase = createClient();
+    supabase.from("tags").select("*").order("created_at").then(({ data }) => {
       if (data) setAllTags(data as Tag[]);
     });
-  }, []);
+    supabase.from("profiles").select("id,first_name,last_name,email").order("first_name").then(({ data }) => {
+      if (data) setUsers(data as typeof users);
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const audioPreviewSrc = useMemo(
     () => (audioFile ? URL.createObjectURL(audioFile) : audioUrl),
@@ -310,6 +322,12 @@ export default function RecordForm({
         label_company: labelCompany.trim() || null, catalog_number: catalog.trim() || null,
         stock_qty: stock ? parseInt(stock) : 1, description: description.trim() || null,
         is_published: published, is_featured: featured,
+        sold,
+        sold_channel: sold ? (soldChannel || null) : null,
+        sold_to_user_id: sold ? soldToUserId : null,
+        sold_to_name: sold ? (soldToName.trim() || null) : null,
+        sold_at: sold ? (record?.sold_at ?? new Date().toISOString()) : null,
+        sold_note: sold ? (soldNote.trim() || null) : null,
         payment_methods: payments, disc_config: discConfig,
         cover_image_url: coverUrlFinal,
         is_gatefold: isGatefold,
@@ -693,6 +711,38 @@ export default function RecordForm({
           <Field label="Garantia"><input className="ipt" value={sale.warranty ?? ""} onChange={(e) => setSale((s) => ({ ...s, warranty: e.target.value }))} placeholder="Ex: 7 dias" /></Field>
           <Field label="Política de devolução"><input className="ipt" value={sale.return_policy ?? ""} onChange={(e) => setSale((s) => ({ ...s, return_policy: e.target.value }))} /></Field>
         </div>
+      </Section>
+
+      {/* Registro de venda */}
+      <Section title="Registro de venda" desc="Marque se este disco já foi vendido e registre para onde/para quem.">
+        <Toggle label="Disco vendido" checked={sold} onChange={setSold} />
+        {sold && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Vendido por onde">
+              <select className="ipt" value={soldChannel} onChange={(e) => setSoldChannel(e.target.value)}>
+                <option value="">—</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="gateway">Gateway de pagamento</option>
+                <option value="loja">Loja física / evento</option>
+                <option value="outro">Outro</option>
+              </select>
+            </Field>
+            <Field label="Vendido para (usuário do site)">
+              <select className="ipt" value={soldToUserId ?? ""} onChange={(e) => setSoldToUserId(e.target.value || null)}>
+                <option value="">— (comprador avulso)</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>{`${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Ou nome do comprador (avulso)">
+              <input className="ipt" value={soldToName} onChange={(e) => setSoldToName(e.target.value)} placeholder="Se não for usuário do site" />
+            </Field>
+            <Field label="Observação da venda">
+              <input className="ipt" value={soldNote} onChange={(e) => setSoldNote(e.target.value)} placeholder="Valor final, condições…" />
+            </Field>
+          </div>
+        )}
       </Section>
 
       {/* Blocos livres */}

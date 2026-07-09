@@ -8,6 +8,7 @@ import { formatBRL } from "@/lib/utils";
 import Vinyl from "@/components/Vinyl";
 import TrackVinyl from "@/components/TrackVinyl";
 import BuyButtons from "@/components/BuyButtons";
+import FavoriteButton from "@/components/FavoriteButton";
 import GradingHelp from "@/components/GradingHelp";
 import ShippingCalculator from "@/components/ShippingCalculator";
 import PhotoGallery from "@/components/PhotoGallery";
@@ -29,6 +30,12 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
     supabase.from("comments").select("*").eq("record_id", id).order("created_at", { ascending: false }),
     getSessionProfile(),
   ]);
+
+  let isFav = false;
+  if (profile) {
+    const { data: favRow } = await supabase.from("favorites").select("record_id").eq("record_id", id).eq("user_id", profile.id).maybeSingle();
+    isFav = !!favRow;
+  }
 
   // conta visita
   await supabase.rpc("increment_record_views", { p_record_id: id });
@@ -159,8 +166,9 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
             {(dq || cq) && <GradingHelp />}
           </div>
 
-          <div className="mt-6">
+          <div className="mt-6 space-y-3">
             <BuyButtons id={r.id} title={r.title} artist={r.artist} price={r.price} coverUrl={r.cover_image_url} />
+            <FavoriteButton recordId={r.id} initialFav={isFav} userId={profile?.id ?? null} />
           </div>
 
           {r.payment_methods.length > 0 && (

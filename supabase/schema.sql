@@ -373,6 +373,37 @@ alter table public.records add column if not exists is_gatefold boolean not null
 alter table public.records add column if not exists gatefold_image_url text;
 alter table public.records add column if not exists gatefold_dir text not null default 'side';  -- 'side' | 'down'
 alter table public.records add column if not exists audioteca_tier text not null default 'public';  -- 'public' | 'members' | 'signature'
+
+-- Foto de perfil, favoritos e registro de venda
+alter table public.profiles add column if not exists avatar_url text;
+
+alter table public.records add column if not exists sold boolean not null default false;
+alter table public.records add column if not exists sold_channel text;
+alter table public.records add column if not exists sold_to_user_id uuid references public.profiles(id) on delete set null;
+alter table public.records add column if not exists sold_to_name text;
+alter table public.records add column if not exists sold_at timestamptz;
+alter table public.records add column if not exists sold_note text;
+
+create table if not exists public.favorites (
+  user_id    uuid not null references public.profiles(id) on delete cascade,
+  record_id  uuid not null references public.records(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, record_id)
+);
+create index if not exists favorites_record_idx on public.favorites (record_id);
+alter table public.favorites enable row level security;
+drop policy if exists favorites_own on public.favorites;
+create policy favorites_own on public.favorites for all
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true)
+  on conflict (id) do update set public = true;
+drop policy if exists avatars_public_read on storage.objects;
+create policy avatars_public_read on storage.objects for select using (bucket_id = 'avatars');
+drop policy if exists avatars_auth_write on storage.objects;
+create policy avatars_auth_write on storage.objects for insert with check (bucket_id = 'avatars' and auth.role() = 'authenticated');
+drop policy if exists avatars_auth_update on storage.objects;
+create policy avatars_auth_update on storage.objects for update using (bucket_id = 'avatars' and auth.role() = 'authenticated');
 alter table public.record_photos add column if not exists category text not null default 'outro';
 create index if not exists records_sort_idx on public.records (sort_order asc, created_at desc);
 
