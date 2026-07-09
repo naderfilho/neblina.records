@@ -19,7 +19,7 @@ export default function HeroVinyl() {
           interactive
           autoSpin
           noNeedle
-          spinDuration={9}
+          spinDuration={6}
           title="Neblina Records"
         />
       </div>

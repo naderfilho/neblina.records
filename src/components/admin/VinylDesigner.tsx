@@ -2,7 +2,7 @@
 
 import Vinyl from "@/components/Vinyl";
 import {
-  DISC_COLORS, DISC_STYLES, LABEL_STYLES, BORDER_STYLES,
+  DISC_STYLES, LABEL_STYLES, BORDER_STYLES,
   resolveDiscColor, resolveBorderColor, type DiscConfig,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -10,52 +10,33 @@ import { cn } from "@/lib/utils";
 function ColorPicker({
   value,
   onChange,
-  swatches,
 }: {
   value: string;
   onChange: (hex: string) => void;
-  swatches: { id: string; label: string; dot: string }[];
 }) {
   return (
-    <div className="space-y-2.5">
-      <div className="flex items-center gap-2">
-        <label className="relative h-10 w-12 shrink-0 cursor-pointer overflow-hidden rounded-lg border border-line">
-          <input
-            type="color"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="absolute -left-2 -top-2 h-14 w-16 cursor-pointer border-0 bg-transparent p-0"
-          />
-        </label>
+    <div className="flex items-center gap-2">
+      <label className="relative h-10 w-12 shrink-0 cursor-pointer overflow-hidden rounded-lg border border-line">
         <input
-          type="text"
+          type="color"
           value={value}
-          onChange={(e) => {
-            let v = e.target.value.trim();
-            if (v && !v.startsWith("#")) v = "#" + v;
-            onChange(v);
-          }}
-          placeholder="#000000"
-          spellCheck={false}
-          className="ipt max-w-[130px] font-mono uppercase"
+          onChange={(e) => onChange(e.target.value)}
+          className="absolute -left-2 -top-2 h-14 w-16 cursor-pointer border-0 bg-transparent p-0"
         />
-        <span className="h-8 w-8 shrink-0 rounded-full border border-line" style={{ background: value }} title="Prévia da cor" />
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {swatches.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            title={s.label}
-            onClick={() => onChange(s.dot)}
-            className={cn(
-              "h-7 w-7 rounded-full border-2 transition-transform hover:scale-110",
-              value.toLowerCase() === s.dot.toLowerCase() ? "border-brand" : "border-line",
-            )}
-            style={{ background: s.dot }}
-          />
-        ))}
-      </div>
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => {
+          let v = e.target.value.trim();
+          if (v && !v.startsWith("#")) v = "#" + v;
+          onChange(v);
+        }}
+        placeholder="#000000"
+        spellCheck={false}
+        className="ipt max-w-[130px] font-mono uppercase"
+      />
+      <span className="h-8 w-8 shrink-0 rounded-full border border-line" style={{ background: value }} title="Prévia da cor" />
     </div>
   );
 }
@@ -76,9 +57,6 @@ export default function VinylDesigner({
   const discHex = /^#/.test(config.color) ? config.color : resolveDiscColor(config.color).groove;
   const borderHex = /^#/.test(config.borderColor ?? "") ? (config.borderColor as string) : resolveBorderColor(config.borderColor ?? "sunset");
 
-  const discSwatches = DISC_COLORS.map((c) => ({ id: c.id, label: c.label, dot: c.groove }));
-  const borderSwatches = DISC_COLORS.map((c) => ({ id: c.id, label: c.label, dot: c.accent }));
-
   return (
     <div className="grid gap-6 md:grid-cols-[220px_1fr]">
       {/* preview */}
@@ -93,7 +71,7 @@ export default function VinylDesigner({
       <div className="space-y-5">
         <div>
           <p className="mb-2 text-xs uppercase tracking-wider text-muted">Cor do disco</p>
-          <ColorPicker value={discHex} onChange={(hex) => set({ color: hex })} swatches={discSwatches} />
+          <ColorPicker value={discHex} onChange={(hex) => set({ color: hex })} />
         </div>
 
         <div>
@@ -143,7 +121,7 @@ export default function VinylDesigner({
         {config.border !== "none" && (
           <div>
             <p className="mb-2 text-xs uppercase tracking-wider text-muted">Cor da borda</p>
-            <ColorPicker value={borderHex} onChange={(hex) => set({ borderColor: hex })} swatches={borderSwatches} />
+            <ColorPicker value={borderHex} onChange={(hex) => set({ borderColor: hex })} />
           </div>
         )}
       </div>

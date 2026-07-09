@@ -4,13 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 import IntroCurtain from "@/components/IntroCurtain";
 import RecordGrid from "@/components/RecordGrid";
 import HeroVinyl from "@/components/HeroVinyl";
-import type { RecordItem, Tag } from "@/lib/types";
+import HomeMiniPlayer, { type HomeSong } from "@/components/HomeMiniPlayer";
+import type { RecordItem, Tag, Track } from "@/lib/types";
 
 export const revalidate = 0;
 
 export default async function HomePage() {
   const supabase = await createClient();
-  const [{ data }, { data: tagData }] = await Promise.all([
+  const [{ data }, { data: tagData }, { data: settings }] = await Promise.all([
     supabase
       .from("records")
       .select("*")
@@ -18,10 +19,36 @@ export default async function HomePage() {
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false }),
     supabase.from("tags").select("*"),
+    supabase.from("site_settings").select("*").eq("id", "main").maybeSingle(),
   ]);
 
   const records = (data ?? []) as RecordItem[];
   const tags = (tagData ?? []) as Tag[];
+
+  // música da home (mini-player sobre o disco Neblina)
+  let homeSong: HomeSong | null = null;
+  if (settings?.home_record_id) {
+    const { data: hr } = await supabase
+      .from("records")
+      .select("id,title,artist,tracks,audio_url,audio_start,home_track_id")
+      .eq("id", settings.home_record_id)
+      .maybeSingle();
+    if (hr) {
+      const track = ((hr.tracks ?? []) as Track[]).find((t) => t.id === settings.home_track_id) ?? null;
+      const audioUrl = track?.audio_url ?? hr.audio_url;
+      if (audioUrl) {
+        homeSong = {
+          recordId: hr.id,
+          recordTitle: hr.title,
+          artist: hr.artist,
+          trackTitle: track?.title ?? "Faixa da home",
+          audioUrl,
+          audioStart: track && track.id === hr.home_track_id ? Number(hr.audio_start ?? 0) : 0,
+          tag: settings.home_tag_id ? tags.find((t) => t.id === settings.home_tag_id) ?? null : null,
+        };
+      }
+    }
+  }
 
   return (
     <>
@@ -57,7 +84,8 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div className="relative flex justify-center">
+          <div className="relative flex flex-col items-center justify-center">
+            {homeSong && <HomeMiniPlayer song={homeSong} />}
             <HeroVinyl />
           </div>
         </div>

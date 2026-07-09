@@ -283,17 +283,28 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
         </section>
       )}
 
-      {/* histórico */}
+      {/* histórico — apresentação editorial premium */}
       {historyRows.length > 0 && (
-        <section className="mt-12">
-          <h2 className="mb-5 font-display text-2xl text-ink">Histórico</h2>
-          <div className="grid gap-5 md:grid-cols-2">
-            {historyRows.map((h) => (
-              <div key={h.label} className="rounded-2xl border border-line bg-panel p-5">
-                <p className="mb-1 text-sm font-semibold text-brand">{h.label}</p>
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">{h.value}</p>
-              </div>
-            ))}
+        <section className="mt-14">
+          <div className="mb-7 flex items-center gap-3">
+            <span className="h-px w-10 bg-gradient-to-r from-brand to-transparent" />
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand">A história</p>
+          </div>
+          <h2 className="mb-8 max-w-2xl font-display text-3xl leading-tight text-ink md:text-4xl">
+            O que faz deste disco uma peça especial
+          </h2>
+          <div className="overflow-hidden rounded-3xl border border-line bg-gradient-to-b from-panel/70 via-panel/40 to-transparent">
+            <div className="divide-y divide-line/70">
+              {historyRows.map((h, i) => (
+                <div key={h.label} className="grid gap-3 px-6 py-7 md:grid-cols-[240px_1fr] md:gap-10 md:px-9">
+                  <div className="flex items-start gap-3">
+                    <span className="font-display text-2xl leading-none text-brand/40">{String(i + 1).padStart(2, "0")}</span>
+                    <p className="pt-1 text-xs font-semibold uppercase tracking-[0.18em] text-mist">{h.label}</p>
+                  </div>
+                  <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-muted md:text-base">{h.value}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}

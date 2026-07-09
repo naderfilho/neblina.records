@@ -167,8 +167,8 @@ export default function TrackVinyl({
       {/* disco com flip 3D */}
       <div className="relative aspect-square w-full" style={{ perspective: "1400px" }}>
         <div
-          className="relative h-full w-full transition-transform duration-[1500ms]"
-          style={{ transformStyle: "preserve-3d", transform: side === "B" ? "rotateY(180deg)" : "rotateY(0deg)", transitionTimingFunction: "cubic-bezier(0.33, 0, 0.15, 1)" }}
+          className="relative h-full w-full transition-transform duration-[2100ms]"
+          style={{ transformStyle: "preserve-3d", transform: side === "B" ? "rotateY(180deg)" : "rotateY(0deg)", transitionTimingFunction: "cubic-bezier(0.45,0,0.15,1)" }}
         >
           {/* sombra */}
           <div className="absolute inset-[5%] rounded-full bg-black/60 blur-xl" style={{ backfaceVisibility: "hidden" }} aria-hidden />

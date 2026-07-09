@@ -111,6 +111,12 @@ export default function RecordForm({
     [audioFile, audioUrl],
   );
 
+  const homeTrackObj = tracks.find((t) => t.id === homeTrackId);
+  const homeTrackSrc = useMemo(
+    () => (homeTrackObj?.file ? URL.createObjectURL(homeTrackObj.file) : homeTrackObj?.audioUrl ?? null),
+    [homeTrackObj?.file, homeTrackObj?.audioUrl],
+  );
+
   function addTrack(side: "A" | "B") {
     setTracks((t) => [...t, { id: crypto.randomUUID(), side, title: "", audioUrl: null }]);
   }
@@ -468,17 +474,40 @@ export default function RecordForm({
       </Section>
 
       {/* 5. Áudio da home */}
-      <Section title="Áudio da home" desc="Trecho que toca ao passar o mouse no disco (se você não marcar uma faixa como 'home').">
-        <div className="mb-4 flex items-center gap-3">
-          <button type="button" onClick={() => audioInput.current?.click()} className="flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm hover:border-brand/50">
-            <Music size={16} /> {audioPreviewSrc ? "Trocar áudio" : "Enviar áudio"}
-          </button>
-          {audioPreviewSrc && <button type="button" onClick={() => { setAudioFile(null); setAudioUrl(null); }} className="text-sm text-faint hover:text-red-400">Remover</button>}
-          <input ref={audioInput} type="file" accept="audio/*" hidden onChange={onAudio} />
-        </div>
-        {audioPreviewSrc && (
-          <AudioTrimmer url={audioPreviewSrc} start={audioStart} end={audioEnd}
-            onChange={({ start, end }) => { setAudioStart(start); setAudioEnd(end); }} />
+      <Section title="Áudio da home" desc="Trecho que toca ao passar o mouse no disco na home.">
+        {homeTrackId && homeTrackSrc ? (
+          <>
+            <div className="mb-4 flex items-start gap-2 rounded-xl border border-brand/30 bg-brand/10 px-4 py-3 text-sm text-ink">
+              <Info size={16} className="mt-0.5 shrink-0 text-brand" />
+              <span>
+                Música escolhida pela área de Faixas: <strong>{homeTrackObj?.title || "faixa"}</strong>{" "}
+                (Lado {homeTrackObj?.side}). Recorte abaixo o melhor trecho que vai tocar na home.
+              </span>
+            </div>
+            <AudioTrimmer
+              key={homeTrackId}
+              url={homeTrackSrc}
+              start={audioStart}
+              end={audioEnd}
+              onChange={({ start, end }) => { setAudioStart(start); setAudioEnd(end); }}
+            />
+          </>
+        ) : (
+          <>
+            <div className="mb-4 flex items-center gap-3">
+              <button type="button" onClick={() => audioInput.current?.click()} className="flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm hover:border-brand/50">
+                <Music size={16} /> {audioPreviewSrc ? "Trocar áudio" : "Enviar áudio"}
+              </button>
+              {audioPreviewSrc && <button type="button" onClick={() => { setAudioFile(null); setAudioUrl(null); }} className="text-sm text-faint hover:text-red-400">Remover</button>}
+              <input ref={audioInput} type="file" accept="audio/*" hidden onChange={onAudio} />
+            </div>
+            {audioPreviewSrc ? (
+              <AudioTrimmer url={audioPreviewSrc} start={audioStart} end={audioEnd}
+                onChange={({ start, end }) => { setAudioStart(start); setAudioEnd(end); }} />
+            ) : (
+              <p className="text-sm text-faint">Marque uma faixa como <strong className="text-muted">home</strong> na área de Faixas (ela aparece aqui pra recortar) ou envie um áudio avulso.</p>
+            )}
+          </>
         )}
       </Section>
 

@@ -53,20 +53,14 @@ export default function BuyButtons({ id, title, artist, price, coverUrl }: Props
     <div className="space-y-3">
       <button
         onClick={buyWhatsApp}
-        className="group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl px-5 py-4 text-left transition-transform hover:-translate-y-0.5"
+        className="inline-flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
         style={{
-          background: "linear-gradient(135deg, #1faf54 0%, #12a150 45%, #0c7f43 100%)",
-          boxShadow: "0 14px 34px -12px rgba(18,161,80,0.65), inset 0 1px 0 rgba(255,255,255,0.25)",
+          background: "linear-gradient(135deg, #1faf54, #12924a)",
+          boxShadow: "0 6px 16px -8px rgba(18,146,74,0.5)",
         }}
       >
-        <span className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.14), transparent 55%)" }} />
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25">
-          <WhatsAppGlyph size={22} />
-        </span>
-        <span className="relative flex flex-col leading-tight text-white">
-          <span className="text-[15px] font-bold tracking-tight">Comprar pelo WhatsApp</span>
-          <span className="text-xs text-white/80">Atendimento direto · resposta rápida</span>
-        </span>
+        <WhatsAppGlyph size={18} />
+        Comprar pelo WhatsApp
       </button>
 
       <button

@@ -105,7 +105,9 @@ export default function IntroCurtain() {
                     : { scale: 1, opacity: 1, rotate: 360, x: 0, y: 0 }
                 }
                 transition={{
-                  rotate: { duration: 3.2, ease: "linear", repeat: Infinity },
+                  // mesma velocidade do disco do hero (6s/volta) p/ o encaixe
+                  // acontecer sem "tick" de diferença de rotação
+                  rotate: { duration: 6, ease: "linear", repeat: Infinity },
                   scale: fly ? flyTransition : { duration: 0.9, ease: "backOut" },
                   x: flyTransition,
                   y: flyTransition,

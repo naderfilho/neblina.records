@@ -1,5 +1,6 @@
 import { Tent, Building2, Music4, Frame, Disc3, Sparkles, ShieldCheck, Truck } from "lucide-react";
 import EventForm from "@/components/EventForm";
+import EventsVideoBg from "@/components/EventsVideoBg";
 
 export const metadata = {
   title: "Eventos & Exposições",
@@ -36,27 +37,10 @@ export default function EventosPage() {
   return (
     <div>
       {/* HERO com vídeo de fundo */}
-      <section className="relative overflow-hidden border-b border-line">
-        <div className="absolute inset-0">
-          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-          <video
-            className="h-full w-full object-cover"
-            src="/eventos.mp4"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            aria-hidden
-          />
-          {/* camada que deixa o vídeo visível mas mantém o texto legível */}
-          <div
-            className="absolute inset-0"
-            style={{ background: "linear-gradient(180deg, rgba(6,9,14,0.72) 0%, rgba(6,9,14,0.62) 45%, rgba(6,9,14,0.88) 100%)" }}
-          />
-        </div>
+      <section className="relative overflow-hidden">
+        <EventsVideoBg />
 
-        <div className="relative mx-auto max-w-5xl px-6 py-24 text-center md:py-32">
+        <div className="relative mx-auto max-w-5xl px-6 py-24 text-center md:py-36">
           <span className="inline-flex items-center gap-2 rounded-full border border-brand/40 bg-black/30 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.25em] text-brand backdrop-blur">
             <Disc3 size={14} /> Neblina nos eventos
           </span>
@@ -126,9 +110,9 @@ export default function EventosPage() {
       {/* QUEM FAZ (donos) */}
       <section className="mx-auto max-w-6xl px-6 py-16">
         <div className="card grid items-center gap-8 overflow-hidden p-0 md:grid-cols-2">
-          <div className="relative h-72 w-full md:h-full md:min-h-[340px]">
+          <div className="relative h-72 w-full md:h-full md:min-h-[360px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/donos.jpg" alt="Yuri e Vitor, fundadores da Neblina Records" className="absolute inset-0 h-full w-full object-cover" />
+            <img src="/donos.jpg" alt="Yuri e Vitor, fundadores da Neblina Records" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: "center 30%" }} />
             <div className="absolute inset-0 md:bg-gradient-to-r md:from-transparent md:to-panel/80" />
           </div>
           <div className="p-8 md:pl-2">

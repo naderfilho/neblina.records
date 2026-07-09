@@ -382,3 +382,20 @@ drop policy if exists tags_public_read on public.tags;
 create policy tags_public_read on public.tags for select using (true);
 drop policy if exists tags_admin_write on public.tags;
 create policy tags_admin_write on public.tags for all using (public.is_admin()) with check (public.is_admin());
+
+-- ============================================================================
+--  Configurações do site (música global da home + etiqueta do mini-player)
+-- ============================================================================
+create table if not exists public.site_settings (
+  id             text primary key default 'main',
+  home_record_id uuid references public.records(id) on delete set null,
+  home_track_id  text,
+  home_tag_id    uuid references public.tags(id) on delete set null,
+  updated_at     timestamptz not null default now()
+);
+insert into public.site_settings (id) values ('main') on conflict (id) do nothing;
+alter table public.site_settings enable row level security;
+drop policy if exists site_settings_public_read on public.site_settings;
+create policy site_settings_public_read on public.site_settings for select using (true);
+drop policy if exists site_settings_admin_write on public.site_settings;
+create policy site_settings_admin_write on public.site_settings for all using (public.is_admin()) with check (public.is_admin());

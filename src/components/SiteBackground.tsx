@@ -45,7 +45,8 @@ export default function SiteBackground() {
       {/* sol âmbar (se põe ao rolar) */}
       <div className="site-bg-sun" />
 
-      {/* montanhas ancoradas na base — cobrem toda a largura em qualquer tela */}
+      {/* montanhas ancoradas na base — cobrem toda a largura em qualquer tela.
+          Picos com folga no topo (nenhum encosta na borda -> sem topo cortado). */}
       <svg
         className="site-bg-mts"
         viewBox="0 0 1440 900"
@@ -66,16 +67,14 @@ export default function SiteBackground() {
             <stop offset="1" stopColor="#0d1b2a" />
           </linearGradient>
         </defs>
-        {/* névoa entre as camadas */}
-        <rect y="470" width="1440" height="220" fill="#0a1622" opacity="0.30" />
         <g className="sbg-layer sbg-layer-back">
-          <path d="M0 560 L180 430 L340 520 L520 400 L700 515 L900 420 L1120 525 L1300 440 L1440 510 L1440 900 L0 900 Z" fill="url(#sbg-m1)" opacity="0.55" />
+          <path d="M0 620 L200 505 L360 585 L540 470 L720 575 L920 490 L1140 585 L1320 505 L1440 560 L1440 900 L0 900 Z" fill="url(#sbg-m1)" opacity="0.55" />
         </g>
         <g className="sbg-layer sbg-layer-mid">
-          <path d="M0 640 L220 500 L430 610 L640 490 L860 610 L1080 505 L1280 615 L1440 555 L1440 900 L0 900 Z" fill="url(#sbg-m2)" opacity="0.85" />
+          <path d="M0 690 L240 575 L450 670 L660 560 L880 665 L1100 575 L1300 670 L1440 620 L1440 900 L0 900 Z" fill="url(#sbg-m2)" opacity="0.85" />
         </g>
         <g className="sbg-layer sbg-layer-front">
-          <path d="M0 730 L260 600 L500 720 L760 585 L1000 710 L1240 600 L1440 690 L1440 900 L0 900 Z" fill="url(#sbg-m3)" />
+          <path d="M0 770 L280 660 L520 760 L780 640 L1020 750 L1260 655 L1440 730 L1440 900 L0 900 Z" fill="url(#sbg-m3)" />
         </g>
       </svg>
 
