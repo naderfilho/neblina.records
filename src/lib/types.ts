@@ -97,6 +97,7 @@ export type RecordItem = {
   cover_image_url: string | null;
   is_gatefold: boolean;
   gatefold_image_url: string | null;
+  gatefold_dir: "side" | "down";
   disc_config: DiscConfig;
   audio_url: string | null;
   audio_start: number;

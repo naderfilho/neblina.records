@@ -82,8 +82,9 @@ export default function SiteFooter() {
       <div className="border-t border-line">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-6 py-5 text-xs text-faint md:flex-row">
           <p>© {new Date().getFullYear()} Neblina Records. Todos os direitos reservados.</p>
-          <p>
-            Feito por{" "}
+          <p className="flex items-center gap-2">
+            Feito por
+            <Image src="/ndr-logo.png" alt="NDR Private Agency" width={37} height={20} className="h-5 w-auto object-contain" />
             <span className="font-semibold text-brand">NDR Private Agency</span>
           </p>
         </div>

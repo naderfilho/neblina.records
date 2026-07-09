@@ -13,7 +13,7 @@ export default async function AudiotecaPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("records")
-    .select("id,title,artist,cover_image_url,disc_config,tracks,audio_url,audio_start,audio_end,is_gatefold,gatefold_image_url")
+    .select("id,title,artist,cover_image_url,disc_config,tracks,audio_url,audio_start,audio_end,is_gatefold,gatefold_image_url,gatefold_dir")
     .eq("is_published", true)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });

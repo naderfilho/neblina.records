@@ -368,6 +368,7 @@ alter table public.records add column if not exists tag_ids text[] not null defa
 alter table public.records add column if not exists sort_order int not null default 0;
 alter table public.records add column if not exists is_gatefold boolean not null default false;
 alter table public.records add column if not exists gatefold_image_url text;
+alter table public.records add column if not exists gatefold_dir text not null default 'side';  -- 'side' | 'down'
 alter table public.record_photos add column if not exists category text not null default 'outro';
 create index if not exists records_sort_idx on public.records (sort_order asc, created_at desc);
 

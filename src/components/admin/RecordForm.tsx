@@ -69,6 +69,7 @@ export default function RecordForm({
   const [coverPreview, setCoverPreview] = useState<string | null>(record?.cover_image_url ?? null);
 
   const [isGatefold, setIsGatefold] = useState(record?.is_gatefold ?? false);
+  const [gatefoldDir, setGatefoldDir] = useState<"side" | "down">(record?.gatefold_dir ?? "side");
   const [gatefoldFile, setGatefoldFile] = useState<File | null>(null);
   const [gatefoldPreview, setGatefoldPreview] = useState<string | null>(record?.gatefold_image_url ?? null);
 
@@ -313,6 +314,7 @@ export default function RecordForm({
         cover_image_url: coverUrlFinal,
         is_gatefold: isGatefold,
         gatefold_image_url: isGatefold ? gatefoldUrlFinal : null,
+        gatefold_dir: gatefoldDir,
         audio_url: homeTrack?.audio_url ?? audioUrlFinal,
         audio_start: audioStart, audio_end: audioEnd,
         tracks: finalTracks, home_track_id: homeTrackId,
@@ -389,6 +391,22 @@ export default function RecordForm({
           {isGatefold && (
             <div className="mt-4 space-y-3">
               <p className="text-xs text-muted">Envie a arte interna completa (aberta). Na Audioteca a capa deste disco abre e fecha revelando essa arte.</p>
+
+              <div>
+                <p className="mb-1.5 text-xs uppercase tracking-wider text-muted">Como a capa abre</p>
+                <div className="flex gap-2">
+                  {([["side", "Para o lado"], ["down", "Para baixo"]] as const).map(([id, label]) => (
+                    <button key={id} type="button" onClick={() => setGatefoldDir(id)}
+                      className={cn("rounded-lg border px-3 py-1.5 text-xs", gatefoldDir === id ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:text-ink")}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1 text-[11px] text-faint">
+                  {gatefoldDir === "side" ? "Envie a arte aberta na horizontal (paisagem — duas metades lado a lado)." : "Envie a arte aberta na vertical (retrato — duas metades uma sobre a outra)."}
+                </p>
+              </div>
+
               <div className="flex flex-wrap items-center gap-3">
                 <button type="button" onClick={() => gatefoldInput.current?.click()} className="flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm hover:border-brand/50">
                   <ImageIcon size={16} /> {gatefoldPreview ? "Trocar arte interna" : "Enviar arte interna (aberta)"}
