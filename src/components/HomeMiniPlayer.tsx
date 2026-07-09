@@ -14,6 +14,7 @@ export type HomeSong = {
   trackTitle: string;
   audioUrl: string;
   audioStart: number;
+  audioEnd: number | null;
   tag: Tag | null;
 };
 
@@ -26,13 +27,18 @@ export default function HomeMiniPlayer({ song }: { song: HomeSong }) {
     if (!a) return;
     const onPause = () => setPlaying(false);
     const onPlay = () => setPlaying(true);
+    const onTime = () => {
+      if (song.audioEnd && a.currentTime >= song.audioEnd) a.currentTime = song.audioStart;
+    };
     a.addEventListener("pause", onPause);
     a.addEventListener("play", onPlay);
+    a.addEventListener("timeupdate", onTime);
     return () => {
       a.removeEventListener("pause", onPause);
       a.removeEventListener("play", onPlay);
+      a.removeEventListener("timeupdate", onTime);
     };
-  }, []);
+  }, [song.audioEnd, song.audioStart]);
 
   function toggle() {
     const a = audioRef.current;
@@ -47,12 +53,12 @@ export default function HomeMiniPlayer({ song }: { song: HomeSong }) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-1.5">
+    <div className="flex flex-col items-end gap-1.5">
       {song.tag && <TagBadge tag={song.tag} size="sm" />}
 
-      <div className="max-w-[220px] rounded-xl bg-black/45 px-3 py-1.5 text-center backdrop-blur-sm">
-        <p className="truncate text-[13px] font-semibold leading-tight text-ink">{song.trackTitle}</p>
-        <Link href={`/disco/${song.recordId}`} className="block truncate text-[11px] leading-tight text-mist transition-colors hover:text-brand">
+      <div className="max-w-[180px] rounded-xl bg-black/50 px-2.5 py-1.5 text-right backdrop-blur-sm sm:max-w-[200px]">
+        <p className="truncate text-xs font-semibold leading-tight text-ink">{song.trackTitle}</p>
+        <Link href={`/disco/${song.recordId}`} className="block truncate text-[10px] leading-tight text-mist transition-colors hover:text-brand">
           {song.recordTitle} — {song.artist}
         </Link>
       </div>
@@ -72,7 +78,7 @@ export default function HomeMiniPlayer({ song }: { song: HomeSong }) {
         preload="none"
         loop
         crossOrigin="anonymous"
-        onEnded={() => { const a = audioRef.current; if (a) releaseAudio(a); }}
+        onEnded={() => { const a = audioRef.current; if (!a) return; if (song.audioStart) a.currentTime = song.audioStart; }}
       />
     </div>
   );

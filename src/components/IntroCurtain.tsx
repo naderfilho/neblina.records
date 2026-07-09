@@ -100,7 +100,9 @@ export default function IntroCurtain() {
                 ref={discRef}
                 className="relative h-64 w-64 rounded-full vinyl-grooves shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]"
                 style={{ zIndex: 2 }}
-                initial={{ scale: 0.55, opacity: 0, rotate: -40, x: 0, y: 0 }}
+                // começa exatamente como o shell SSR (cheio, opaco, sem rotação)
+                // -> sem "tick"/grow-in ao iniciar a animação
+                initial={{ scale: 1, opacity: 1, rotate: 0, x: 0, y: 0 }}
                 animate={
                   fly
                     ? { scale: fly.scale, opacity: 1, rotate: 360, x: fly.x, y: fly.y }
@@ -110,10 +112,10 @@ export default function IntroCurtain() {
                   // mesma velocidade do disco do hero (6s/volta) p/ o encaixe
                   // acontecer sem "tick" de diferença de rotação
                   rotate: { duration: 6, ease: "linear", repeat: Infinity },
-                  scale: fly ? flyTransition : { duration: 0.9, ease: "backOut" },
+                  scale: fly ? flyTransition : { duration: 0 },
                   x: flyTransition,
                   y: flyTransition,
-                  opacity: { duration: 0.6 },
+                  opacity: { duration: 0.4 },
                 }}
               >
                 <div className="absolute inset-0 rounded-full ring-1 ring-white/10" />

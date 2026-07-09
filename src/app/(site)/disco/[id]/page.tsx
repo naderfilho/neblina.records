@@ -134,11 +134,11 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
           <p className="mt-1 text-lg text-muted">{r.artist}</p>
 
           <div className="mt-5 flex items-center gap-3">
-            <span className="font-display text-4xl text-brand">{formatBRL(r.price)}</span>
+            <span className="font-display text-4xl" style={{ color: "#c96a12" }}>{formatBRL(r.price)}</span>
             {r.stock_qty > 0 ? (
-              <span className="rounded-full bg-teal/15 px-3 py-1 text-xs text-teal">Disponível</span>
+              <span className="rounded-full border border-teal/25 px-3 py-1 text-xs font-medium text-[#3aa7b4]" style={{ background: "#0c2e2b" }}>Disponível</span>
             ) : (
-              <span className="rounded-full bg-red-500/15 px-3 py-1 text-xs text-red-400">Esgotado</span>
+              <span className="rounded-full border border-red-500/25 px-3 py-1 text-xs font-medium text-red-300" style={{ background: "#2e0f0f" }}>Esgotado</span>
             )}
           </div>
 

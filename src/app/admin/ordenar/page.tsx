@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Save, Loader2, Check, GripVertical } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
+import Vinyl from "@/components/Vinyl";
 import type { RecordItem } from "@/lib/types";
 
 export default function AdminOrdenarPage() {
@@ -76,11 +77,8 @@ export default function AdminOrdenarPage() {
             >
               <span className="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-xs font-bold text-brand">{i + 1}</span>
               <GripVertical size={16} className="absolute right-2 top-2 text-faint opacity-0 group-hover:opacity-100" />
-              <div className="aspect-square w-full overflow-hidden rounded-full border border-line bg-black vinyl-grooves">
-                {r.cover_image_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={r.cover_image_url} alt="" className="h-full w-full scale-[0.44] rounded-full object-cover" draggable={false} />
-                )}
+              <div className="pointer-events-none aspect-square w-full">
+                <Vinyl config={r.disc_config} coverUrl={r.cover_image_url} interactive={false} noNeedle title={r.title} />
               </div>
               <p className="mt-2 line-clamp-1 w-full text-center text-sm text-ink">{r.title}</p>
               <p className="line-clamp-1 w-full text-center text-xs text-muted">{r.artist}</p>

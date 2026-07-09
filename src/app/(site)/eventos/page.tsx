@@ -16,7 +16,7 @@ const STATS = [
 
 const DIFERENCIAIS = [
   { icon: Sparkles, title: "Curadoria de verdade", desc: "A gente escolhe disco por disco. Tem clássico que todo mundo procura e tem raridade pra quem entende, sempre com aquela peça que puxa conversa." },
-  { icon: Disc3, title: "É experiência, não só venda", desc: "Levamos toca-discos, higienização na hora e um cantinho pra ouvir. O público fica, mexe nas caixas e volta pra comprar." },
+  { icon: Disc3, title: "É experiência, não só venda", desc: "Levamos toca-discos, acessórios e montamos um cantinho pra apreciar um bom som. O público fica, mexe nas caixas e volta pra comprar." },
   { icon: ShieldCheck, title: "Gente que já rodou muito", desc: "Estivemos em feiras grandes pelo Brasil e conversamos com colecionador de fora também. Você contrata quem já tem estrada." },
 ];
 
@@ -35,21 +35,19 @@ const TIPOS = [
 
 export default function EventosPage() {
   return (
-    <div>
-      {/* HERO com vídeo de fundo */}
-      <section className="relative overflow-hidden">
-        <EventsVideoBg />
+    <div className="relative">
+      {/* vídeo de fundo fixo — o site se move por cima */}
+      <EventsVideoBg />
 
+      {/* HERO */}
+      <section className="relative overflow-hidden">
         <div className="relative mx-auto max-w-5xl px-6 py-24 text-center md:py-36">
-          <span className="inline-flex items-center gap-2 rounded-full border border-brand/40 bg-black/30 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.25em] text-brand backdrop-blur">
-            <Disc3 size={14} /> Neblina nos eventos
-          </span>
-          <h1 className="mt-6 font-display text-5xl font-extrabold leading-tight text-ink md:text-6xl">
+          <h1 className="font-display text-5xl font-extrabold leading-tight text-ink md:text-6xl">
             Leve a <span className="text-gradient">Neblina</span> para o seu evento
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg text-mist">
             Feiras, festivais, eventos corporativos e culturais. A gente monta um estande completo, com acervo de
-            verdade e aquela experiência de garimpar disco que o público adora. Cada proposta é feita sob medida
+            verdade e aquela experiência de garimpar discos que o público adora. Cada proposta é feita sob medida
             para o perfil e o espaço do seu evento.
           </p>
           <a href="#proposta" className="btn-brand mt-8 inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-sm">
@@ -120,7 +118,7 @@ export default function EventosPage() {
             <h2 className="mt-2 font-display text-3xl text-ink">Yuri e Vitor</h2>
             <p className="mt-3 leading-relaxed text-muted">
               A Neblina nasceu de dois amigos apaixonados por disco. Somos nós dois na estrada, montando estande,
-              garimpando raridade e conversando com colecionador em cada feira. Quando você contrata a Neblina, é
+              garimpando raridades e conversando com colecionadores em cada feira. Quando você contrata a Neblina, é
               com a gente que você fala, do primeiro papo ao evento montado.
             </p>
             <a href="#proposta" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-brand hover:underline">

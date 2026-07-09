@@ -33,7 +33,7 @@ export default function EventsVideoBg() {
     "radial-gradient(115% 125% at 50% 42%, #000 46%, rgba(0,0,0,0.4) 74%, transparent 100%)";
 
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div className="pointer-events-none fixed inset-0 -z-[5] overflow-hidden" style={{ background: "var(--color-bg)" }}>
       <video
         ref={ref}
         className="absolute left-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 object-cover"

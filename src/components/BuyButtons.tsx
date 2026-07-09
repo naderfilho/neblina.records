@@ -53,19 +53,19 @@ export default function BuyButtons({ id, title, artist, price, coverUrl }: Props
     <div className="space-y-3">
       <button
         onClick={buyWhatsApp}
-        className="inline-flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+        className="flex w-fit items-center gap-2 rounded-lg px-3.5 py-2 text-[13px] font-semibold text-white transition-transform hover:-translate-y-0.5"
         style={{
           background: "linear-gradient(135deg, #1faf54, #12924a)",
-          boxShadow: "0 6px 16px -8px rgba(18,146,74,0.5)",
+          boxShadow: "0 5px 14px -8px rgba(18,146,74,0.45)",
         }}
       >
-        <WhatsAppGlyph size={18} />
+        <WhatsAppGlyph size={16} />
         Comprar pelo WhatsApp
       </button>
 
       <button
         onClick={() => (inCart ? cart.setOpen(true) : cart.add({ id, title, artist, price, coverUrl }))}
-        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs transition-colors ${
+        className={`flex w-fit items-center gap-1.5 rounded-lg border px-3 py-2 text-xs transition-colors ${
           inCart
             ? "border-teal/60 bg-teal/15 text-teal"
             : "border-line bg-panel text-muted hover:border-brand/50 hover:text-ink"

@@ -69,11 +69,17 @@ export default function SiteHeader({ profile }: { profile: Profile | null }) {
 
         {/* nav desktop */}
         <nav className="hidden items-center gap-8 md:flex">
-          {NAV.map((n) => (
-            <Link key={n.href} href={n.href} className="text-sm font-medium text-muted transition-colors hover:text-brand">
-              {n.label}
-            </Link>
-          ))}
+          {NAV.map((n) =>
+            n.href.includes("#") ? (
+              <a key={n.href} href={n.href} className="text-sm font-medium text-muted transition-colors hover:text-brand">
+                {n.label}
+              </a>
+            ) : (
+              <Link key={n.href} href={n.href} className="text-sm font-medium text-muted transition-colors hover:text-brand">
+                {n.label}
+              </Link>
+            ),
+          )}
         </nav>
 
         <div className="flex items-center gap-1.5">
@@ -153,16 +159,27 @@ export default function SiteHeader({ profile }: { profile: Profile | null }) {
       {mobile && (
         <div className="border-t border-line bg-panel px-5 py-4 md:hidden">
           <nav className="flex flex-col gap-1">
-            {NAV.map((n) => (
-              <Link
-                key={n.href}
-                href={n.href}
-                onClick={() => setMobile(false)}
-                className="rounded-lg px-3 py-2.5 text-sm text-ink hover:bg-panel-2"
-              >
-                {n.label}
-              </Link>
-            ))}
+            {NAV.map((n) =>
+              n.href.includes("#") ? (
+                <a
+                  key={n.href}
+                  href={n.href}
+                  onClick={() => setMobile(false)}
+                  className="rounded-lg px-3 py-2.5 text-sm text-ink hover:bg-panel-2"
+                >
+                  {n.label}
+                </a>
+              ) : (
+                <Link
+                  key={n.href}
+                  href={n.href}
+                  onClick={() => setMobile(false)}
+                  className="rounded-lg px-3 py-2.5 text-sm text-ink hover:bg-panel-2"
+                >
+                  {n.label}
+                </Link>
+              ),
+            )}
             {!profile && (
               <div className="mt-2 flex gap-2">
                 <Link href="/login" onClick={() => setMobile(false)} className="flex-1 rounded-lg border border-line px-3 py-2.5 text-center text-sm">

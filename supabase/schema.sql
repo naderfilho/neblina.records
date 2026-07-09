@@ -387,12 +387,16 @@ create policy tags_admin_write on public.tags for all using (public.is_admin()) 
 --  Configurações do site (música global da home + etiqueta do mini-player)
 -- ============================================================================
 create table if not exists public.site_settings (
-  id             text primary key default 'main',
-  home_record_id uuid references public.records(id) on delete set null,
-  home_track_id  text,
-  home_tag_id    uuid references public.tags(id) on delete set null,
-  updated_at     timestamptz not null default now()
+  id               text primary key default 'main',
+  home_record_id   uuid references public.records(id) on delete set null,
+  home_track_id    text,
+  home_tag_id      uuid references public.tags(id) on delete set null,
+  home_track_start numeric(10,2) not null default 0,   -- trecho da música da home
+  home_track_end   numeric(10,2),
+  updated_at       timestamptz not null default now()
 );
+alter table public.site_settings add column if not exists home_track_start numeric(10,2) not null default 0;
+alter table public.site_settings add column if not exists home_track_end numeric(10,2);
 insert into public.site_settings (id) values ('main') on conflict (id) do nothing;
 alter table public.site_settings enable row level security;
 drop policy if exists site_settings_public_read on public.site_settings;

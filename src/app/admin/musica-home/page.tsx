@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Loader2, Save, Search, Plus, Check, Music, Disc3 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import TagBadge from "@/components/TagBadge";
+import AudioTrimmer from "@/components/admin/AudioTrimmer";
 import { cn } from "@/lib/utils";
 import type { Tag, Track } from "@/lib/types";
 
@@ -24,6 +25,8 @@ export default function MusicaHomePage() {
   const [homeRecordId, setHomeRecordId] = useState<string | null>(null);
   const [homeTrackId, setHomeTrackId] = useState<string | null>(null);
   const [homeTagId, setHomeTagId] = useState<string | null>(null);
+  const [trackStart, setTrackStart] = useState(0);
+  const [trackEnd, setTrackEnd] = useState<number | null>(null);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,6 +50,8 @@ export default function MusicaHomePage() {
         setHomeRecordId(settings.home_record_id ?? null);
         setHomeTrackId(settings.home_track_id ?? null);
         setHomeTagId(settings.home_tag_id ?? null);
+        setTrackStart(Number(settings.home_track_start ?? 0));
+        setTrackEnd(settings.home_track_end != null ? Number(settings.home_track_end) : null);
       }
       setLoading(false);
     })();
@@ -63,7 +68,7 @@ export default function MusicaHomePage() {
     setSaved(false);
     await supabase
       .from("site_settings")
-      .update({ home_record_id: homeRecordId, home_track_id: homeTrackId, home_tag_id: homeTagId, updated_at: new Date().toISOString() })
+      .update({ home_record_id: homeRecordId, home_track_id: homeTrackId, home_tag_id: homeTagId, home_track_start: trackStart, home_track_end: trackEnd, updated_at: new Date().toISOString() })
       .eq("id", "main");
     setSaving(false);
     setSaved(true);
@@ -109,6 +114,14 @@ export default function MusicaHomePage() {
         )}
       </div>
 
+      {/* recorte do trecho da faixa escolhida */}
+      {selected.t?.audio_url && (
+        <div className="mb-6 max-w-2xl">
+          <p className="mb-2 text-sm text-muted">Escolha o trecho da faixa que vai tocar no mini-player da home:</p>
+          <AudioTrimmer key={homeTrackId} url={selected.t.audio_url} start={trackStart} end={trackEnd} onChange={({ start, end }) => { setTrackStart(start); setTrackEnd(end); }} />
+        </div>
+      )}
+
       {loading ? (
         <p className="text-muted">Carregando…</p>
       ) : (
@@ -152,7 +165,7 @@ export default function MusicaHomePage() {
                             <button
                               key={t.id}
                               type="button"
-                              onClick={() => { setHomeRecordId(r.id); setHomeTrackId(t.id); }}
+                              onClick={() => { if (homeTrackId !== t.id) { setTrackStart(0); setTrackEnd(null); } setHomeRecordId(r.id); setHomeTrackId(t.id); }}
                               className={cn(
                                 "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors",
                                 on ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:text-ink",

@@ -32,7 +32,7 @@ export default function SobrePage() {
         </p>
         <p>
           Mais do que uma loja, somos um ponto de encontro para colecionadores, amantes da música e novos ouvintes
-          que buscam experiências autênticas — onde cada disco carrega uma história para contar.
+          que buscam experiências autênticas, onde cada disco carrega uma história para contar.
         </p>
       </div>
 

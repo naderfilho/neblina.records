@@ -46,7 +46,8 @@ export default function SiteFooter() {
         <div>
           <h4 className="mb-4 text-sm font-semibold uppercase tracking-widest text-ink">Navegar</h4>
           <ul className="space-y-2 text-sm text-muted">
-            <li><Link href="/" className="hover:text-brand">Discos</Link></li>
+            <li><a href="/#acervo" className="hover:text-brand">Discos</a></li>
+            <li><Link href="/audioteca" className="hover:text-brand">Audioteca</Link></li>
             <li><Link href="/eventos" className="hover:text-brand">Eventos</Link></li>
             <li><Link href="/sobre" className="hover:text-brand">Sobre</Link></li>
             <li><Link href="/conta" className="hover:text-brand">Minha conta</Link></li>
@@ -81,8 +82,9 @@ export default function SiteFooter() {
       <div className="border-t border-line">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-6 py-5 text-xs text-faint md:flex-row">
           <p>© {new Date().getFullYear()} Neblina Records. Todos os direitos reservados.</p>
-          <p>
-            Feito por{" "}
+          <p className="flex items-center gap-1.5">
+            Feito por
+            <Image src="/ndr-logo.png" alt="NDR Private Agency" width={18} height={18} className="h-4 w-4 object-contain" />
             <span className="font-semibold text-brand">NDR Private Agency</span>
           </p>
         </div>

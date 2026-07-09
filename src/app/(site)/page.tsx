@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { ArrowRight, Disc3 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import IntroCurtain from "@/components/IntroCurtain";
@@ -43,7 +42,8 @@ export default async function HomePage() {
           artist: hr.artist,
           trackTitle: track?.title ?? "Faixa da home",
           audioUrl,
-          audioStart: track && track.id === hr.home_track_id ? Number(hr.audio_start ?? 0) : 0,
+          audioStart: Number(settings.home_track_start ?? 0),
+          audioEnd: settings.home_track_end != null ? Number(settings.home_track_end) : null,
           tag: settings.home_tag_id ? tags.find((t) => t.id === settings.home_tag_id) ?? null : null,
         };
       }
@@ -66,9 +66,9 @@ export default async function HomePage() {
               marcaram gerações às edições mais raras.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="#acervo" className="btn-brand inline-flex items-center gap-2 rounded-xl px-7 py-4 text-sm">
+              <a href="#acervo" className="btn-brand inline-flex items-center gap-2 rounded-xl px-7 py-4 text-sm">
                 Explorar o acervo <ArrowRight size={16} />
-              </Link>
+              </a>
             </div>
 
             <div className="mt-12 grid max-w-sm grid-cols-2 gap-6">
@@ -87,7 +87,7 @@ export default async function HomePage() {
           <div className="relative flex justify-center">
             <HeroVinyl />
             {homeSong && (
-              <div className="absolute left-1/2 top-[14%] z-20 -translate-x-1/2">
+              <div className="absolute right-[3%] top-[3%] z-20">
                 <HomeMiniPlayer song={homeSong} />
               </div>
             )}
