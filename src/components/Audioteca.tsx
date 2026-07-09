@@ -10,6 +10,7 @@ import Vinyl from "@/components/Vinyl";
 import { resolveDiscColor, resolveBorderColor, DEFAULT_DISC_CONFIG, type DiscConfig } from "@/lib/constants";
 import { claimAudio, releaseAudio } from "@/lib/audio-bus";
 import { useCoarsePointer } from "@/lib/use-coarse-pointer";
+import { playScratch } from "@/lib/scratch";
 import { cn } from "@/lib/utils";
 import type { RecordItem, Track } from "@/lib/types";
 
@@ -119,6 +120,10 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
   // disco no prato (independe da reproducao — mostra mesmo sem faixas com audio)
   const [platterDi, setPlatterDi] = useState(-1);
   const [platterSide, setPlatterSide] = useState<"A" | "B">("A");
+
+  // agulha arrastável
+  const [armDrag, setArmDrag] = useState(false);
+  const [armAngle, setArmAngle] = useState<number | null>(null);
 
   // controles de som
   const [volume, setVolume] = useState(0.9);
@@ -245,6 +250,7 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
       crackleTimer.current = window.setTimeout(() => { setCrackling(false); start(); }, 3500);
     } else {
       setCrackling(false);
+      playScratch(); // agulha riscando a cada troca de faixa
       start();
     }
   }, [playlist, bass, treble, fade, volume, ensureEqGraph]);
@@ -290,6 +296,50 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
       if (i >= 0) playAt(i);
     }
   }
+
+  /* ---------- agulha arrastável: mapeia o raio do ponteiro -> faixa ---------- */
+  function cueFromPointer(clientX: number, clientY: number): { track: Track | null; angle: number } | null {
+    const dz = dropRef.current?.getBoundingClientRect();
+    if (!dz) return null;
+    const cx = dz.left + dz.width / 2;
+    const cy = dz.top + dz.height / 2;
+    const dist = Math.hypot(clientX - cx, clientY - cy);
+    const discR = (dz.width / 2) * 0.8; // vinil = inset-[10%] do prato
+    const rNorm = (dist / discR) * 50; // escala 0..50 (viewBox do sulco)
+    const list = platterSide === "A" ? sideA : sideB;
+    const N = list.length;
+    const R_OUT = 47, R_IN = 24.5;
+    if (!N) return { track: null, angle: 6 };
+    const bw = (R_OUT - R_IN) / N;
+    if (rNorm < R_IN - 2 || rNorm > R_OUT + 4) return { track: null, angle: rNorm > R_OUT ? 4 : 34 };
+    let i = Math.floor((R_OUT - rNorm) / bw);
+    i = Math.max(0, Math.min(N - 1, i));
+    const angle = 10 + ((R_OUT - rNorm) / (R_OUT - R_IN)) * 24;
+    return { track: list[i], angle: Math.max(8, Math.min(34, angle)) };
+  }
+
+  useEffect(() => {
+    if (!armDrag) return;
+    const move = (e: PointerEvent) => {
+      const c = cueFromPointer(e.clientX, e.clientY);
+      if (c) { setArmAngle(c.angle); setHoverId(c.track?.id ?? null); }
+    };
+    const up = (e: PointerEvent) => {
+      const c = cueFromPointer(e.clientX, e.clientY);
+      setArmDrag(false);
+      setArmAngle(null);
+      setHoverId(null);
+      if (c?.track) selectTrack(c.track);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    document.body.style.userSelect = "none";
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      document.body.style.userSelect = "";
+    };
+  }, [armDrag, platterSide, sideA, sideB]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ---------- fila ---------- */
   function place(rec: RecordItem) {
@@ -401,13 +451,26 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
       {/* ================= DECK ================= */}
       <div className="mx-auto max-w-3xl">
         <div
-          className="relative overflow-hidden rounded-[30px] border border-black/60 p-5 md:p-8"
+          className="relative overflow-hidden rounded-t-[60px] rounded-b-[28px] border border-black/60 p-5 pt-7 md:p-8 md:pt-9"
           style={{
             background: "linear-gradient(155deg, #2a2018 0%, #1a130d 46%, #0c0906 100%)",
             boxShadow: "0 60px 100px -50px rgba(0,0,0,0.95), inset 0 1px 0 rgba(255,255,255,0.06)",
           }}
         >
           <div className="pointer-events-none absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "repeating-linear-gradient(93deg, #fff 0 1px, transparent 1px 8px)" }} />
+          {/* brilho do arco (jukebox) */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-24" style={{ background: "radial-gradient(120% 90% at 50% 0%, rgba(255,157,46,0.22), rgba(38,192,212,0.10) 45%, transparent 72%)" }} />
+
+          {/* marquee estilo jukebox */}
+          <div className="relative mb-5 flex items-center justify-center gap-3">
+            <span className="flex gap-1">{[0, 1, 2, 3].map((i) => (
+              <span key={i} className="h-2 w-2 rounded-full" style={{ background: i % 2 ? "#26c0d4" : "#ff9d2e", boxShadow: `0 0 8px ${i % 2 ? "#26c0d4" : "#ff9d2e"}`, animation: `jb 1.2s ${i * 0.15}s ease-in-out infinite alternate` }} />
+            ))}</span>
+            <span className="font-display text-xs tracking-[0.35em] text-brand/85 sm:text-sm">NEBLINA JUKEBOX</span>
+            <span className="flex gap-1">{[0, 1, 2, 3].map((i) => (
+              <span key={i} className="h-2 w-2 rounded-full" style={{ background: i % 2 ? "#ff9d2e" : "#26c0d4", boxShadow: `0 0 8px ${i % 2 ? "#ff9d2e" : "#26c0d4"}`, animation: `jb 1.2s ${i * 0.15}s ease-in-out infinite alternate` }} />
+            ))}</span>
+          </div>
 
           <div className="relative flex flex-col items-center gap-6 sm:flex-row sm:items-start">
             {/* prato */}
@@ -447,12 +510,24 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
                 )}
               </div>
 
-              {/* braço / agulha */}
-              <svg viewBox="0 0 200 200" className="pointer-events-none absolute -right-2 -top-2 z-30 h-[52%] w-[52%] drop-shadow-xl">
+              {/* braço / agulha — arraste até o sulco pra tocar */}
+              <svg viewBox="0 0 200 200" className="pointer-events-none absolute -right-2 -top-2 z-30 h-[52%] w-[52%] touch-none drop-shadow-xl">
                 <defs>
                   <linearGradient id="ata-arm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#eef1f4" /><stop offset="1" stopColor="#59636e" /></linearGradient>
                 </defs>
-                <g style={{ transformOrigin: "176px 24px", transform: `rotate(${playing || crackling ? 31 : 4}deg)`, transition: "transform 1s cubic-bezier(0.5,0,0.2,1)" }}>
+                <g
+                  style={{
+                    transformOrigin: "176px 24px",
+                    transform: `rotate(${armDrag && armAngle != null ? armAngle : (playing || crackling ? 31 : 4)}deg)`,
+                    transition: armDrag ? "none" : "transform 1s cubic-bezier(0.5,0,0.2,1)",
+                    pointerEvents: "auto",
+                    cursor: armDrag ? "grabbing" : "grab",
+                  }}
+                  onPointerDown={(e) => { e.preventDefault(); if (disc) setArmDrag(true); }}
+                >
+                  {/* área de pega larga (transparente) */}
+                  <line x1="176" y1="24" x2="76" y2="132" stroke="transparent" strokeWidth="46" strokeLinecap="round" />
+                  <circle cx="76" cy="132" r="30" fill="transparent" />
                   <circle cx="176" cy="24" r="14" fill="#2a2118" stroke="#3a444e" strokeWidth="2" />
                   <circle cx="176" cy="24" r="6" fill="#ff9d2e" />
                   <line x1="176" y1="24" x2="78" y2="128" stroke="url(#ata-arm)" strokeWidth="8" strokeLinecap="round" />
@@ -460,6 +535,11 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
                   <circle cx="76" cy="132" r="4.5" fill="#ff9d2e" />
                 </g>
               </svg>
+              {armDrag && (
+                <span className="pointer-events-none absolute -bottom-1 left-1/2 z-30 -translate-x-1/2 rounded-full bg-black/75 px-2 py-0.5 text-[10px] text-brand">
+                  {hoverId ? "solte pra tocar" : "leve até um sulco"}
+                </span>
+              )}
             </div>
 
             {/* player + faixas */}
@@ -602,6 +682,7 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
       <style jsx>{`
         .ata-spin { animation: ata-rot 3.2s linear infinite; }
         @keyframes ata-rot { to { transform: rotate(360deg); } }
+        @keyframes jb { from { opacity: 0.35; } to { opacity: 1; } }
         @media (prefers-reduced-motion: reduce) { .ata-spin { animation: none; } }
       `}</style>
     </div>

@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Play, Pause } from "lucide-react";
 import { type DiscConfig, DEFAULT_DISC_CONFIG, resolveDiscColor } from "@/lib/constants";
 import { claimAudio, releaseAudio } from "@/lib/audio-bus";
+import { playScratch } from "@/lib/scratch";
 import type { Track } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -121,6 +122,10 @@ export default function TrackVinyl({
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const discRef = useRef<HTMLDivElement | null>(null);
+
+  const [armDrag, setArmDrag] = useState(false);
+  const [armAngle, setArmAngle] = useState<number | null>(null);
 
   const sideA = useMemo(() => tracks.filter((t) => t.side === "A"), [tracks]);
   const sideB = useMemo(() => tracks.filter((t) => t.side === "B"), [tracks]);
@@ -137,8 +142,52 @@ export default function TrackVinyl({
     claimAudio(a);
     a.src = t.audio_url;
     a.currentTime = 0;
+    playScratch(); // agulha riscando a cada troca de faixa
     a.play().then(() => setPlayingId(t.id)).catch(() => {});
   }
+
+  /* ---------- agulha arrastável ---------- */
+  function cueFromPointer(clientX: number, clientY: number): { track: Track | null; angle: number } | null {
+    const el = discRef.current?.getBoundingClientRect();
+    if (!el) return null;
+    const cx = el.left + el.width / 2;
+    const cy = el.top + el.height / 2;
+    const dist = Math.hypot(clientX - cx, clientY - cy);
+    const rNorm = (dist / (el.width / 2)) * 50;
+    const list = side === "A" ? sideA : sideB;
+    const N = list.length;
+    const R_OUT = 47.5, R_IN = 23;
+    if (!N) return { track: null, angle: 6 };
+    const bw = (R_OUT - R_IN) / N;
+    if (rNorm < R_IN - 2 || rNorm > R_OUT + 4) return { track: null, angle: rNorm > R_OUT ? 4 : 34 };
+    let i = Math.floor((R_OUT - rNorm) / bw);
+    i = Math.max(0, Math.min(N - 1, i));
+    const angle = 10 + ((R_OUT - rNorm) / (R_OUT - R_IN)) * 24;
+    return { track: list[i], angle: Math.max(8, Math.min(34, angle)) };
+  }
+
+  useEffect(() => {
+    if (!armDrag) return;
+    const move = (e: PointerEvent) => {
+      const c = cueFromPointer(e.clientX, e.clientY);
+      if (c) { setArmAngle(c.angle); setHoverId(c.track?.id ?? null); }
+    };
+    const up = (e: PointerEvent) => {
+      const c = cueFromPointer(e.clientX, e.clientY);
+      setArmDrag(false);
+      setArmAngle(null);
+      setHoverId(null);
+      if (c?.track) play(c.track);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    document.body.style.userSelect = "none";
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      document.body.style.userSelect = "";
+    };
+  }, [armDrag, side, sideA, sideB]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function flipTo(s: "A" | "B") {
     if (s === side) return;
@@ -154,7 +203,7 @@ export default function TrackVinyl({
     ? tracks.find((t) => t.id === hoverId)?.title
     : playingId
       ? tracks.find((t) => t.id === playingId)?.title
-      : "Passe o mouse nos sulcos e clique para tocar";
+      : "Arraste a agulha até um sulco (ou clique) para tocar";
 
   return (
     <div className="mx-auto max-w-md">
@@ -165,7 +214,7 @@ export default function TrackVinyl({
       </div>
 
       {/* disco com flip 3D */}
-      <div className="relative aspect-square w-full" style={{ perspective: "1400px" }}>
+      <div ref={discRef} className="relative aspect-square w-full" style={{ perspective: "1400px" }}>
         <div
           className="relative h-full w-full transition-transform duration-[2100ms]"
           style={{ transformStyle: "preserve-3d", transform: side === "B" ? "rotateY(180deg)" : "rotateY(0deg)", transitionTimingFunction: "cubic-bezier(0.45,0,0.15,1)" }}
@@ -183,6 +232,36 @@ export default function TrackVinyl({
             <Face tracks={sideB} coverUrl={coverUrl} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} />
           </div>
         </div>
+
+        {/* braço/agulha — arraste até o sulco pra tocar */}
+        <svg viewBox="0 0 200 200" className="pointer-events-none absolute -right-3 -top-3 z-30 h-[54%] w-[54%] touch-none drop-shadow-xl">
+          <defs>
+            <linearGradient id="tv-arm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#eef1f4" /><stop offset="1" stopColor="#59636e" /></linearGradient>
+          </defs>
+          <g
+            style={{
+              transformOrigin: "176px 24px",
+              transform: `rotate(${armDrag && armAngle != null ? armAngle : (playingId ? 31 : 6)}deg)`,
+              transition: armDrag ? "none" : "transform 1s cubic-bezier(0.5,0,0.2,1)",
+              pointerEvents: "auto",
+              cursor: armDrag ? "grabbing" : "grab",
+            }}
+            onPointerDown={(e) => { e.preventDefault(); setArmDrag(true); }}
+          >
+            <line x1="176" y1="24" x2="76" y2="132" stroke="transparent" strokeWidth="46" strokeLinecap="round" />
+            <circle cx="76" cy="132" r="30" fill="transparent" />
+            <circle cx="176" cy="24" r="14" fill="#2a2118" stroke="#3a444e" strokeWidth="2" />
+            <circle cx="176" cy="24" r="6" fill="#ff9d2e" />
+            <line x1="176" y1="24" x2="78" y2="128" stroke="url(#tv-arm)" strokeWidth="8" strokeLinecap="round" />
+            <g transform="rotate(45 74 130)"><rect x="56" y="118" width="34" height="20" rx="4" fill="url(#tv-arm)" stroke="#3a444e" /></g>
+            <circle cx="76" cy="132" r="4.5" fill="#ff9d2e" />
+          </g>
+        </svg>
+        {armDrag && (
+          <span className="pointer-events-none absolute -bottom-2 left-1/2 z-30 -translate-x-1/2 rounded-full bg-black/75 px-2 py-0.5 text-[10px] text-brand">
+            {hoverId ? "solte pra tocar" : "leve até um sulco"}
+          </span>
+        )}
       </div>
 
       {/* botões de lado */}
