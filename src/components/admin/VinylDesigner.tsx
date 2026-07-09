@@ -1,11 +1,16 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { Pipette } from "lucide-react";
 import Vinyl from "@/components/Vinyl";
 import {
   DISC_STYLES, LABEL_STYLES, BORDER_STYLES,
   resolveDiscColor, resolveBorderColor, type DiscConfig,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+
+type EyeDropperResult = { sRGBHex: string };
+type EyeDropperCtor = new () => { open: () => Promise<EyeDropperResult> };
 
 function ColorPicker({
   value,
@@ -14,6 +19,25 @@ function ColorPicker({
   value: string;
   onChange: (hex: string) => void;
 }) {
+  const [hasEyeDropper, setHasEyeDropper] = useState(false);
+
+  useEffect(() => {
+    setHasEyeDropper(typeof window !== "undefined" && "EyeDropper" in window);
+  }, []);
+
+  // Conta-gotas assíncrono (EyeDropper API): clona a cor de qualquer ponto da
+  // tela sem abrir o diálogo nativo do SO (que estava travando o site).
+  async function pickFromScreen() {
+    const Ctor = (window as unknown as { EyeDropper?: EyeDropperCtor }).EyeDropper;
+    if (!Ctor) return;
+    try {
+      const res = await new Ctor().open();
+      if (res?.sRGBHex) onChange(res.sRGBHex);
+    } catch {
+      /* usuário cancelou — sem travar */
+    }
+  }
+
   return (
     <div className="flex items-center gap-2">
       <label className="relative h-10 w-12 shrink-0 cursor-pointer overflow-hidden rounded-lg border border-line">
@@ -34,8 +58,18 @@ function ColorPicker({
         }}
         placeholder="#000000"
         spellCheck={false}
-        className="ipt max-w-[130px] font-mono uppercase"
+        className="ipt max-w-[120px] font-mono uppercase"
       />
+      {hasEyeDropper && (
+        <button
+          type="button"
+          onClick={pickFromScreen}
+          title="Clonar cor de um ponto da tela"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-panel text-muted transition-colors hover:border-brand/50 hover:text-brand"
+        >
+          <Pipette size={15} />
+        </button>
+      )}
       <span className="h-8 w-8 shrink-0 rounded-full border border-line" style={{ background: value }} title="Prévia da cor" />
     </div>
   );

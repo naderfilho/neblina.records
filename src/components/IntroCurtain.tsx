@@ -47,7 +47,7 @@ export default function IntroCurtain() {
     setShow(true);
     document.body.style.overflow = "hidden";
     const t1 = setTimeout(startExit, 2800);
-    const t2 = setTimeout(finish, 4100);
+    const t2 = setTimeout(finish, 4550);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -58,10 +58,11 @@ export default function IntroCurtain() {
   function skip() {
     if (exiting) return;
     startExit();
-    setTimeout(finish, 1250);
+    setTimeout(finish, 1750);
   }
 
-  const flyTransition = { duration: 1.25, ease: [0.55, 0, 0.2, 1] as const };
+  // easing suave (Material standard) e duração maior p/ o encaixe ficar "smooth"
+  const flyTransition = { duration: 1.55, ease: [0.4, 0, 0.2, 1] as const };
 
   return (
     <AnimatePresence>
@@ -73,6 +74,7 @@ export default function IntroCurtain() {
           initial={{ opacity: 1 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.7, ease: "easeInOut" }}
         >
           {/* fundo (névoa) — some para revelar a home enquanto o disco voa */}
           <motion.div

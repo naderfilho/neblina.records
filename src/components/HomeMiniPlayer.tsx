@@ -47,12 +47,12 @@ export default function HomeMiniPlayer({ song }: { song: HomeSong }) {
   }
 
   return (
-    <div className="mb-5 flex flex-col items-center gap-2">
-      {song.tag && <TagBadge tag={song.tag} size="md" />}
+    <div className="flex flex-col items-center gap-1.5">
+      {song.tag && <TagBadge tag={song.tag} size="sm" />}
 
-      <div className="max-w-[260px] text-center">
-        <p className="truncate text-sm font-semibold text-ink">{song.trackTitle}</p>
-        <Link href={`/disco/${song.recordId}`} className="block truncate text-xs text-muted transition-colors hover:text-brand">
+      <div className="max-w-[220px] rounded-xl bg-black/45 px-3 py-1.5 text-center backdrop-blur-sm">
+        <p className="truncate text-[13px] font-semibold leading-tight text-ink">{song.trackTitle}</p>
+        <Link href={`/disco/${song.recordId}`} className="block truncate text-[11px] leading-tight text-mist transition-colors hover:text-brand">
           {song.recordTitle} — {song.artist}
         </Link>
       </div>
@@ -60,9 +60,9 @@ export default function HomeMiniPlayer({ song }: { song: HomeSong }) {
       <button
         onClick={toggle}
         aria-label={playing ? "Pausar" : "Tocar"}
-        className="btn-brand flex h-12 w-12 items-center justify-center rounded-full"
+        className="btn-brand flex h-9 w-9 items-center justify-center rounded-full shadow-lg"
       >
-        {playing ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
+        {playing ? <Pause size={16} /> : <Play size={16} className="ml-0.5" />}
       </button>
 
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}

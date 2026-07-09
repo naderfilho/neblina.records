@@ -30,13 +30,13 @@ export default function EventsVideoBg() {
 
   // máscara que faz as 4 bordas do vídeo desaparecerem suavemente (blend no fundo)
   const edgeFade =
-    "radial-gradient(120% 120% at 50% 45%, #000 52%, rgba(0,0,0,0.35) 78%, transparent 100%)";
+    "radial-gradient(115% 125% at 50% 42%, #000 46%, rgba(0,0,0,0.4) 74%, transparent 100%)";
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       <video
         ref={ref}
-        className="absolute left-1/2 top-1/2 h-[112%] w-[112%] -translate-x-1/2 -translate-y-1/2 object-cover"
+        className="absolute left-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 object-cover"
         src="/eventos.mp4"
         autoPlay
         muted
@@ -45,24 +45,34 @@ export default function EventsVideoBg() {
         preload="auto"
         aria-hidden
         style={{
+          // sem upscale (evita blur); leve realce cinematográfico
+          filter: "contrast(1.06) saturate(1.08) brightness(0.94)",
           maskImage: edgeFade,
           WebkitMaskImage: edgeFade,
         }}
       />
-      {/* leve escurecida por cima do vídeo, para o texto ficar legível */}
+      {/* color-grade: harmoniza o vídeo com a paleta âmbar/teal do site */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 mix-blend-soft-light"
         style={{
           background:
-            "linear-gradient(180deg, rgba(6,9,14,0.55) 0%, rgba(6,9,14,0.30) 42%, rgba(6,9,14,0.72) 100%)",
+            "linear-gradient(135deg, rgba(255,157,46,0.28), transparent 45%, rgba(38,192,212,0.22))",
         }}
       />
-      {/* casa as bordas com a cor exata do fundo do site */}
+      {/* escurecida para o texto ficar legível */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(130% 130% at 50% 45%, transparent 60%, var(--color-bg) 100%)",
+            "linear-gradient(180deg, rgba(6,9,14,0.58) 0%, rgba(6,9,14,0.34) 42%, rgba(6,9,14,0.78) 100%)",
+        }}
+      />
+      {/* vinheta: casa as bordas com a cor exata do fundo do site */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(120% 120% at 50% 44%, transparent 52%, rgba(6,9,14,0.85) 82%, var(--color-bg) 100%)",
         }}
       />
     </div>

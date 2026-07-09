@@ -84,9 +84,13 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div className="relative flex flex-col items-center justify-center">
-            {homeSong && <HomeMiniPlayer song={homeSong} />}
+          <div className="relative flex justify-center">
             <HeroVinyl />
+            {homeSong && (
+              <div className="absolute left-1/2 top-[14%] z-20 -translate-x-1/2">
+                <HomeMiniPlayer song={homeSong} />
+              </div>
+            )}
           </div>
         </div>
       </section>
