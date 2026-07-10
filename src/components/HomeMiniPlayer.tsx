@@ -40,6 +40,20 @@ export default function HomeMiniPlayer({ song }: { song: HomeSong }) {
     };
   }, [song.audioEnd, song.audioStart]);
 
+  // a música "entra" quando o disco da intro chega na home (best-effort: o
+  // autoplay com som pode ser bloqueado se a intro terminar sem um clique).
+  useEffect(() => {
+    const onArrived = () => {
+      const a = audioRef.current;
+      if (!a) return;
+      claimAudio(a);
+      if (a.currentTime < song.audioStart) a.currentTime = song.audioStart;
+      a.play().catch(() => {});
+    };
+    window.addEventListener("neblina:disc-arrived", onArrived);
+    return () => window.removeEventListener("neblina:disc-arrived", onArrived);
+  }, [song.audioStart]);
+
   function toggle() {
     const a = audioRef.current;
     if (!a) return;

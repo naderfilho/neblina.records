@@ -1,9 +1,28 @@
 "use client";
 
+import { useEffect } from "react";
 import Vinyl from "@/components/Vinyl";
 
 // Disco do hero: mesmo componente interativo/mixável, com a logo Neblina.
+// Nasce invisível (CSS); só aparece quando o disco da intro "chega" — ou de
+// imediato em visitas seguintes (quando a intro não roda).
 export default function HeroVinyl() {
+  useEffect(() => {
+    const reveal = () => document.documentElement.classList.add("disc-ready");
+    // intro já vista nesta sessão -> mostra já (a intro não vai rodar)
+    if (typeof window !== "undefined" && sessionStorage.getItem("neblina_intro_seen")) {
+      reveal();
+      return;
+    }
+    window.addEventListener("neblina:disc-arrived", reveal);
+    // rede de segurança: nunca deixa o disco preso invisível
+    const fallback = window.setTimeout(reveal, 6000);
+    return () => {
+      window.removeEventListener("neblina:disc-arrived", reveal);
+      clearTimeout(fallback);
+    };
+  }, []);
+
   return (
     <div className="relative aspect-square w-full max-w-[440px]">
       {/* glow */}

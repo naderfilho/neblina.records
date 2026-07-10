@@ -195,6 +195,21 @@ h1, h2, h3, h4, .font-display {
 }
 html.intro-seen #intro-shell { display: none; }
 
+/* O disco da home nasce invisível: ele "chega" com a animação de abertura
+   (o disco da intro voa até aqui e vira o disco da home). Sem disco pré-existente. */
+#hero-vinyl-disc {
+  opacity: 0;
+  transform: scale(0.96);
+  transition: opacity 0.7s ease, transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+html.disc-ready #hero-vinyl-disc {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  #hero-vinyl-disc { opacity: 1; transform: none; transition: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .spin, .spin-slow { animation: none; }
   .fade-up { animation: none; }

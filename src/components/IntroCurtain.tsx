@@ -40,6 +40,12 @@ export default function IntroCurtain() {
     setExiting(true);
     // esconde o shell SSR já no início da saída → sem flash da logo no fim
     document.documentElement.classList.add("intro-seen");
+    // quando o disco "chega" na home (fim do voo), a home revela o disco girando
+    // e a música entra — o disco da intro NÃO se funde num disco pré-existente.
+    window.setTimeout(() => {
+      document.documentElement.classList.add("disc-ready");
+      window.dispatchEvent(new Event("neblina:disc-arrived"));
+    }, 1850); // = duração do flyTransition
   }
 
   useEffect(() => {
