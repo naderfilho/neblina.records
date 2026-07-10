@@ -68,6 +68,10 @@ export type IdentificationInfo = {
   series?: string;
   sound_mode?: string; // "Mono" | "Estéreo"
   disc_count?: string; // "Simples" | "Duplo" | "Triplo"
+  recorded_at?: string;  // Gravado em (estúdio/cidade/país)
+  mixed_at?: string;     // Mixado em
+  mastered_at?: string;  // Masterizado em
+  pressed_at?: string;   // Prensado em (país/cidade)
 };
 
 export type SaleInfo = {

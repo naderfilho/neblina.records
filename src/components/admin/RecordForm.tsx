@@ -533,10 +533,6 @@ export default function RecordForm({
             <input className="ipt" list="s-genres" value={genre} onChange={(e) => setGenre(e.target.value)} />
             <datalist id="s-genres">{suggestions.genres.map((g) => <option key={g} value={g} />)}</datalist>
           </Field>
-          <Field label="Nacionalidade">
-            <input className="ipt" list="s-nats" value={nationality} onChange={(e) => setNationality(e.target.value)} />
-            <datalist id="s-nats">{suggestions.nationalities.map((n) => <option key={n} value={n} />)}</datalist>
-          </Field>
           <Field label="Tipo de disco">
             <select className="ipt" value={format} onChange={(e) => setFormat(e.target.value)}>
               {RECORD_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
@@ -760,6 +756,16 @@ export default function RecordForm({
           <Field label="Matrix Lado B"><input className="ipt" value={ident.matrix_b ?? ""} onChange={(e) => setIdent((i) => ({ ...i, matrix_b: e.target.value }))} /></Field>
           <Field label="Label Code"><input className="ipt" value={ident.label_code ?? ""} onChange={(e) => setIdent((i) => ({ ...i, label_code: e.target.value }))} /></Field>
           <Field label="Série"><input className="ipt" value={ident.series ?? ""} onChange={(e) => setIdent((i) => ({ ...i, series: e.target.value }))} /></Field>
+        </div>
+      </Section>
+
+      {/* 10b. Produção (onde foi feito) */}
+      <Section title="Produção" desc="Onde o disco foi gravado, mixado, masterizado e prensado. Ex.: “Abbey Road Studios, Londres”.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Gravado em"><input className="ipt" value={ident.recorded_at ?? ""} onChange={(e) => setIdent((i) => ({ ...i, recorded_at: e.target.value }))} /></Field>
+          <Field label="Mixado em"><input className="ipt" value={ident.mixed_at ?? ""} onChange={(e) => setIdent((i) => ({ ...i, mixed_at: e.target.value }))} /></Field>
+          <Field label="Masterizado em"><input className="ipt" value={ident.mastered_at ?? ""} onChange={(e) => setIdent((i) => ({ ...i, mastered_at: e.target.value }))} /></Field>
+          <Field label="Prensado em"><input className="ipt" value={ident.pressed_at ?? ""} onChange={(e) => setIdent((i) => ({ ...i, pressed_at: e.target.value }))} /></Field>
         </div>
       </Section>
 

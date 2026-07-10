@@ -46,7 +46,6 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
   const specs: { label: string; value: string | null }[] = [
     { label: "Artista", value: r.artist },
     { label: "Estilo", value: r.genre },
-    { label: "Nacionalidade", value: r.nationality },
     { label: "Formato", value: r.format },
     { label: "Canais", value: r.identification?.sound_mode || null },
     { label: "Discos", value: r.identification?.disc_count || null },
@@ -54,6 +53,10 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
     { label: "Gravadora", value: r.label_company },
     { label: "Nº de catálogo", value: r.catalog_number },
     { label: "Peso", value: r.weight_grams ? `${r.weight_grams} g` : null },
+    { label: "Gravado em", value: r.identification?.recorded_at || null },
+    { label: "Mixado em", value: r.identification?.mixed_at || null },
+    { label: "Masterizado em", value: r.identification?.mastered_at || null },
+    { label: "Prensado em", value: r.identification?.pressed_at || null },
     { label: "Matrix Lado A", value: r.identification?.matrix_a || null },
     { label: "Matrix Lado B", value: r.identification?.matrix_b || null },
     { label: "Label Code", value: r.identification?.label_code || null },

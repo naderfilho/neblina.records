@@ -41,7 +41,11 @@ Depois responda APENAS com um JSON válido (sem texto antes ou depois), em portu
     "label_code": "código da gravadora, se conhecido",
     "series": "série/coleção, se houver",
     "sound_mode": "Mono ou Estéreo",
-    "disc_count": "Simples, Duplo ou Triplo"
+    "disc_count": "Simples, Duplo ou Triplo",
+    "recorded_at": "onde foi gravado (estúdio, cidade/país), se constar",
+    "mixed_at": "onde foi mixado, se constar",
+    "mastered_at": "onde foi masterizado, se constar",
+    "pressed_at": "país/local de prensagem desta edição, se constar"
   },
   "tracks": [ { "side": "A", "title": "nome da faixa" } ]
 }
