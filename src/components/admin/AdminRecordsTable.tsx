@@ -7,6 +7,7 @@ import { Pencil, Trash2, Eye, EyeOff, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAction } from "@/lib/audit";
 import { formatBRL } from "@/lib/utils";
+import { AVAILABILITY } from "@/lib/constants";
 import type { RecordItem } from "@/lib/types";
 
 export default function AdminRecordsTable({ records }: { records: RecordItem[] }) {
@@ -62,7 +63,7 @@ export default function AdminRecordsTable({ records }: { records: RecordItem[] }
               <th className="px-4 py-3">Disco</th>
               <th className="px-4 py-3">Estilo</th>
               <th className="px-4 py-3">Preço</th>
-              <th className="px-4 py-3">Estoque</th>
+              <th className="px-4 py-3">Disponibilidade</th>
               <th className="px-4 py-3">Visitas</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3 text-right">Ações</th>
@@ -87,7 +88,12 @@ export default function AdminRecordsTable({ records }: { records: RecordItem[] }
                 </td>
                 <td className="px-4 py-3 text-muted">{r.genre ?? "—"}</td>
                 <td className="px-4 py-3 text-brand">{formatBRL(r.price)}</td>
-                <td className="px-4 py-3 text-muted">{r.stock_qty}</td>
+                <td className="px-4 py-3">
+                  {(() => {
+                    const a = AVAILABILITY.find((x) => x.id === (r.availability ?? "available")) ?? AVAILABILITY[0];
+                    return <span className="inline-flex items-center gap-1.5 text-xs text-muted"><span className="h-2 w-2 rounded-full" style={{ background: a.color }} /> {a.label}</span>;
+                  })()}
+                </td>
                 <td className="px-4 py-3 text-muted">{r.views_count}</td>
                 <td className="px-4 py-3">
                   <button

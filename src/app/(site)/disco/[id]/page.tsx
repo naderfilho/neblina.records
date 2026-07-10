@@ -157,10 +157,12 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
             >
               {formatBRL(r.price)}
             </span>
-            {r.stock_qty > 0 ? (
-              <span className="rounded-full border border-teal/25 px-3 py-1 text-xs font-medium text-[#3aa7b4]" style={{ background: "#0c2e2b" }}>Disponível</span>
+            {r.availability === "sold" ? (
+              <span className="rounded-full border border-red-500/25 px-3 py-1 text-xs font-medium text-red-300" style={{ background: "#2e0f0f" }}>Vendido</span>
+            ) : r.availability === "reserved" ? (
+              <span className="rounded-full border border-amber-500/25 px-3 py-1 text-xs font-medium text-[#e0a63a]" style={{ background: "#2e2408" }}>Reservado</span>
             ) : (
-              <span className="rounded-full border border-red-500/25 px-3 py-1 text-xs font-medium text-red-300" style={{ background: "#2e0f0f" }}>Esgotado</span>
+              <span className="rounded-full border border-teal/25 px-3 py-1 text-xs font-medium text-[#3aa7b4]" style={{ background: "#0c2e2b" }}>Disponível</span>
             )}
           </div>
 

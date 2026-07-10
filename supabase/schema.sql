@@ -499,3 +499,6 @@ drop policy if exists ai_usage_admin_read on public.ai_usage;
 create policy ai_usage_admin_read on public.ai_usage for select using (public.is_admin());
 drop policy if exists ai_usage_admin_insert on public.ai_usage;
 create policy ai_usage_admin_insert on public.ai_usage for insert with check (public.is_admin());
+
+-- Disponibilidade do disco (peca unica): available | reserved | sold
+alter table public.records add column if not exists availability text not null default 'available';

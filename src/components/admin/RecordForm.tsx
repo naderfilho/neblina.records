@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/client";
 import { uploadFile } from "@/lib/upload";
 import {
   QUALITY_GRADES, QUALITY_META, RECORD_FORMATS, PAYMENT_METHODS, DEFAULT_DISC_CONFIG,
-  PHOTO_CATEGORIES, NEBLINA_AI, SOUND_MODES, DISC_COUNTS, type DiscConfig,
+  PHOTO_CATEGORIES, NEBLINA_AI, SOUND_MODES, DISC_COUNTS, AVAILABILITY, type Availability, type DiscConfig,
 } from "@/lib/constants";
 import type {
   RecordItem, RecordPhoto, ExtraBlock, Tag,
@@ -93,7 +93,6 @@ export default function RecordForm({
   const [year, setYear] = useState(record?.year?.toString() ?? "");
   const [labelCompany, setLabelCompany] = useState(record?.label_company ?? "");
   const [catalog, setCatalog] = useState(record?.catalog_number ?? "");
-  const [stock, setStock] = useState(record?.stock_qty?.toString() ?? "1");
   const [description, setDescription] = useState(record?.description ?? "");
   const [published, setPublished] = useState(record?.is_published ?? true);
   const [featured, setFeatured] = useState(record?.is_featured ?? false);
@@ -110,7 +109,8 @@ export default function RecordForm({
   const [allTags, setAllTags] = useState<Tag[]>([]);
 
   // registro de venda
-  const [sold, setSold] = useState(record?.sold ?? false);
+  const [availability, setAvailability] = useState<Availability>(record?.availability ?? (record?.sold ? "sold" : "available"));
+  const sold = availability === "sold";
   const [soldChannel, setSoldChannel] = useState(record?.sold_channel ?? "");
   const [soldToUserId, setSoldToUserId] = useState<string | null>(record?.sold_to_user_id ?? null);
   const [soldToName, setSoldToName] = useState(record?.sold_to_name ?? "");
@@ -349,8 +349,9 @@ export default function RecordForm({
         disc_quality: discQuality || null, cover_quality: coverQuality || null,
         price: price ? parseFloat(price) : 0, year: year ? parseInt(year) : null,
         label_company: labelCompany.trim() || null, catalog_number: catalog.trim() || null,
-        stock_qty: stock ? parseInt(stock) : 1, description: description.trim() || null,
+        stock_qty: sold ? 0 : 1, description: description.trim() || null,
         is_published: published, is_featured: featured,
+        availability,
         sold,
         sold_channel: sold ? (soldChannel || null) : null,
         sold_to_user_id: sold ? soldToUserId : null,
@@ -554,7 +555,6 @@ export default function RecordForm({
           <Field label="Ano"><input className="ipt" type="number" value={year} onChange={(e) => setYear(e.target.value)} /></Field>
           <Field label="Gravadora"><input className="ipt" value={labelCompany} onChange={(e) => setLabelCompany(e.target.value)} /></Field>
           <Field label="Nº de catálogo"><input className="ipt" value={catalog} onChange={(e) => setCatalog(e.target.value)} /></Field>
-          <Field label="Estoque"><input className="ipt" type="number" value={stock} onChange={(e) => setStock(e.target.value)} /></Field>
           <Field label="Qualidade do disco (Goldmine)">
             <select className="ipt" value={discQuality} onChange={(e) => setDiscQuality(e.target.value)}>
               <option value="">—</option>
@@ -806,9 +806,17 @@ export default function RecordForm({
         </div>
       </Section>
 
-      {/* Registro de venda */}
-      <Section title="Registro de venda" desc="Marque se este disco já foi vendido e registre para onde/para quem.">
-        <Toggle label="Disco vendido" checked={sold} onChange={setSold} />
+      {/* Disponibilidade / venda */}
+      <Section title="Disponibilidade" desc="Cada disco é uma peça única. Defina o status; ao marcar como Vendido, registre para onde/para quem.">
+        <div className="mb-4 flex flex-wrap gap-2">
+          {AVAILABILITY.map((a) => (
+            <button key={a.id} type="button" onClick={() => setAvailability(a.id)}
+              className={cn("flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
+                availability === a.id ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:text-ink")}>
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: a.color }} /> {a.label}
+            </button>
+          ))}
+        </div>
         {sold && (
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Vendido por onde">

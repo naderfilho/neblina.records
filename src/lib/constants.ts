@@ -37,6 +37,14 @@ export const RECORD_FORMATS = [
   "Coletânea",
 ] as const;
 
+/** Disponibilidade do disco (cada disco é uma peça única) */
+export const AVAILABILITY = [
+  { id: "available", label: "Disponível", color: "#3aa7b4" },
+  { id: "reserved", label: "Reservado", color: "#e0a63a" },
+  { id: "sold", label: "Vendido", color: "#c65a4c" },
+] as const;
+export type Availability = (typeof AVAILABILITY)[number]["id"];
+
 /** Canais de áudio do disco */
 export const SOUND_MODES = ["Mono", "Estéreo"] as const;
 

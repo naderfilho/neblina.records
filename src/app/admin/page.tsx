@@ -11,20 +11,21 @@ export default async function AdminDashboard() {
   const supabase = await createClient();
 
   const [{ data: records }, { count: userCount }, { count: eventCount }] = await Promise.all([
-    supabase.from("records").select("id,title,artist,price,stock_qty,views_count,is_published,cover_image_url,disc_config"),
+    supabase.from("records").select("id,title,artist,price,availability,views_count,is_published,cover_image_url,disc_config"),
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("event_requests").select("*", { count: "exact", head: true }).eq("status", "new"),
   ]);
 
   const recs = (records ?? []) as RecordItem[];
-  const inventoryValue = recs.reduce((s, r) => s + (r.price || 0) * (r.stock_qty || 0), 0);
-  const totalUnits = recs.reduce((s, r) => s + (r.stock_qty || 0), 0);
+  const available = recs.filter((r) => r.availability !== "sold");
+  const inventoryValue = available.reduce((s, r) => s + (r.price || 0), 0);
+  const totalUnits = available.length;
   const published = recs.filter((r) => r.is_published).length;
   const mostVisited = [...recs].sort((a, b) => b.views_count - a.views_count).slice(0, 6);
 
   const stats = [
     { icon: Disc3, label: "Discos cadastrados", value: String(recs.length), sub: `${published} publicados` },
-    { icon: DollarSign, label: "Valor do inventário", value: formatBRL(inventoryValue), sub: `${totalUnits} unidades` },
+    { icon: DollarSign, label: "Valor do inventário", value: formatBRL(inventoryValue), sub: `${totalUnits} disponíveis` },
     { icon: Users, label: "Usuários", value: String(userCount ?? 0), sub: "cadastrados" },
     { icon: CalendarDays, label: "Pedidos de evento", value: String(eventCount ?? 0), sub: "novos" },
   ];
