@@ -20,11 +20,11 @@ export default function GradingHelp() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-7 w-7 items-center justify-center rounded-full border border-line text-muted transition-colors hover:border-brand/50 hover:text-brand"
+        className="inline-flex items-center justify-center p-0.5 text-muted transition-colors hover:text-brand"
         title="O que significam as siglas?"
         aria-label="Explicar classificação de qualidade"
       >
-        <HelpCircle size={16} />
+        <HelpCircle size={18} />
       </button>
 
       {open && (

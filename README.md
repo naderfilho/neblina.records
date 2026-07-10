@@ -19,7 +19,8 @@ npm run dev
 
 Abra http://localhost:3000
 
-As variáveis já estão em `.env.local` (URL do Supabase, chaves e WhatsApp).
+Configure as variáveis em `.env.local` (URL do Supabase, chaves, WhatsApp). Esse
+arquivo **não é versionado** — nunca faça commit de segredos.
 
 ## Banco de dados
 
@@ -30,11 +31,9 @@ Buckets de Storage criados: `covers`, `record-photos`, `audio` (públicos para l
 
 ## Acesso admin
 
-- **E-mail:** contato@example.com
-- **Senha:** neblina2001
-- Painel em `/admin` (discos, inventário, usuários, eventos).
-
-Para adicionar outro admin, insira o e-mail na tabela `admin_emails` — ao se cadastrar, a pessoa vira admin automaticamente.
+O painel fica em `/admin`. Para tornar alguém admin, insira o e-mail na tabela
+`admin_emails` — ao se cadastrar (ou no próximo login), a pessoa vira admin
+automaticamente. **Credenciais não ficam no repositório.**
 
 ## Estrutura
 

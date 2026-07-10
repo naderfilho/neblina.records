@@ -320,37 +320,13 @@ create policy storage_admin_delete on storage.objects
   for delete using (bucket_id in ('covers','record-photos','audio') and public.is_admin());
 
 -- ============================================================================
---  Usuário ADMIN inicial (admin@example.com / senha: neblina2001)
---  Cria a conta já confirmada. O trigger handle_new_user o marca como admin
---  porque o e-mail está em admin_emails. Rode uma única vez.
+--  Usuário ADMIN inicial
+--  Crie o admin pelo painel do Supabase (Authentication > Users) ou pelo fluxo
+--  de cadastro do site, e adicione o e-mail em public.admin_emails para que o
+--  trigger handle_new_user o marque como admin. NÃO versione senhas aqui.
+--  (defina a variável psql :admin_email / :admin_password ao rodar manualmente)
 -- ============================================================================
-do $$
-declare
-  uid uuid := gen_random_uuid();
-begin
-  if not exists (select 1 from auth.users where email = 'admin@example.com') then
-    insert into auth.users (
-      instance_id, id, aud, role, email, encrypted_password,
-      email_confirmed_at, created_at, updated_at,
-      raw_app_meta_data, raw_user_meta_data,
-      confirmation_token, recovery_token, email_change_token_new, email_change
-    ) values (
-      '00000000-0000-0000-0000-000000000000', uid, 'authenticated', 'authenticated',
-      'admin@example.com', crypt('neblina2001', gen_salt('bf')),
-      now(), now(), now(),
-      '{"provider":"email","providers":["email"]}'::jsonb,
-      '{"first_name":"Nader","last_name":"Filho","phone":""}'::jsonb,
-      '', '', '', ''
-    );
-    insert into auth.identities (
-      id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
-    ) values (
-      gen_random_uuid(), uid, uid::text,
-      jsonb_build_object('sub', uid::text, 'email', 'admin@example.com', 'email_verified', true),
-      'email', now(), now(), now()
-    );
-  end if;
-end $$;
+-- do $$ ... $$;  -- removido: não guardamos credenciais no repositório
 
 -- ============================================================================
 --  Fim

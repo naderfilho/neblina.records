@@ -148,12 +148,7 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
           <div className="mt-5 flex items-center gap-3">
             <span
               className="font-display text-4xl font-bold"
-              style={{
-                color: "#ff9d2e",
-                WebkitTextStroke: "1.4px #000",
-                paintOrder: "stroke fill",
-                textShadow: "0 1px 3px rgba(0,0,0,0.5)",
-              }}
+              style={{ color: "#ff9d2e", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}
             >
               {formatBRL(r.price)}
             </span>

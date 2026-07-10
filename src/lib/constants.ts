@@ -148,7 +148,7 @@ export const DISC_STYLES = [
 
 export const LABEL_STYLES = [
   { id: "photo", label: "Foto da Capa" },
-  { id: "photo-ring", label: "Foto + Anel" },
+  { id: "photo-ring", label: "Foto da capa + Anel" },
   { id: "solid", label: "Cor Sólida" },
   { id: "gradient", label: "Degradê" },
   { id: "logo", label: "Logo Neblina" },

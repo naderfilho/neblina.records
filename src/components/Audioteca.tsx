@@ -908,14 +908,17 @@ function Shelf({
   if (records.length === 0) {
     return <p className="rounded-2xl border border-dashed border-line py-14 text-center text-muted">Nenhum disco no acervo ainda.</p>;
   }
+  const tierOrder: Record<string, number> = { public: 0, members: 1, signature: 2 };
+  const ordered = [...records].sort((a, b) => (tierOrder[a.audioteca_tier] ?? 3) - (tierOrder[b.audioteca_tier] ?? 3));
+
   return (
     <div className="relative">
       <div className="flex items-end gap-4 overflow-x-auto px-2 pb-6 pt-4" style={{ scrollbarWidth: "thin" }}>
-        {records.map((r) => {
+        {ordered.map((r) => {
           const locked = !canAccess(r);
           const open = openId === r.id && !locked;
           const queuedN = queuedIds.filter((id) => id === r.id).length;
-          const lockReason = r.audioteca_tier === "signature" ? "Signature · em breve" : "Entre para ouvir";
+          const lockReason = r.audioteca_tier === "signature" ? "Neblina Signature" : "Entre para ouvir";
           return (
             <div
               key={r.id}
@@ -952,7 +955,7 @@ function Shelf({
                 </button>
 
                 {locked ? (
-                  <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 text-center">
+                  <div className="pointer-events-none absolute left-0 top-0 z-20 flex h-28 w-28 flex-col items-center justify-center gap-1 px-1 text-center">
                     <Lock size={18} className="text-white/90" />
                     <span className="rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-semibold text-white">{lockReason}</span>
                   </div>
