@@ -27,6 +27,23 @@ type PhotoItem = { id: string; url: string; category: string; file?: File };
 type Suggestions = { genres: string[]; nationalities: string[]; artists: string[] };
 
 /**
+ * Executa uma etapa do salvamento rotulando o erro, para saber exatamente onde
+ * falhou. Erros de RLS quase sempre significam sessão expirada (o token não
+ * chega ao Postgres, então `auth.uid()` é nulo e `is_admin()` dá falso).
+ */
+async function step<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/row-level security|violates row-level/i.test(msg)) {
+      throw new Error(`Sem permissão ao ${label}. Sua sessão provavelmente expirou — faça login novamente e tente salvar.`);
+    }
+    throw new Error(`Falha ao ${label}: ${msg}`);
+  }
+}
+
+/**
  * Lê a resposta de uma rota de IA com segurança. As rotas sempre respondem JSON,
  * mas a plataforma (Vercel) pode devolver uma página de erro em texto puro quando
  * a função estoura o tempo limite (timeout) — aí um `res.json()` direto quebra com
@@ -293,25 +310,34 @@ export default function RecordForm({
     const supabase = createClient();
 
     try {
+      // Revalida a sessão antes de escrever: se o access token tiver expirado
+      // (formulário aberto por muito tempo), o refresh acontece aqui. Sem isso a
+      // escrita chega sem auth.uid() e a RLS recusa ("new row violates row-level
+      // security policy").
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Sua sessão expirou. Faça login novamente e salve de novo (os dados do formulário continuam aqui).");
+      }
+
       let coverUrlFinal = coverPreview;
-      if (coverFile) coverUrlFinal = await uploadFile("covers", coverFile, "cover-");
+      if (coverFile) coverUrlFinal = await step("enviar a capa", () => uploadFile("covers", coverFile, "cover-"));
 
       let gatefoldUrlFinal = gatefoldPreview;
-      if (gatefoldFile) gatefoldUrlFinal = await uploadFile("covers", gatefoldFile, "gatefold-");
+      if (gatefoldFile) gatefoldUrlFinal = await step("enviar a arte do gatefold", () => uploadFile("covers", gatefoldFile, "gatefold-"));
 
       let audioUrlFinal = audioUrl;
-      if (audioFile) audioUrlFinal = await uploadFile("audio", audioFile, "audio-");
+      if (audioFile) audioUrlFinal = await step("enviar o áudio", () => uploadFile("audio", audioFile, "audio-"));
 
       const finalPhotos: { url: string; category: string }[] = [];
       for (const p of photos) {
-        const url = p.file ? await uploadFile("record-photos", p.file, "photo-") : p.url;
+        const url = p.file ? await step("enviar uma foto do disco", () => uploadFile("record-photos", p.file!, "photo-")) : p.url;
         finalPhotos.push({ url, category: p.category || "outro" });
       }
 
       const finalTracks: { id: string; side: "A" | "B"; title: string; audio_url: string | null }[] = [];
       for (const t of tracks) {
         let url = t.audioUrl;
-        if (t.file) url = await uploadFile("audio", t.file, "track-");
+        if (t.file) url = await step(`enviar o áudio da faixa "${t.title || "sem nome"}"`, () => uploadFile("audio", t.file!, "track-"));
         finalTracks.push({ id: t.id, side: t.side, title: t.title.trim() || "Faixa", audio_url: url });
       }
       const homeTrack = finalTracks.find((t) => t.id === homeTrackId);
@@ -347,12 +373,16 @@ export default function RecordForm({
 
       let recordId = record?.id;
       if (isEdit) {
-        const { error } = await supabase.from("records").update(payload).eq("id", record!.id);
-        if (error) throw error;
+        await step("salvar as alterações do disco", async () => {
+          const { error } = await supabase.from("records").update(payload).eq("id", record!.id);
+          if (error) throw error;
+        });
       } else {
-        const { data, error } = await supabase.from("records").insert(payload).select("id").single();
-        if (error) throw error;
-        recordId = data.id;
+        recordId = await step("criar o disco", async () => {
+          const { data, error } = await supabase.from("records").insert(payload).select("id").single();
+          if (error) throw error;
+          return data.id as string;
+        });
       }
 
       // histórico de ações
