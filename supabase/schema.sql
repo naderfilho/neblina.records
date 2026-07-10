@@ -474,3 +474,28 @@ drop policy if exists site_settings_public_read on public.site_settings;
 create policy site_settings_public_read on public.site_settings for select using (true);
 drop policy if exists site_settings_admin_write on public.site_settings;
 create policy site_settings_admin_write on public.site_settings for all using (public.is_admin()) with check (public.is_admin());
+
+-- ============================================================================
+--  Data de nascimento no perfil (promoções de aniversário)
+-- ============================================================================
+alter table public.profiles add column if not exists birth_date date;
+
+-- ============================================================================
+--  Uso da Neblina IA (custo por chamada — gasto em tempo real no admin)
+-- ============================================================================
+create table if not exists public.ai_usage (
+  id            uuid primary key default gen_random_uuid(),
+  actor_id      uuid references public.profiles(id) on delete set null,
+  action        text not null,
+  model         text,
+  cost_usd      numeric not null default 0,
+  input_tokens  integer,
+  output_tokens integer,
+  created_at    timestamptz not null default now()
+);
+create index if not exists ai_usage_created_idx on public.ai_usage (created_at desc);
+alter table public.ai_usage enable row level security;
+drop policy if exists ai_usage_admin_read on public.ai_usage;
+create policy ai_usage_admin_read on public.ai_usage for select using (public.is_admin());
+drop policy if exists ai_usage_admin_insert on public.ai_usage;
+create policy ai_usage_admin_insert on public.ai_usage for insert with check (public.is_admin());

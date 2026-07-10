@@ -10,6 +10,7 @@ export type Profile = {
   phone: string | null;
   role: UserRole;
   avatar_url: string | null;
+  birth_date: string | null;
   created_at: string;
   last_login_at: string | null;
 };

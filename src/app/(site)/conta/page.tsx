@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatBRL } from "@/lib/utils";
 import SignOutButton from "@/components/SignOutButton";
 import AvatarUpload from "@/components/AvatarUpload";
+import BirthDateEditor from "@/components/BirthDateEditor";
 
 export const metadata = { title: "Minha conta" };
 export const revalidate = 0;
@@ -65,6 +66,7 @@ export default async function ContaPage() {
               </div>
             </div>
           ))}
+          <BirthDateEditor userId={profile.id} initial={profile.birth_date} />
         </dl>
       </div>
 

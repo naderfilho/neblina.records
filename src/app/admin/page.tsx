@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Disc3, DollarSign, Users, Eye, CalendarDays, Plus, TrendingUp, Package } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatBRL } from "@/lib/utils";
+import AiSpendCard from "@/components/admin/AiSpendCard";
 import type { RecordItem } from "@/lib/types";
 
 export const revalidate = 0;
@@ -51,6 +52,7 @@ export default async function AdminDashboard() {
             <p className="mt-0.5 text-xs text-faint">{s.sub}</p>
           </div>
         ))}
+        <AiSpendCard />
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">

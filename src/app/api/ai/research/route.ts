@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { anthropic, AI_MODEL, estimateCostUsd, isAdminRequest, extractJson } from "@/lib/ai";
+import { anthropic, AI_MODEL, estimateCostUsd, isAdminRequest, extractJson, recordAiUsage } from "@/lib/ai";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -104,6 +104,7 @@ export async function POST(req: Request) {
       );
     }
     const costUsd = estimateCostUsd(AI_MODEL, msg.usage);
+    await recordAiUsage("research", AI_MODEL, msg.usage, costUsd);
 
     return NextResponse.json({ ok: true, data, costUsd });
   } catch (err) {

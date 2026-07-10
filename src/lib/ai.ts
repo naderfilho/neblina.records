@@ -28,6 +28,29 @@ export function estimateCostUsd(model: string, usage: {
   return (inTok * r.in + out * r.out) / 1_000_000;
 }
 
+/** Registra o custo de uma chamada da Neblina IA (para o gasto no admin). Best-effort. */
+export async function recordAiUsage(
+  action: string,
+  model: string,
+  usage: { input_tokens?: number; output_tokens?: number },
+  costUsd: number,
+): Promise<void> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from("ai_usage").insert({
+      actor_id: user?.id ?? null,
+      action,
+      model,
+      cost_usd: costUsd,
+      input_tokens: usage.input_tokens ?? null,
+      output_tokens: usage.output_tokens ?? null,
+    });
+  } catch {
+    /* não bloqueia a resposta da IA */
+  }
+}
+
 export async function isAdminRequest(): Promise<boolean> {
   const supabase = await createClient();
   const {
