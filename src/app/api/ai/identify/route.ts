@@ -19,14 +19,14 @@ Responda APENAS com um JSON válido, sem texto antes ou depois, com exatamente e
 Se não tiver certeza de um campo, use "" (string vazia) ou null. Não invente dados improváveis.`;
 
 export async function POST(req: Request) {
-  if (!(await isAdminRequest())) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json({ error: "Chave da IA não configurada." }, { status: 500 });
-  }
-
   try {
+    if (!(await isAdminRequest())) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    }
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({ error: "Chave da IA não configurada." }, { status: 500 });
+    }
+
     const { imageBase64, mediaType } = await req.json();
     if (!imageBase64) return NextResponse.json({ error: "Imagem ausente" }, { status: 400 });
 

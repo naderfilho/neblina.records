@@ -42,14 +42,14 @@ Liste TODAS as faixas nos lados A e B, na ordem. Se não encontrar um dado, use 
 }
 
 export async function POST(req: Request) {
-  if (!(await isAdminRequest())) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json({ error: "Chave da IA não configurada." }, { status: 500 });
-  }
-
   try {
+    if (!(await isAdminRequest())) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    }
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({ error: "Chave da IA não configurada." }, { status: 500 });
+    }
+
     const { title, artist, year } = await req.json();
     if (!title || !artist) {
       return NextResponse.json({ error: "Informe título e artista antes de usar a IA." }, { status: 400 });

@@ -26,6 +26,32 @@ import { cn } from "@/lib/utils";
 type PhotoItem = { id: string; url: string; category: string; file?: File };
 type Suggestions = { genres: string[]; nationalities: string[]; artists: string[] };
 
+/**
+ * Lê a resposta de uma rota de IA com segurança. As rotas sempre respondem JSON,
+ * mas a plataforma (Vercel) pode devolver uma página de erro em texto puro quando
+ * a função estoura o tempo limite (timeout) — aí um `res.json()` direto quebra com
+ * "Unexpected token 'A'…". Aqui lemos como texto e só então tentamos o JSON,
+ * traduzindo o erro para uma mensagem clara.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function readJsonResponse(res: Response): Promise<any> {
+  const raw = await res.text();
+  let json: { error?: string; [k: string]: unknown } | null = null;
+  try {
+    json = raw ? JSON.parse(raw) : null;
+  } catch {
+    // resposta não-JSON: timeout / erro de plataforma / HTML de erro
+    if (res.status === 504 || res.status === 408 || /timeout|timed out|FUNCTION_INVOCATION_TIMEOUT/i.test(raw)) {
+      throw new Error("A IA demorou demais e a conexão expirou (timeout). Tente de novo — costuma responder na 2ª tentativa.");
+    }
+    throw new Error(`O servidor respondeu de forma inesperada (${res.status || "sem status"}). Tente novamente em instantes.`);
+  }
+  if (!res.ok) {
+    throw new Error((json?.error as string) || `Erro ${res.status} na IA.`);
+  }
+  return json ?? {};
+}
+
 export default function RecordForm({
   record,
   existingPhotos = [],
@@ -245,8 +271,7 @@ export default function RecordForm({
     let idYear = year;
     try {
       const res = await fetch("/api/ai/identify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageBase64: b.data, mediaType: b.mediaType }) });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || "Erro na IA");
+      const j = await readJsonResponse(res);
       const d = j.data ?? {};
       fill(setTitle, d.title); fill(setArtist, d.artist); fill(setGenre, d.genre);
       fill(setNationality, d.nationality); fill(setFormat, d.format);
@@ -272,8 +297,7 @@ export default function RecordForm({
     setAiBusy("research");
     try {
       const res = await fetch("/api/ai/research", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: idTitle, artist: idArtist, year: idYear }) });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || "Erro na pesquisa da IA");
+      const j = await readJsonResponse(res);
       applyResearch(j.data ?? {});
       if (typeof j.costUsd === "number") setAiCost((c) => c + j.costUsd);
     } catch (e) {
