@@ -13,6 +13,19 @@ const STYLES = [
   { id: "glow", label: "Brilho" },
 ];
 
+const FONTS = [
+  { id: "sans", label: "Padrão" },
+  { id: "display", label: "Display" },
+  { id: "serif", label: "Serifada" },
+  { id: "mono", label: "Mono" },
+];
+
+const SIZES = [
+  { id: "sm", label: "Pequena" },
+  { id: "md", label: "Média" },
+  { id: "lg", label: "Grande" },
+];
+
 export default function AdminTagsPage() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +48,8 @@ export default function AdminTagsPage() {
         bg: preset?.bg ?? "#ff9d2e",
         fg: preset?.fg ?? "#241304",
         style: "solid",
+        font: "sans",
+        size: "sm",
       })
       .select()
       .single();
@@ -43,7 +58,7 @@ export default function AdminTagsPage() {
 
   async function saveTag(tag: Tag) {
     setSavingId(tag.id);
-    await supabase.from("tags").update({ label: tag.label, bg: tag.bg, fg: tag.fg, style: tag.style }).eq("id", tag.id);
+    await supabase.from("tags").update({ label: tag.label, bg: tag.bg, fg: tag.fg, style: tag.style, font: tag.font ?? "sans", size: tag.size ?? "sm" }).eq("id", tag.id);
     setSavingId(null);
   }
 
@@ -87,13 +102,16 @@ export default function AdminTagsPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           {tags.map((t) => (
             <div key={t.id} className="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-              {/* preview em cima de um mini disco */}
-              <div className="relative h-28 w-28 shrink-0 self-center rounded-full vinyl-grooves">
-                <div className="absolute left-1/2 top-1/2 h-[42%] w-[42%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand" />
-                <div className="absolute left-1/2 top-1/2 h-[4%] w-[4%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-black" />
-                <div className="absolute left-1/2 top-1 -translate-x-1/2">
-                  <TagBadge tag={t} size="sm" />
+              {/* prévia de como fica na home (etiqueta em cima do disco) */}
+              <div className="shrink-0 self-center">
+                <div className="relative h-28 w-28 rounded-full vinyl-grooves">
+                  <div className="absolute left-1/2 top-1/2 h-[42%] w-[42%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand" />
+                  <div className="absolute left-1/2 top-1/2 h-[4%] w-[4%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-black" />
+                  <div className="absolute left-1/2 top-1 -translate-x-1/2">
+                    <TagBadge tag={t} />
+                  </div>
                 </div>
+                <p className="mt-1.5 text-center text-[10px] text-faint">Prévia na home</p>
               </div>
 
               <div className="flex-1 space-y-3">
@@ -108,9 +126,24 @@ export default function AdminTagsPage() {
                   <label className="flex items-center gap-1.5 text-xs text-muted">
                     Texto <input type="color" value={t.fg} onChange={(e) => patch(t.id, { fg: e.target.value })} className="h-7 w-9 rounded border border-line bg-transparent" />
                   </label>
-                  <select value={t.style} onChange={(e) => patch(t.id, { style: e.target.value })} className="rounded-lg border border-line bg-bg-soft px-2 py-1.5 text-xs text-ink">
-                    {STYLES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-                  </select>
+                  <label className="flex items-center gap-1.5 text-xs text-muted">
+                    Estilo
+                    <select value={t.style} onChange={(e) => patch(t.id, { style: e.target.value })} className="rounded-lg border border-line bg-bg-soft px-2 py-1.5 text-xs text-ink">
+                      {STYLES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs text-muted">
+                    Fonte
+                    <select value={t.font ?? "sans"} onChange={(e) => patch(t.id, { font: e.target.value })} className="rounded-lg border border-line bg-bg-soft px-2 py-1.5 text-xs text-ink">
+                      {FONTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs text-muted">
+                    Tamanho
+                    <select value={t.size ?? "sm"} onChange={(e) => patch(t.id, { size: e.target.value })} className="rounded-lg border border-line bg-bg-soft px-2 py-1.5 text-xs text-ink">
+                      {SIZES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                    </select>
+                  </label>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => saveTag(t)} className="btn-brand flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs">

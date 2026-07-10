@@ -86,6 +86,8 @@ export type Tag = {
   bg: string;
   fg: string;
   style: string;
+  font?: string; // "sans" | "display" | "serif" | "mono"
+  size?: string; // "sm" | "md" | "lg"
   created_at?: string;
 };
 

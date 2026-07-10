@@ -502,3 +502,6 @@ create policy ai_usage_admin_insert on public.ai_usage for insert with check (pu
 
 -- Disponibilidade do disco (peca unica): available | reserved | sold
 alter table public.records add column if not exists availability text not null default 'available';
+-- Tags: fonte e tamanho da etiqueta
+alter table public.tags add column if not exists font text not null default 'sans';
+alter table public.tags add column if not exists size text not null default 'sm';
