@@ -8,6 +8,7 @@ import { formatBRL } from "@/lib/utils";
 import Vinyl from "@/components/Vinyl";
 import TrackVinyl from "@/components/TrackVinyl";
 import BuyButtons from "@/components/BuyButtons";
+import DiscCoverReveal from "@/components/DiscCoverReveal";
 import FavoriteButton from "@/components/FavoriteButton";
 import GradingHelp from "@/components/GradingHelp";
 import ShippingCalculator from "@/components/ShippingCalculator";
@@ -109,26 +110,24 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
       <div className="grid gap-10 md:grid-cols-2">
         {/* Vinil */}
         <div className="md:sticky md:top-24 md:self-start">
-          {r.tracks && r.tracks.length > 0 ? (
-            <TrackVinyl tracks={r.tracks} coverUrl={r.cover_image_url} coverUrlB={r.cover_image_url_b} config={r.disc_config} title={r.title} />
-          ) : (
-            <>
-              <div className="mx-auto max-w-md">
-                <Vinyl
-                  coverUrl={r.cover_image_url}
-                  config={r.disc_config}
-                  audioUrl={r.audio_url}
-                  audioStart={r.audio_start}
-                  audioEnd={r.audio_end}
-                  title={r.title}
-                />
-              </div>
-              <p className="mt-4 flex items-center justify-center gap-4 text-xs text-faint">
-                <span className="flex items-center gap-1"><Eye size={13} /> {r.views_count} visitas</span>
-                {r.audio_url && <span className="flex items-center gap-1"><Music2 size={13} /> Passe o mouse para ouvir</span>}
-              </p>
-            </>
-          )}
+          <DiscCoverReveal coverUrl={r.cover_image_url}>
+            {r.tracks && r.tracks.length > 0 ? (
+              <TrackVinyl tracks={r.tracks} coverUrl={r.cover_image_url} coverUrlB={r.cover_image_url_b} config={r.disc_config} title={r.title} />
+            ) : (
+              <Vinyl
+                coverUrl={r.cover_image_url}
+                config={r.disc_config}
+                audioUrl={r.audio_url}
+                audioStart={r.audio_start}
+                audioEnd={r.audio_end}
+                title={r.title}
+              />
+            )}
+          </DiscCoverReveal>
+          <p className="mt-4 flex items-center justify-center gap-4 text-xs text-faint">
+            <span className="flex items-center gap-1"><Eye size={13} /> {r.views_count} visitas</span>
+            {!r.tracks?.length && r.audio_url && <span className="flex items-center gap-1"><Music2 size={13} /> Passe o mouse para ouvir</span>}
+          </p>
         </div>
 
         {/* Info */}
