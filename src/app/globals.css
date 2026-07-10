@@ -89,22 +89,10 @@ h1, h2, h3, h4, .font-display {
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-brand-deep); }
 
-/* ---- Fundo global (montanhas na névoa) ---- */
-.site-bg { --scroll: 0; }
+/* ---- Fundo global (montanhas da logo) ---- */
+.site-bg { --scroll: 0; background: #000; }
 .site-bg-sky {
-  background: linear-gradient(180deg, #0a1622 0%, #0b1622 48%, #070b12 82%, var(--color-bg) 100%);
-}
-.site-bg-sun {
-  position: absolute;
-  left: 50%;
-  top: 40%;
-  width: min(820px, 135vw);
-  height: min(820px, 135vw);
-  transform: translate(-50%, -50%) translateY(calc(var(--scroll) * 30vh));
-  background:
-    radial-gradient(circle at center, #ffd38a 0%, #ff9d2e 26%, rgba(209,112,26,0.34) 60%, transparent 72%);
-  opacity: calc(1 - var(--scroll) * 0.92);
-  will-change: transform, opacity;
+  background: linear-gradient(180deg, #0a1622 0%, #0a1420 40%, #05070c 74%, #000 100%);
 }
 .site-bg-mts {
   position: absolute;
@@ -112,7 +100,9 @@ h1, h2, h3, h4, .font-display {
   right: 0;
   bottom: -1px;
   width: 100%;
-  height: clamp(340px, 72vh, 860px);
+  height: 100%;
+  background: url("/montanhas.png") no-repeat bottom center;
+  background-size: 100% auto;
   transform: translateY(calc(var(--scroll) * 26px));
   will-change: transform;
 }
@@ -125,7 +115,6 @@ h1, h2, h3, h4, .font-display {
   transition: opacity 0.12s linear;
 }
 @media (prefers-reduced-motion: reduce) {
-  .site-bg-sun, .site-bg-mts { transform: translate(-50%, -50%); }
   .site-bg-mts { transform: none; }
 }
 
