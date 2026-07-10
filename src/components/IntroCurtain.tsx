@@ -46,8 +46,8 @@ export default function IntroCurtain() {
     if (sessionStorage.getItem(KEY)) return;
     setShow(true);
     document.body.style.overflow = "hidden";
-    const t1 = setTimeout(startExit, 2800);
-    const t2 = setTimeout(finish, 4550);
+    const t1 = setTimeout(startExit, 2600);
+    const t2 = setTimeout(finish, 4700);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -58,11 +58,11 @@ export default function IntroCurtain() {
   function skip() {
     if (exiting) return;
     startExit();
-    setTimeout(finish, 1750);
+    setTimeout(finish, 2100);
   }
 
-  // easing suave (Material standard) e duração maior p/ o encaixe ficar "smooth"
-  const flyTransition = { duration: 1.55, ease: [0.4, 0, 0.2, 1] as const };
+  // easing de "encaixe": desacelera bem no fim p/ o disco assentar suave no hero
+  const flyTransition = { duration: 1.85, ease: [0.22, 1, 0.36, 1] as const };
 
   return (
     <AnimatePresence>
@@ -74,14 +74,14 @@ export default function IntroCurtain() {
           initial={{ opacity: 1 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.7, ease: "easeInOut" }}
+          transition={{ duration: 0.95, ease: "easeInOut" }}
         >
           {/* fundo (névoa) — some para revelar a home enquanto o disco voa */}
           <motion.div
             className="mist-bg absolute inset-0"
             initial={{ opacity: 1 }}
             animate={exiting ? { opacity: 0 } : { opacity: 1 }}
-            transition={{ duration: 0.9, delay: exiting ? 0.35 : 0, ease: [0.5, 0, 0.2, 1] }}
+            transition={{ duration: 1.1, delay: exiting ? 0.25 : 0, ease: [0.5, 0, 0.2, 1] }}
           />
 
           {/* halo de luz */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Play, Pause, SkipBack, SkipForward, Hand, Disc3, ArrowDownToLine,
@@ -124,6 +124,7 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
   // agulha arrastável
   const [armDrag, setArmDrag] = useState(false);
   const [armAngle, setArmAngle] = useState<number | null>(null);
+  const [restAngle, setRestAngle] = useState<number | null>(null);
 
   // controles de som
   const [volume, setVolume] = useState(0.9);
@@ -135,7 +136,6 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
   const crackleRef = useRef<HTMLAudioElement | null>(null);
   const dropRef = useRef<HTMLDivElement | null>(null);
   const armSvgRef = useRef<SVGSVGElement | null>(null);
-  const liveArmRef = useRef(4);
   const acRef = useRef<AudioContext | null>(null);
   const bassRef = useRef<BiquadFilterNode | null>(null);
   const trebleRef = useRef<BiquadFilterNode | null>(null);
@@ -299,85 +299,123 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
     }
   }
 
-  /* ---------- agulha arrastável (física real de braço de toca-discos) ----------
-     O braço gira em torno do pivô e a ponta (estilete) percorre um arco. Enquanto
-     arrasta, o braço aponta continuamente para o cursor (fica "colado" na mão) e a
-     faixa é escolhida pelo raio em que o estilete pousa. Ao soltar sobre um sulco,
-     a agulha fica pousada nele. */
+  /* ---------- agulha arrastável (geometria real do braço) ----------
+     Um único modelo geométrico serve tanto para arrastar quanto para pousar:
+     `angleForRadius` é o INVERSO exato do arco do braço — dado o raio de um sulco,
+     devolve o ângulo em que o estilete pousa nele. Assim, clicar num sulco e
+     arrastar a agulha até ele levam ao MESMO lugar (o sulco certo). No arrasto, o
+     braço acompanha a distância do dedo/cursor ao centro (radial), fluido no
+     desktop e no touch. */
   const R_OUT = 47, R_IN = 24.5;
-  const ARM_MIN = 4, ARM_MAX = 40;
+  const ARM_MIN = 2, ARM_MAX = 44;
 
-  // ângulo de descanso do braço = sulco da faixa que está tocando (ou berço)
-  function grooveAngle(list: Track[], id: string | null): number | null {
+  // centro do sulco (escala 0..50) da faixa 'id' dentro da lista do lado
+  function grooveCenter(list: Track[], id: string | null): number | null {
     if (!id) return null;
     const N = list.length;
     const i = list.findIndex((t) => t.id === id);
     if (i < 0 || N === 0) return null;
     const bw = (R_OUT - R_IN) / N;
-    const rC = R_OUT - (i + 0.5) * bw;
-    return Math.max(8, Math.min(34, 10 + ((R_OUT - rC) / (R_OUT - R_IN)) * 24));
+    return R_OUT - (i + 0.5) * bw;
   }
 
-  function computeArm(clientX: number, clientY: number): { deg: number; track: Track | null } | null {
+  // inverso do arco do braço: raio-alvo (0..50) -> ângulo do braço (graus)
+  function angleForRadius(rNorm: number): number | null {
     const svg = armSvgRef.current?.getBoundingClientRect();
     const dz = dropRef.current?.getBoundingClientRect();
     if (!svg || !dz) return null;
-    // pivô do braço (viewBox 176,24) e offset base do estilete (78,128) em coords de tela
     const pivotX = svg.left + (176 / 200) * svg.width;
     const pivotY = svg.top + (24 / 200) * svg.height;
-    const ox = ((78 - 176) / 200) * svg.width;
+    const ox = ((78 - 176) / 200) * svg.width; // offset do estilete no ângulo 0
     const oy = ((128 - 24) / 200) * svg.height;
-    const base = Math.atan2(oy, ox);
-    // ângulo para o braço apontar ao cursor (mantém a agulha "na mão")
-    let deg = ((Math.atan2(clientY - pivotY, clientX - pivotX) - base) * 180) / Math.PI;
-    deg = ((((deg + 180) % 360) + 360) % 360) - 180;
-    deg = Math.max(ARM_MIN, Math.min(ARM_MAX, deg));
-    // posição do estilete nesse ângulo -> raio a partir do centro do disco
-    const rad = (deg * Math.PI) / 180;
-    const tipX = pivotX + ox * Math.cos(rad) - oy * Math.sin(rad);
-    const tipY = pivotY + ox * Math.sin(rad) + oy * Math.cos(rad);
     const cx = dz.left + dz.width / 2;
     const cy = dz.top + dz.height / 2;
     const vinylR = (dz.width / 2) * 0.8; // vinil = inset-[10%] do prato
-    const rNorm = (Math.hypot(tipX - cx, tipY - cy) / vinylR) * 50;
+    const d = (rNorm / 50) * vinylR; // raio-alvo em px
+    const Vx = pivotX - cx, Vy = pivotY - cy;
+    const A = Vx * ox + Vy * oy;
+    const B = Vy * ox - Vx * oy;
+    const Rr = Math.hypot(A, B);
+    if (Rr === 0) return null;
+    // |V + R(θ)O|² = d²  ->  A cosθ + B sinθ = k·Rr
+    let k = (d * d - (Vx * Vx + Vy * Vy) - (ox * ox + oy * oy)) / 2 / Rr;
+    k = Math.max(-1, Math.min(1, k));
+    const phi = Math.atan2(B, A);
+    const ac = Math.acos(k);
+    let best: number | null = null, bestPen = Infinity;
+    for (const r of [phi + ac, phi - ac]) {
+      let deg = (r * 180) / Math.PI;
+      deg = ((((deg + 180) % 360) + 360) % 360) - 180; // normaliza [-180,180]
+      const clamped = Math.max(ARM_MIN, Math.min(ARM_MAX, deg));
+      const pen = Math.abs(deg - clamped);
+      if (pen < bestPen) { bestPen = pen; best = clamped; }
+    }
+    return best;
+  }
+
+  // raio (0..50) do cursor/dedo a partir do centro do disco
+  function pointerRadius(clientX: number, clientY: number): number | null {
+    const dz = dropRef.current?.getBoundingClientRect();
+    if (!dz) return null;
+    const cx = dz.left + dz.width / 2;
+    const cy = dz.top + dz.height / 2;
+    const vinylR = (dz.width / 2) * 0.8;
+    return (Math.hypot(clientX - cx, clientY - cy) / vinylR) * 50;
+  }
+
+  function trackAtRadius(rNorm: number): Track | null {
     const list = platterSide === "A" ? sideA : sideB;
     const N = list.length;
-    let track: Track | null = null;
-    if (N && rNorm >= R_IN - 3 && rNorm <= R_OUT + 4) {
-      const bw = (R_OUT - R_IN) / N;
-      let i = Math.floor((R_OUT - rNorm) / bw);
-      i = Math.max(0, Math.min(N - 1, i));
-      track = list[i];
-    }
-    return { deg, track };
+    if (!N || rNorm < R_IN - 4 || rNorm > R_OUT + 5) return null;
+    const bw = (R_OUT - R_IN) / N;
+    let i = Math.floor((R_OUT - rNorm) / bw);
+    i = Math.max(0, Math.min(N - 1, i));
+    return list[i];
   }
 
   useEffect(() => {
     if (!armDrag) return;
     const move = (e: PointerEvent) => {
       e.preventDefault();
-      const c = computeArm(e.clientX, e.clientY);
-      if (!c) return;
-      liveArmRef.current = c.deg;
-      setArmAngle(c.deg);
-      setHoverId(c.track?.id ?? null);
+      const rNorm = pointerRadius(e.clientX, e.clientY);
+      if (rNorm == null) return;
+      const a = angleForRadius(Math.max(R_IN, Math.min(R_OUT, rNorm)));
+      if (a != null) setArmAngle(a);
+      setHoverId(trackAtRadius(rNorm)?.id ?? null);
     };
     const up = (e: PointerEvent) => {
-      const c = computeArm(e.clientX, e.clientY);
+      const rNorm = pointerRadius(e.clientX, e.clientY);
       setArmDrag(false);
       setArmAngle(null);
       setHoverId(null);
-      if (c?.track) selectTrack(c.track); // pousa no sulco e toca (braço fica no sulco via grooveAngle)
+      const t = rNorm != null ? trackAtRadius(rNorm) : null;
+      if (t) selectTrack(t); // pousa e toca; o descanso vai pro sulco certo
     };
     window.addEventListener("pointermove", move, { passive: false });
     window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
     document.body.style.userSelect = "none";
     return () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
       document.body.style.userSelect = "";
     };
   }, [armDrag, platterSide, sideA, sideB]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // descanso do braço = sulco da faixa carregada no prato (mesmo cálculo do arrasto)
+  useLayoutEffect(() => {
+    const apply = () => {
+      if (armDrag) return;
+      const id = entry && entry.di === platterDi ? entry.track.id : null;
+      const list = platterSide === "A" ? sideA : sideB;
+      const rC = grooveCenter(list, id);
+      setRestAngle(rC == null ? null : angleForRadius(rC));
+    };
+    apply();
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
+  }, [entry, platterDi, platterSide, sideA, sideB, armDrag]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ---------- fila ---------- */
   function place(rec: RecordItem) {
@@ -569,15 +607,15 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
               </div>
 
               {/* braço / agulha — arraste até o sulco pra tocar */}
-              <svg ref={armSvgRef} viewBox="0 0 200 200" className="pointer-events-none absolute -right-2 -top-2 z-30 h-[52%] w-[52%] touch-none drop-shadow-xl">
+              <svg ref={armSvgRef} viewBox="0 0 200 200" className="pointer-events-none absolute -right-3 -top-3 z-30 h-[60%] w-[60%] touch-none drop-shadow-xl">
                 <defs>
                   <linearGradient id="ata-arm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#eef1f4" /><stop offset="1" stopColor="#59636e" /></linearGradient>
                 </defs>
                 <g
                   style={{
                     transformOrigin: "176px 24px",
-                    transform: `rotate(${armDrag && armAngle != null ? armAngle : (grooveAngle(side === "A" ? sideA : sideB, playingId) ?? ((playing || crackling) ? 31 : 4))}deg)`,
-                    transition: armDrag ? "none" : "transform 1s cubic-bezier(0.5,0,0.2,1)",
+                    transform: `rotate(${armDrag && armAngle != null ? armAngle : (restAngle ?? 3)}deg)`,
+                    transition: armDrag ? "none" : "transform 0.9s cubic-bezier(0.5,0,0.2,1)",
                     pointerEvents: disc ? "auto" : "none",
                     cursor: armDrag ? "grabbing" : "grab",
                     touchAction: "none",
@@ -586,13 +624,12 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
                     if (!disc) return;
                     e.preventDefault();
                     (e.target as Element).setPointerCapture?.(e.pointerId);
-                    liveArmRef.current = armAngle ?? 4;
                     setArmDrag(true);
                   }}
                 >
-                  {/* área de pega larga (transparente) — fácil de agarrar */}
-                  <line x1="176" y1="24" x2="70" y2="138" stroke="transparent" strokeWidth="64" strokeLinecap="round" />
-                  <circle cx="76" cy="132" r="42" fill="transparent" />
+                  {/* área de pega bem larga (transparente) — fácil de agarrar no touch/mouse */}
+                  <line x1="176" y1="24" x2="66" y2="142" stroke="transparent" strokeWidth="86" strokeLinecap="round" />
+                  <circle cx="76" cy="132" r="56" fill="transparent" />
                   <circle cx="176" cy="24" r="14" fill="#2a2118" stroke="#3a444e" strokeWidth="2" />
                   <circle cx="176" cy="24" r="6" fill="#ff9d2e" />
                   <line x1="176" y1="24" x2="78" y2="128" stroke="url(#ata-arm)" strokeWidth="8" strokeLinecap="round" />

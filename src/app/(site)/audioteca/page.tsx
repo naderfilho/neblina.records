@@ -22,7 +22,10 @@ export default async function AudiotecaPage() {
     getSessionProfile(),
   ]);
 
-  const records = (data ?? []) as RecordItem[];
+  // Regra: discos sem nenhuma faixa cadastrada não aparecem na prateleira da Audioteca.
+  const records = ((data ?? []) as RecordItem[]).filter(
+    (r) => Array.isArray(r.tracks) && r.tracks.length > 0,
+  );
   const isLoggedIn = !!profile;
 
   return (

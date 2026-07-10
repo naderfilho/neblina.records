@@ -1,13 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, Disc3, Check, HelpCircle, Loader2 } from "lucide-react";
+import { Search, Disc3, Check, HelpCircle, Loader2, Info, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAction } from "@/lib/audit";
 import { AUDIOTECA_TIERS, type AudiotecaTier } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
-type Rec = { id: string; title: string; artist: string; cover_image_url: string | null; audioteca_tier: AudiotecaTier };
+type Rec = {
+  id: string;
+  title: string;
+  artist: string;
+  cover_image_url: string | null;
+  audioteca_tier: AudiotecaTier;
+  trackCount: number;
+};
 
 export default function AdminAudiotecaPage() {
   const supabase = createClient();
@@ -17,8 +24,12 @@ export default function AdminAudiotecaPage() {
   const [q, setQ] = useState("");
 
   useEffect(() => {
-    supabase.from("records").select("id,title,artist,cover_image_url,audioteca_tier").order("created_at", { ascending: false }).then(({ data }) => {
-      setRecords((data as Rec[]) ?? []);
+    supabase.from("records").select("id,title,artist,cover_image_url,audioteca_tier,tracks").order("created_at", { ascending: false }).then(({ data }) => {
+      const rows = ((data as (Omit<Rec, "trackCount"> & { tracks: unknown[] | null })[]) ?? []).map((r) => ({
+        id: r.id, title: r.title, artist: r.artist, cover_image_url: r.cover_image_url,
+        audioteca_tier: r.audioteca_tier, trackCount: Array.isArray(r.tracks) ? r.tracks.length : 0,
+      }));
+      setRecords(rows);
       setLoading(false);
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -41,7 +52,16 @@ export default function AdminAudiotecaPage() {
     <div className="p-6 md:p-10">
       <div className="mb-2">
         <h1 className="font-display text-3xl text-ink">Audioteca</h1>
-        <p className="text-muted">Defina o nível de acesso de cada disco na Audioteca. Todos aparecem na estante, mas só ficam coloridos/tocáveis para quem tem acesso.</p>
+        <p className="text-muted">Defina o nível de acesso de cada disco na Audioteca. Os discos com faixas aparecem na estante, mas só ficam coloridos/tocáveis para quem tem acesso.</p>
+      </div>
+
+      {/* regra: discos sem faixa não aparecem na estante */}
+      <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-brand/25 bg-brand/5 p-3 text-sm text-mist">
+        <Info size={16} className="mt-0.5 shrink-0 text-brand" />
+        <p>
+          <strong className="text-ink">Discos sem nenhuma faixa cadastrada não aparecem na prateleira da Audioteca.</strong>{" "}
+          Para exibir um disco aqui, cadastre pelo menos uma faixa na página de edição do disco.
+        </p>
       </div>
 
       {/* legenda */}
@@ -74,6 +94,11 @@ export default function AdminAudiotecaPage() {
                 <div className="min-w-0">
                   <p className="truncate font-display text-ink">{r.title}</p>
                   <p className="truncate text-xs text-muted">{r.artist}</p>
+                  {r.trackCount === 0 && (
+                    <span className="mt-1 inline-flex items-center gap-1 rounded-md bg-bg-soft px-1.5 py-0.5 text-[10px] font-medium text-faint">
+                      <EyeOff size={11} /> sem faixas — não aparece na estante
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex flex-wrap gap-1.5">
