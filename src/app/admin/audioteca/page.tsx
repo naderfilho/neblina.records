@@ -13,7 +13,7 @@ type Rec = {
   artist: string;
   cover_image_url: string | null;
   audioteca_tier: AudiotecaTier;
-  trackCount: number;
+  audioCount: number; // nº de faixas COM áudio
 };
 
 export default function AdminAudiotecaPage() {
@@ -25,9 +25,10 @@ export default function AdminAudiotecaPage() {
 
   useEffect(() => {
     supabase.from("records").select("id,title,artist,cover_image_url,audioteca_tier,tracks").order("created_at", { ascending: false }).then(({ data }) => {
-      const rows = ((data as (Omit<Rec, "trackCount"> & { tracks: unknown[] | null })[]) ?? []).map((r) => ({
+      const rows = ((data as (Omit<Rec, "audioCount"> & { tracks: { audio_url?: string | null }[] | null })[]) ?? []).map((r) => ({
         id: r.id, title: r.title, artist: r.artist, cover_image_url: r.cover_image_url,
-        audioteca_tier: r.audioteca_tier, trackCount: Array.isArray(r.tracks) ? r.tracks.length : 0,
+        audioteca_tier: r.audioteca_tier,
+        audioCount: Array.isArray(r.tracks) ? r.tracks.filter((t) => t.audio_url).length : 0,
       }));
       setRecords(rows);
       setLoading(false);
@@ -52,15 +53,15 @@ export default function AdminAudiotecaPage() {
     <div className="p-6 md:p-10">
       <div className="mb-2">
         <h1 className="font-display text-3xl text-ink">Audioteca</h1>
-        <p className="text-muted">Defina o nível de acesso de cada disco na Audioteca. Os discos com faixas aparecem na estante, mas só ficam coloridos/tocáveis para quem tem acesso.</p>
+        <p className="text-muted">Defina o nível de acesso de cada disco na Audioteca. Os discos com áudio aparecem na estante, mas só ficam coloridos/tocáveis para quem tem acesso.</p>
       </div>
 
-      {/* regra: discos sem faixa não aparecem na estante */}
+      {/* regra: só aparecem discos com faixas COM áudio */}
       <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-brand/25 bg-brand/5 p-3 text-sm text-mist">
         <Info size={16} className="mt-0.5 shrink-0 text-brand" />
         <p>
-          <strong className="text-ink">Discos sem nenhuma faixa cadastrada não aparecem na prateleira da Audioteca.</strong>{" "}
-          Para exibir um disco aqui, cadastre pelo menos uma faixa na página de edição do disco.
+          <strong className="text-ink">Só aparecem na Audioteca discos com pelo menos uma faixa com áudio.</strong>{" "}
+          Discos sem faixas — ou com faixas ainda sem o áudio enviado — não aparecem na estante. Envie o áudio das faixas na página de edição do disco para ele aparecer aqui.
         </p>
       </div>
 
@@ -94,9 +95,9 @@ export default function AdminAudiotecaPage() {
                 <div className="min-w-0">
                   <p className="truncate font-display text-ink">{r.title}</p>
                   <p className="truncate text-xs text-muted">{r.artist}</p>
-                  {r.trackCount === 0 && (
+                  {r.audioCount === 0 && (
                     <span className="mt-1 inline-flex items-center gap-1 rounded-md bg-bg-soft px-1.5 py-0.5 text-[10px] font-medium text-faint">
-                      <EyeOff size={11} /> sem faixas — não aparece na estante
+                      <EyeOff size={11} /> sem áudio — não aparece na estante
                     </span>
                   )}
                 </div>

@@ -22,9 +22,10 @@ export default async function AudiotecaPage() {
     getSessionProfile(),
   ]);
 
-  // Regra: discos sem nenhuma faixa cadastrada não aparecem na prateleira da Audioteca.
+  // Regra: só aparecem na Audioteca discos com pelo menos uma faixa COM áudio.
+  // (discos sem faixas, ou com faixas ainda sem áudio, ficam de fora)
   const records = ((data ?? []) as RecordItem[]).filter(
-    (r) => Array.isArray(r.tracks) && r.tracks.length > 0,
+    (r) => Array.isArray(r.tracks) && r.tracks.some((t) => t.audio_url),
   );
   const isLoggedIn = !!profile;
 

@@ -65,6 +65,8 @@ export type IdentificationInfo = {
   matrix_b?: string;
   label_code?: string;
   series?: string;
+  sound_mode?: string; // "Mono" | "Estéreo"
+  disc_count?: string; // "Simples" | "Duplo" | "Triplo"
 };
 
 export type SaleInfo = {

@@ -48,6 +48,8 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
     { label: "Estilo", value: r.genre },
     { label: "Nacionalidade", value: r.nationality },
     { label: "Formato", value: r.format },
+    { label: "Canais", value: r.identification?.sound_mode || null },
+    { label: "Discos", value: r.identification?.disc_count || null },
     { label: "Ano", value: r.year ? String(r.year) : null },
     { label: "Gravadora", value: r.label_company },
     { label: "Nº de catálogo", value: r.catalog_number },

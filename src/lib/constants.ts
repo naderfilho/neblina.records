@@ -37,6 +37,12 @@ export const RECORD_FORMATS = [
   "Coletânea",
 ] as const;
 
+/** Canais de áudio do disco */
+export const SOUND_MODES = ["Mono", "Estéreo"] as const;
+
+/** Quantidade de discos (simples/duplo/triplo) */
+export const DISC_COUNTS = ["Simples", "Duplo", "Triplo"] as const;
+
 /** Formas de pagamento (com região) */
 export const PAYMENT_METHODS = [
   "Pix (Brasil)",
