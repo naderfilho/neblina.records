@@ -129,7 +129,7 @@ export default function SiteHeader({ profile }: { profile: Profile | null }) {
                     onClick={signOut}
                     className="flex w-full items-center gap-2 border-t border-line px-4 py-3 text-sm text-muted hover:bg-panel-2 hover:text-red-400"
                   >
-                    <LogOut size={16} /> Sair
+                    <LogOut size={16} /> Finalizar sessão
                   </button>
                 </div>
               )}

@@ -444,7 +444,7 @@ export default function RecordForm({
         {coverPreview && (
           <div className="mb-3 rounded-xl border border-brand/30 bg-brand/5 p-3">
             <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-brand">
-              <Sparkles size={13} /> Neblina IA · pesquisa no Discogs
+              <Sparkles size={13} /> Neblina IA - Agente Discogs
             </p>
             <p className="mb-2.5 text-[11px] text-muted">
               Para máxima precisão, confirme o nome do disco e do artista abaixo. A IA lê a capa com atenção e cruza com o Discogs.
@@ -461,7 +461,7 @@ export default function RecordForm({
               className="flex items-center gap-1.5 rounded-lg border border-brand/40 bg-brand/10 px-3 py-2 text-xs font-semibold text-brand hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {aiBusy !== "idle" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-              {aiBusy === "research" ? "Lendo a capa e pesquisando no Discogs…" : "Pesquisar com a Neblina IA"}
+              {aiBusy === "research" ? "Lendo a capa e pesquisando no Discogs…" : "Pesquisar"}
             </button>
             {(!title.trim() || !artist.trim()) && (
               <p className="mt-2 text-[11px] text-faint">Preencha o nome do disco e do artista para liberar a IA.</p>

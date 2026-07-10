@@ -39,7 +39,17 @@ function ActionIcon({ l }: { l: Log }) {
 }
 
 function when(iso: string) {
-  return new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  // Normaliza para ISO estrito: alguns formatos vêm com espaço e offset "+00"
+  // (sem ":"), o que faz o new Date() parsear como horário local e mostrar a
+  // hora errada. Sem offset, assume UTC. Exibe sempre em horário de Brasília.
+  let s = iso.trim().replace(" ", "T");
+  const hasTz = /[zZ]$/.test(s) || /[+-]\d{2}(:\d{2})?$/.test(s);
+  if (!hasTz) s += "Z";
+  s = s.replace(/([+-]\d{2})$/, "$1:00");
+  return new Date(s).toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
 }
 
 function Details({ l }: { l: Log }) {

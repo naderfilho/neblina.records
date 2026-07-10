@@ -22,6 +22,7 @@ export default function AdminAudiotecaPage() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [audioFilter, setAudioFilter] = useState<"all" | "with" | "without">("all");
 
   useEffect(() => {
     supabase.from("records").select("id,title,artist,cover_image_url,audioteca_tier,tracks").order("created_at", { ascending: false }).then(({ data }) => {
@@ -44,10 +45,17 @@ export default function AdminAudiotecaPage() {
     setSavingId(null);
   }
 
-  const filtered = useMemo(
-    () => records.filter((r) => `${r.title} ${r.artist}`.toLowerCase().includes(q.trim().toLowerCase())),
-    [records, q],
-  );
+  const filtered = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return records
+      .filter((r) => `${r.title} ${r.artist}`.toLowerCase().includes(term))
+      .filter((r) => audioFilter === "all" || (audioFilter === "with" ? r.audioCount > 0 : r.audioCount === 0))
+      // sempre os com áudio primeiro
+      .sort((a, b) => (a.audioCount > 0 ? 0 : 1) - (b.audioCount > 0 ? 0 : 1));
+  }, [records, q, audioFilter]);
+
+  const withCount = records.filter((r) => r.audioCount > 0).length;
+  const withoutCount = records.length - withCount;
 
   return (
     <div className="p-6 md:p-10">
@@ -61,7 +69,7 @@ export default function AdminAudiotecaPage() {
         <Info size={16} className="mt-0.5 shrink-0 text-brand" />
         <p>
           <strong className="text-ink">Só aparecem na Audioteca discos com pelo menos uma faixa com áudio.</strong>{" "}
-          Discos sem faixas — ou com faixas ainda sem o áudio enviado — não aparecem na estante. Envie o áudio das faixas na página de edição do disco para ele aparecer aqui.
+          Discos sem faixas ou com faixas ainda sem o áudio enviado não aparecem na estante. Envie o áudio das faixas na página de edição do disco para ele aparecer aqui.
         </p>
       </div>
 
@@ -75,10 +83,25 @@ export default function AdminAudiotecaPage() {
         ))}
       </div>
 
-      <div className="relative mb-4 max-w-md">
-        <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-faint" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar disco…"
-          className="w-full rounded-xl border border-line bg-panel py-2.5 pl-11 pr-4 text-sm text-ink outline-none placeholder:text-faint focus:border-brand/60" />
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="relative w-full max-w-md">
+          <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-faint" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar disco…"
+            className="w-full rounded-xl border border-line bg-panel py-2.5 pl-11 pr-4 text-sm text-ink outline-none placeholder:text-faint focus:border-brand/60" />
+        </div>
+        <div className="flex gap-1.5">
+          {([
+            ["all", `Todos (${records.length})`],
+            ["with", `Com áudio (${withCount})`],
+            ["without", `Sem áudio (${withoutCount})`],
+          ] as const).map(([id, label]) => (
+            <button key={id} type="button" onClick={() => setAudioFilter(id)}
+              className={cn("rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                audioFilter === id ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:text-ink")}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (

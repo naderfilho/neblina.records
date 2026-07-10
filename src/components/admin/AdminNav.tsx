@@ -61,10 +61,10 @@ export default function AdminNav() {
 
         <div className="hidden px-3 md:mt-4 md:block">
           <Link href="/" className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm text-muted hover:bg-panel hover:text-ink">
-            <Store size={17} /> Ver a loja
+            <Store size={17} /> Voltar para a loja
           </Link>
           <button onClick={signOut} className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm text-muted hover:bg-panel hover:text-red-400">
-            <LogOut size={17} /> Sair
+            <LogOut size={17} /> Finalizar sessão
           </button>
         </div>
       </div>
