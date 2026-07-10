@@ -119,6 +119,11 @@ export default function RecordForm({
 
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(record?.cover_image_url ?? null);
+  const [coverBFile, setCoverBFile] = useState<File | null>(null);
+  const [coverBPreview, setCoverBPreview] = useState<string | null>(record?.cover_image_url_b ?? null);
+  const [isAutographed, setIsAutographed] = useState(record?.is_autographed ?? false);
+  const [autographFile, setAutographFile] = useState<File | null>(null);
+  const [autographPreview, setAutographPreview] = useState<string | null>(record?.autograph_photo_url ?? null);
 
   const [isGatefold, setIsGatefold] = useState(record?.is_gatefold ?? false);
   const [gatefoldDir, setGatefoldDir] = useState<"side" | "down">(record?.gatefold_dir ?? "side");
@@ -154,6 +159,8 @@ export default function RecordForm({
   const [cropper, setCropper] = useState<{ file: File; onApply: (b: Blob) => void } | null>(null);
 
   const coverInput = useRef<HTMLInputElement>(null);
+  const coverBInput = useRef<HTMLInputElement>(null);
+  const autographInput = useRef<HTMLInputElement>(null);
   const gatefoldInput = useRef<HTMLInputElement>(null);
   const photosInput = useRef<HTMLInputElement>(null);
   const audioInput = useRef<HTMLInputElement>(null);
@@ -196,6 +203,28 @@ export default function RecordForm({
         setCoverPreview(URL.createObjectURL(blob));
       },
     });
+    e.target.value = "";
+  }
+
+  function onCoverB(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setCropper({
+      file: f,
+      onApply: (blob) => {
+        setCoverBFile(new File([blob], "cover-b.jpg", { type: "image/jpeg" }));
+        setCoverBPreview(URL.createObjectURL(blob));
+      },
+    });
+    e.target.value = "";
+  }
+
+  function onAutograph(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setAutographFile(f);
+    setAutographPreview(URL.createObjectURL(f));
+    setIsAutographed(true);
     e.target.value = "";
   }
 
@@ -322,6 +351,12 @@ export default function RecordForm({
       let coverUrlFinal = coverPreview;
       if (coverFile) coverUrlFinal = await step("enviar a capa", () => uploadFile("covers", coverFile, "cover-"));
 
+      let coverBUrlFinal = coverBPreview;
+      if (coverBFile) coverBUrlFinal = await step("enviar a capa do Lado B", () => uploadFile("covers", coverBFile, "cover-b-"));
+
+      let autographUrlFinal = autographPreview;
+      if (autographFile) autographUrlFinal = await step("enviar a foto do autógrafo", () => uploadFile("record-photos", autographFile, "autograph-"));
+
       let gatefoldUrlFinal = gatefoldPreview;
       if (gatefoldFile) gatefoldUrlFinal = await step("enviar a arte do gatefold", () => uploadFile("covers", gatefoldFile, "gatefold-"));
 
@@ -360,6 +395,9 @@ export default function RecordForm({
         sold_note: sold ? (soldNote.trim() || null) : null,
         payment_methods: payments, disc_config: discConfig,
         cover_image_url: coverUrlFinal,
+        cover_image_url_b: coverBUrlFinal,
+        is_autographed: isAutographed,
+        autograph_photo_url: isAutographed ? autographUrlFinal : null,
         is_gatefold: isGatefold,
         gatefold_image_url: isGatefold ? gatefoldUrlFinal : null,
         gatefold_dir: gatefoldDir,
@@ -520,6 +558,62 @@ export default function RecordForm({
       {/* 1b. Vinil */}
       <Section title="Vinil" desc="Personalize o vinil que aparece na home e na Audioteca (cor, estilo, centro e borda).">
         <VinylDesigner coverUrl={coverPreview} config={discConfig} onChange={setDiscConfig} />
+
+        {/* Capa do centro (label) por lado — o disco fica realista ao virar */}
+        <div className="mt-5 rounded-xl border border-line bg-bg-soft p-4">
+          <p className="mb-1 text-sm font-medium text-ink">Foto do centro (label) por lado</p>
+          <p className="mb-3 text-[11px] text-faint">Use com o estilo de centro “Foto da capa” ou “Foto da capa + Anel”. Ao virar o disco, cada lado mostra a sua foto.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="mb-2 text-xs uppercase tracking-wider text-muted">Capa Lado A</p>
+              <div className="flex items-center gap-3">
+                {coverPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={coverPreview} alt="Centro Lado A" className="h-20 w-20 rounded-full border border-line object-cover" />
+                ) : <div className="flex h-20 w-20 items-center justify-center rounded-full border border-dashed border-line text-faint"><ImageIcon size={18} /></div>}
+                <button type="button" onClick={() => coverInput.current?.click()} className="rounded-lg border border-line bg-panel px-3 py-2 text-xs hover:border-brand/50">
+                  {coverPreview ? "Trocar / ajustar" : "Enviar e ajustar"}
+                </button>
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-xs uppercase tracking-wider text-muted">Capa Lado B (verso)</p>
+              <div className="flex items-center gap-3">
+                {coverBPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={coverBPreview} alt="Centro Lado B" className="h-20 w-20 rounded-full border border-line object-cover" />
+                ) : <div className="flex h-20 w-20 items-center justify-center rounded-full border border-dashed border-line text-faint"><ImageIcon size={18} /></div>}
+                <div className="flex flex-col gap-1.5">
+                  <button type="button" onClick={() => coverBInput.current?.click()} className="rounded-lg border border-line bg-panel px-3 py-2 text-xs hover:border-brand/50">
+                    {coverBPreview ? "Trocar / ajustar" : "Enviar e ajustar"}
+                  </button>
+                  {coverBPreview && <button type="button" onClick={() => { setCoverBFile(null); setCoverBPreview(null); }} className="text-[11px] text-faint hover:text-red-400">Remover (usa a do Lado A)</button>}
+                </div>
+              </div>
+            </div>
+          </div>
+          <input ref={coverBInput} type="file" accept="image/*" hidden onChange={onCoverB} />
+        </div>
+      </Section>
+
+      {/* 1c. Autógrafo */}
+      <Section title="Autógrafo" desc="Marque se o disco é autografado e envie a foto do autógrafo.">
+        <Toggle label="Disco autografado" checked={isAutographed} onChange={setIsAutographed} />
+        {isAutographed && (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button type="button" onClick={() => autographInput.current?.click()} className="flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm hover:border-brand/50">
+              <ImageIcon size={16} /> {autographPreview ? "Trocar foto do autógrafo" : "Enviar foto do autógrafo"}
+            </button>
+            {autographPreview && (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={autographPreview} alt="Autógrafo" className="h-20 w-20 rounded-lg border border-line object-cover" />
+                <button type="button" onClick={() => { setAutographFile(null); setAutographPreview(null); }} className="text-sm text-faint hover:text-red-400">Remover</button>
+              </>
+            )}
+            <input ref={autographInput} type="file" accept="image/*" hidden onChange={onAutograph} />
+          </div>
+        )}
       </Section>
 
       {/* 2. Informações do disco (com formas de pagamento) */}

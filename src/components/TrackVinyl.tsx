@@ -111,11 +111,13 @@ function Face({
 export default function TrackVinyl({
   tracks,
   coverUrl,
+  coverUrlB,
   config,
   title,
 }: {
   tracks: Track[];
   coverUrl?: string | null;
+  coverUrlB?: string | null;
   config?: Partial<DiscConfig> | null;
   title?: string;
 }) {
@@ -300,7 +302,7 @@ export default function TrackVinyl({
 
           {/* Lado B (verso) */}
           <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-            <Face tracks={sideB} coverUrl={coverUrl} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
+            <Face tracks={sideB} coverUrl={coverUrlB ?? coverUrl} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
           </div>
         </div>
 

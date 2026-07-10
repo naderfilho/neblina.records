@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Disc3, Eye, Music2, Check } from "lucide-react";
+import { ArrowLeft, Disc3, Eye, Music2, Check, PenLine } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { QUALITY_META } from "@/lib/constants";
@@ -110,7 +110,7 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
         {/* Vinil */}
         <div className="md:sticky md:top-24 md:self-start">
           {r.tracks && r.tracks.length > 0 ? (
-            <TrackVinyl tracks={r.tracks} coverUrl={r.cover_image_url} config={r.disc_config} title={r.title} />
+            <TrackVinyl tracks={r.tracks} coverUrl={r.cover_image_url} coverUrlB={r.cover_image_url_b} config={r.disc_config} title={r.title} />
           ) : (
             <>
               <div className="mx-auto max-w-md">
@@ -140,6 +140,11 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
               </span>
             )}
             {r.genre && <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-muted">{r.genre}</span>}
+            {r.is_autographed && (
+              <span className="flex items-center gap-1 rounded-full border border-brand/40 bg-brand/10 px-2.5 py-1 text-xs font-semibold text-brand">
+                <PenLine size={12} /> Autografado
+              </span>
+            )}
           </div>
 
           <h1 className="font-display text-4xl leading-tight text-ink">{r.title}</h1>
@@ -202,6 +207,15 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
             <div className="mt-6">
               <h2 className="mb-2 font-display text-lg text-ink">Sobre o disco</h2>
               <p className="whitespace-pre-wrap leading-relaxed text-muted">{r.description}</p>
+            </div>
+          )}
+
+          {/* autógrafo */}
+          {r.is_autographed && r.autograph_photo_url && (
+            <div className="mt-6">
+              <h2 className="mb-2 flex items-center gap-2 font-display text-lg text-ink"><PenLine size={16} className="text-brand" /> Autógrafo</h2>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={r.autograph_photo_url} alt="Autógrafo do disco" className="max-h-72 w-full rounded-2xl border border-line object-cover" />
             </div>
           )}
 

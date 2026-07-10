@@ -593,7 +593,7 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
                           <PlatterFace tracks={sideA} coverUrl={disc.cover_image_url} cfg={cfg} side="A" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={selectTrack} grooveDisabled={armDrag} />
                         </div>
                         <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                          <PlatterFace tracks={sideB} coverUrl={disc.cover_image_url} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={selectTrack} grooveDisabled={armDrag} />
+                          <PlatterFace tracks={sideB} coverUrl={disc.cover_image_url_b ?? disc.cover_image_url} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={selectTrack} grooveDisabled={armDrag} />
                         </div>
                       </div>
                     </div>

@@ -105,9 +105,12 @@ export type RecordItem = {
   payment_methods: string[];
   description: string | null;
   cover_image_url: string | null;
+  cover_image_url_b: string | null;
   is_gatefold: boolean;
   gatefold_image_url: string | null;
   gatefold_dir: "side" | "down";
+  is_autographed: boolean;
+  autograph_photo_url: string | null;
   audioteca_tier: "public" | "members" | "signature";
   disc_config: DiscConfig;
   audio_url: string | null;
@@ -158,6 +161,7 @@ export type Comment = {
   author_name: string | null;
   body: string;
   is_question: boolean;
+  parent_id: string | null;
   created_at: string;
 };
 
