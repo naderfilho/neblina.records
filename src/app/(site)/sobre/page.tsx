@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Disc3, Globe, Award, Heart, ArrowRight } from "lucide-react";
 import { STORE } from "@/lib/constants";
+import StoreMap from "@/components/StoreMap";
 
 export const metadata = {
   title: "Sobre",
@@ -66,6 +67,11 @@ export default function SobrePage() {
             </span>
           ))}
         </div>
+      </div>
+
+      {/* loja física */}
+      <div className="mt-16">
+        <StoreMap />
       </div>
 
       {/* CTA */}
