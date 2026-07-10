@@ -55,50 +55,44 @@ export default function SiteBackground() {
       >
         <defs>
           <linearGradient id="sbg-m1" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#3fc0dc" />
-            <stop offset="1" stopColor="#1f83a0" />
+            <stop offset="0" stopColor="#2ec6e0" />
+            <stop offset="1" stopColor="#1f9ec2" />
           </linearGradient>
           <linearGradient id="sbg-m2" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#1f6f92" />
-            <stop offset="1" stopColor="#194a68" />
+            <stop offset="0" stopColor="#1e82a6" />
+            <stop offset="1" stopColor="#186b8c" />
           </linearGradient>
           <linearGradient id="sbg-m3" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#1a2a4a" />
-            <stop offset="1" stopColor="#0c1626" />
+            <stop offset="0" stopColor="#1e2a52" />
+            <stop offset="1" stopColor="#131c38" />
           </linearGradient>
         </defs>
         {/* montanhas clonando a logo: crista de picos afiados e irregulares ao
             centro (cyan claro), massa teal média, e cume navy dominante à frente */}
-        {/* fundo (cyan) — crista serrilhada com bumps ARREDONDADOS e menores (como na logo) */}
+        {/* fundo (cyan) — domo com crista serrilhada fina e irregular (como na logo) */}
         <g className="sbg-layer sbg-layer-back">
           <path
-            d="M0 596 L120 566 L250 566 Q300 516 350 548 Q396 508 442 544 Q486 500 528 540 Q566 506 606 542 Q648 512 700 548 L820 560 L950 532 L1090 574 L1230 544 L1360 578 L1440 560 L1440 900 L0 900 Z"
+            d="M0 662 L200 644 L336 566 L372 512 L398 486 L420 500 L446 470 L470 484 L498 462 L524 478 L552 458 L580 474 L610 456 L640 470 L674 452 L714 446 L754 462 L794 452 L834 470 L874 460 L918 500 L1010 542 L1120 586 L1230 610 L1330 600 L1440 636 L1440 900 L0 900 Z"
             fill="url(#sbg-m1)"
             stroke="url(#sbg-m1)"
-            strokeWidth="8"
+            strokeWidth="6"
             strokeLinejoin="round"
-            opacity="0.5"
+            opacity="0.82"
           />
         </g>
-        {/* massa média (teal) — formas mais largas e arredondadas */}
+        {/* massa média (teal) — pico arredondado à esquerda + colinas à direita */}
         <g className="sbg-layer sbg-layer-mid">
           <path
-            d="M0 672 L180 620 L360 656 L520 596 L680 646 L860 606 L1040 654 L1220 618 L1380 650 L1440 636 L1440 900 L0 900 Z"
+            d="M0 690 L100 640 L210 544 L330 650 L480 700 L640 690 L770 656 L880 600 L1000 646 L1110 606 L1210 636 L1330 618 L1440 648 L1440 900 L0 900 Z"
             fill="url(#sbg-m2)"
-            stroke="url(#sbg-m2)"
-            strokeWidth="14"
-            strokeLinejoin="round"
-            opacity="0.9"
+            opacity="0.92"
           />
         </g>
-        {/* frente (navy) — grande cume dominante à esquerda + colina à direita, como na logo */}
+        {/* frente (navy) — colina esq + grande pico afiado + montanha larga à direita, como na logo */}
         <g className="sbg-layer sbg-layer-front">
           <path
-            d="M0 726 L130 708 L300 654 L440 576 L590 698 L720 688 L900 704 L1010 636 L1180 700 L1340 668 L1440 700 L1440 900 L0 900 Z"
+            d="M0 762 L120 732 L250 700 L360 724 L480 570 L600 722 L740 704 L900 672 L1060 606 L1210 690 L1330 668 L1440 706 L1440 900 L0 900 Z"
             fill="url(#sbg-m3)"
-            stroke="url(#sbg-m3)"
-            strokeWidth="14"
-            strokeLinejoin="round"
           />
         </g>
       </svg>
