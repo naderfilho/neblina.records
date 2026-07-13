@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Save, Search, Plus, Check, Music, Disc3 } from "lucide-react";
+import { Loader2, Save, Search, Plus, Check, Music, Disc3, VolumeX } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAction } from "@/lib/audit";
 import TagBadge from "@/components/TagBadge";
@@ -104,15 +104,24 @@ export default function MusicaHomePage() {
       </div>
 
       {/* seleção atual */}
-      <div className="mb-6 flex items-center gap-3 rounded-2xl border border-brand/30 bg-brand/10 p-4">
-        <Music size={18} className="text-brand" />
+      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-brand/30 bg-brand/10 p-4">
+        <Music size={18} className="shrink-0 text-brand" />
         {selected.r && selected.t ? (
           <p className="text-sm text-ink">
             Tocando na home: <strong>{selected.t.title}</strong> · {selected.r.title} — {selected.r.artist}
             {!selected.t.audio_url && <span className="ml-2 text-red-400">(essa faixa está sem áudio)</span>}
           </p>
         ) : (
-          <p className="text-sm text-muted">Nenhuma música escolhida ainda.</p>
+          <p className="text-sm text-muted">A home está <strong className="text-ink">sem música</strong>.</p>
+        )}
+        {(homeRecordId || homeTrackId) && (
+          <button
+            type="button"
+            onClick={() => { setHomeRecordId(null); setHomeTrackId(null); setTrackStart(0); setTrackEnd(null); }}
+            className="ml-auto flex items-center gap-1.5 rounded-lg border border-line bg-panel px-3 py-1.5 text-xs text-muted hover:border-red-400/50 hover:text-red-400"
+          >
+            <VolumeX size={14} /> Sem música na home
+          </button>
         )}
       </div>
 
@@ -195,11 +204,11 @@ export default function MusicaHomePage() {
             <div className="card p-5">
               <h2 className="mb-1 font-display text-lg text-ink">Etiqueta do mini-player</h2>
               <p className="mb-3 text-xs text-muted">Aparece em cima do mini-player na home.</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setHomeTagId(null)}
-                  className={cn("rounded-full border px-3 py-1.5 text-xs", homeTagId === null ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:text-ink")}
+                  className={cn("inline-flex items-center rounded-full border px-3 py-1.5 text-xs leading-none", homeTagId === null ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:text-ink")}
                 >
                   Nenhuma
                 </button>
@@ -208,7 +217,7 @@ export default function MusicaHomePage() {
                     key={t.id}
                     type="button"
                     onClick={() => setHomeTagId(t.id)}
-                    className={cn("rounded-full transition", homeTagId === t.id ? "ring-2 ring-brand" : "opacity-80 hover:opacity-100")}
+                    className={cn("inline-flex rounded-full transition", homeTagId === t.id ? "ring-2 ring-brand ring-offset-1 ring-offset-panel" : "opacity-80 hover:opacity-100")}
                   >
                     <TagBadge tag={t} size="md" />
                   </button>

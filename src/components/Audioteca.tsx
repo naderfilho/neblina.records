@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import Link from "next/link";
 import {
   Play, Pause, SkipBack, SkipForward, Hand, Disc3, ArrowDownToLine,
-  Volume2, Waves, X, ListMusic, BookOpen, Plus, Lock,
+  Volume2, Waves, X, ListMusic, BookOpen, Plus, Lock, Eye,
 } from "lucide-react";
 import Vinyl from "@/components/Vinyl";
 import { resolveDiscColor, resolveBorderColor, DEFAULT_DISC_CONFIG, type DiscConfig } from "@/lib/constants";
@@ -876,10 +876,10 @@ function Shelf({
               onPointerEnter={() => { if (!coarse && !locked) setOpenId(r.id); }}
               onPointerLeave={() => { if (!coarse) setOpenId(null); }}
             >
-              <div className={cn("relative h-28 w-40 transition", locked && "opacity-70 grayscale")}>
+              <div className={cn("relative h-40 w-56 transition", locked && "opacity-70 grayscale")}>
                 {/* disco atrás — sai da capa; a ponta (à direita) é a alça de arraste */}
                 <div
-                  className={cn("absolute left-0 top-0 h-28 w-28 transition-transform duration-500 ease-out", open ? "cursor-grab active:cursor-grabbing" : "")}
+                  className={cn("absolute left-0 top-0 h-40 w-40 transition-transform duration-500 ease-out", open ? "cursor-grab active:cursor-grabbing" : "")}
                   style={{ transform: open ? "translateX(46%) rotate(5deg)" : "translateX(4%)" }}
                   onPointerDown={(e) => { if (open && !locked) onGrab(r, e); }}
                 >
@@ -889,12 +889,12 @@ function Shelf({
                 <button
                   type="button"
                   onClick={() => { if (coarse && !locked) setOpenId(open ? null : r.id); }}
-                  className="absolute left-0 top-0 h-28 w-28 overflow-hidden rounded-md border border-black/50 shadow-xl"
+                  className="absolute left-0 top-0 h-40 w-40 overflow-hidden rounded-md border border-black/50 shadow-xl"
                 >
                   {r.cover_image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={r.cover_image_url} alt="" className="h-full w-full object-cover" draggable={false} />
-                  ) : <div className="flex h-full w-full items-center justify-center bg-panel text-faint"><Disc3 size={24} /></div>}
+                  ) : <div className="flex h-full w-full items-center justify-center bg-panel text-faint"><Disc3 size={30} /></div>}
                   <div className="absolute inset-y-0 right-0 w-2 bg-gradient-to-l from-black/50 to-transparent" />
                   {locked && <div className="absolute inset-0 bg-black/45" />}
                   {r.is_gatefold && !locked && (
@@ -905,9 +905,9 @@ function Shelf({
                 </button>
 
                 {locked ? (
-                  <div className="pointer-events-none absolute left-0 top-0 z-20 flex h-28 w-28 flex-col items-center justify-center gap-1 px-1 text-center">
-                    <Lock size={18} className="text-white/90" />
-                    <span className="rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-semibold text-white">{lockReason}</span>
+                  <div className="pointer-events-none absolute left-0 top-0 z-20 flex h-40 w-40 flex-col items-center justify-center gap-1 px-1 text-center">
+                    <Lock size={20} className="text-white/90" />
+                    <span className="rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">{lockReason}</span>
                   </div>
                 ) : (
                   <button
@@ -916,14 +916,23 @@ function Shelf({
                     onClick={(e) => { e.stopPropagation(); onQueue(r); }}
                     aria-label="Adicionar à fila"
                     title="Adicionar à fila"
-                    className="absolute left-1 top-1 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-brand text-black shadow-lg transition-transform hover:scale-110"
+                    className="absolute left-1 top-1 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-brand text-black shadow-lg transition-transform hover:scale-110"
                   >
-                    <Plus size={14} />
+                    <Plus size={15} />
                   </button>
                 )}
+                {/* Ver disco -> subpágina */}
+                <Link
+                  href={`/disco/${r.id}`}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  title="Ver página do disco"
+                  className="absolute left-1 top-9 z-20 flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 text-[10px] font-semibold text-white shadow-lg transition-colors hover:bg-black/85 hover:text-brand"
+                >
+                  <Eye size={12} /> Ver disco
+                </Link>
                 {queuedN > 0 && <span className="absolute -right-1 -top-1 z-10 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-black">{queuedN}</span>}
               </div>
-              <span className="mt-1 line-clamp-1 w-28 text-[11px] text-muted">{r.title}</span>
+              <span className="mt-1 line-clamp-1 w-40 text-[11px] text-muted">{r.title}</span>
             </div>
           );
         })}
