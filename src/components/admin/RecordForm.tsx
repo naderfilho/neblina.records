@@ -155,6 +155,8 @@ export default function RecordForm({
   const [aiBusy, setAiBusy] = useState<"idle" | "research">("idle");
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiCost, setAiCost] = useState(0);
+  const [aiProgress, setAiProgress] = useState(0);
+  const [lastCost, setLastCost] = useState<number | null>(null);
 
   const [cropper, setCropper] = useState<{ file: File; onApply: (b: Blob) => void } | null>(null);
 
@@ -286,11 +288,12 @@ export default function RecordForm({
   }
 
   function applyResearch(d: {
-    genre?: string; nationality?: string; label_company?: string; format?: string;
+    title?: string; genre?: string; nationality?: string; label_company?: string; format?: string;
     description?: string; year?: number | null;
     history?: HistoryInfo; market?: MarketInfo; identification?: IdentificationInfo;
     tracks?: { side?: string; title?: string }[];
   }) {
+    fill(setTitle, d.title);
     fill(setGenre, d.genre); fill(setNationality, d.nationality); fill(setLabelCompany, d.label_company);
     fill(setFormat, d.format); fill(setDescription, d.description);
     fill(setYear, d.year != null ? String(d.year) : undefined);
@@ -304,30 +307,43 @@ export default function RecordForm({
     }
   }
 
-  // Neblina IA — usa a CAPA + nome do disco + artista (informados pelo admin) e
-  // pesquisa somente no Discogs. Sem margem de erro: exige os três.
+  // Neblina IA — usa a CAPA + nº de catálogo (Selo) + artista para achar a versão
+  // EXATA no Discogs. Exige os três (0 margem de erro).
   async function runNeblinaIA() {
     setAiError(null);
-    const t = title.trim();
     const a = artist.trim();
-    if (!t || !a) { setAiError("Preencha o nome do disco e o nome do artista antes de usar a IA."); return; }
+    const cat = catalog.trim();
+    if (!a || !cat) { setAiError("Preencha o nome do artista e o número de catálogo (Selo) antes de usar a IA."); return; }
     const b = await coverBase64();
     if (!b) { setAiError("Envie a foto da capa primeiro."); return; }
 
     setAiBusy("research");
+    setLastCost(null);
+    setAiProgress(4);
+    // barra simulada: é uma única chamada (sem progresso real), então subimos de
+    // forma assintótica até ~95% e completamos 100% quando a resposta chega.
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      const elapsed = (Date.now() - started) / 1000;
+      const p = 95 * (1 - Math.exp(-elapsed / 40));
+      setAiProgress((cur) => Math.max(cur, Math.min(95, p)));
+    }, 400);
     try {
       const res = await fetch("/api/ai/research", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: t, artist: a, year, imageBase64: b.data, mediaType: b.mediaType }),
+        body: JSON.stringify({ artist: a, catalog: cat, year, imageBase64: b.data, mediaType: b.mediaType }),
       });
       const j = await readJsonResponse(res);
       applyResearch(j.data ?? {});
-      if (typeof j.costUsd === "number") setAiCost((c) => c + j.costUsd);
+      if (typeof j.costUsd === "number") { setAiCost((c) => c + j.costUsd); setLastCost(j.costUsd); }
+      setAiProgress(100);
     } catch (e) {
       setAiError(e instanceof Error ? e.message : "Erro na pesquisa da IA");
     } finally {
+      clearInterval(timer);
       setAiBusy("idle");
+      window.setTimeout(() => setAiProgress(0), 1400);
     }
   }
 
@@ -479,31 +495,48 @@ export default function RecordForm({
           <input ref={coverInput} type="file" accept="image/*" hidden onChange={onCover} />
         </div>
 
-        {/* Neblina IA — capa + nome do disco + artista (0 margem de erro) */}
+        {/* Neblina IA — capa + artista + nº de catálogo (versão exata, 0 erro) */}
         {coverPreview && (
           <div className="mb-3 rounded-xl border border-brand/30 bg-brand/5 p-3">
             <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-brand">
               <Sparkles size={13} /> Neblina IA - Agente Discogs
             </p>
             <p className="mb-2.5 text-[11px] text-muted">
-              Para máxima precisão, confirme o nome do disco e do artista abaixo. A IA lê a capa com atenção e cruza com o Discogs.
+              Informe o artista e o nº de catálogo (aparece como “Selo” no Discogs, ex.: <span className="text-mist">EMI - 31C 164 422831/2</span>). A IA lê a capa e acha a versão exata no Discogs.
             </p>
             <div className="mb-2.5 grid gap-2 sm:grid-cols-2">
-              <input className="ipt" placeholder="Nome do disco *" value={title} onChange={(e) => setTitle(e.target.value)} />
               <input className="ipt" placeholder="Nome do artista *" value={artist} onChange={(e) => setArtist(e.target.value)} />
+              <input className="ipt" placeholder="Nº de catálogo / Selo *" value={catalog} onChange={(e) => setCatalog(e.target.value)} />
             </div>
-            <button
-              type="button"
-              onClick={runNeblinaIA}
-              disabled={aiBusy !== "idle" || !title.trim() || !artist.trim()}
-              title={`Neblina IA · lê a capa e pesquisa ficha, histórico, mercado e faixas no Discogs · ${NEBLINA_AI.fullCost}/disco`}
-              className="flex items-center gap-1.5 rounded-lg border border-brand/40 bg-brand/10 px-3 py-2 text-xs font-semibold text-brand hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {aiBusy !== "idle" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-              {aiBusy === "research" ? "Lendo a capa e pesquisando no Discogs…" : "Pesquisar"}
-            </button>
-            {(!title.trim() || !artist.trim()) && (
-              <p className="mt-2 text-[11px] text-faint">Preencha o nome do disco e do artista para liberar a IA.</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={runNeblinaIA}
+                disabled={aiBusy !== "idle" || !artist.trim() || !catalog.trim()}
+                title={`Neblina IA · lê a capa e pesquisa a versão exata no Discogs · ${NEBLINA_AI.fullCost}/disco`}
+                className="flex items-center gap-1.5 rounded-lg border border-brand/40 bg-brand/10 px-3 py-2 text-xs font-semibold text-brand hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {aiBusy !== "idle" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                {aiBusy === "research" ? "Pesquisando no Discogs…" : "Pesquisar"}
+              </button>
+              <span className="text-[11px] text-faint">Custo por pesquisa: <span className="font-semibold text-mist">{NEBLINA_AI.fullCost}</span></span>
+            </div>
+
+            {/* barra de progresso */}
+            {(aiBusy !== "idle" || aiProgress > 0) && (
+              <div className="mt-2.5">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-panel-2">
+                  <div className="h-full rounded-full bg-brand transition-[width] duration-300 ease-out" style={{ width: `${Math.round(aiProgress)}%` }} />
+                </div>
+                <p className="mt-1 text-[11px] text-faint">{aiBusy === "research" ? `Pesquisando… ${Math.round(aiProgress)}%` : "Concluído"}</p>
+              </div>
+            )}
+
+            {lastCost != null && (
+              <p className="mt-2 text-[11px] text-teal">Custo desta pesquisa: <span className="font-semibold">US$ {lastCost.toFixed(4)}</span></p>
+            )}
+            {(!artist.trim() || !catalog.trim()) && (
+              <p className="mt-2 text-[11px] text-faint">Preencha o artista e o nº de catálogo para liberar a IA.</p>
             )}
           </div>
         )}

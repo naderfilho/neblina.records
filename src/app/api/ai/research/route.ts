@@ -2,20 +2,23 @@ import { NextResponse } from "next/server";
 import { anthropic, AI_MODEL, estimateCostUsd, isAdminRequest, extractJson, recordAiUsage } from "@/lib/ai";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+// Tempo generoso p/ a busca web não estourar. Requer plano Vercel Pro (até 300s);
+// no Hobby o teto é 60s.
+export const maxDuration = 300;
 
-function prompt(title: string, artist: string, year?: string, hasImage?: boolean) {
+function prompt(artist: string, catalog: string, year?: string, hasImage?: boolean) {
   return `Você é um especialista em discos de vinil e catalogação no Discogs. Sua prioridade é PRECISÃO — nada de inventar.
 
 Dados informados pelo administrador (são a verdade — use-os como referência principal):
-Título: "${title}"
-Artista: "${artist}"${year ? `\nAno aproximado: ${year}` : ""}
-${hasImage ? `\nHá uma FOTO DA CAPA anexada. Leia-a com MUITA ATENÇÃO: título, artista, ano, gravadora, número de catálogo, se está impresso "STEREO" ou "MONO", e se é disco simples/duplo/triplo (ex.: "2 LP", "Duplo"). O que estiver impresso na capa tem prioridade sobre suposições.` : ""}
+Artista: "${artist}"
+Número de catálogo (no Discogs aparece como "Selo"): "${catalog}"${year ? `\nAno aproximado: ${year}` : ""}
+${hasImage ? `\nHá uma FOTO DA CAPA anexada. Leia-a com MUITA ATENÇÃO: título, ano, gravadora, se está impresso "STEREO" ou "MONO", e se é disco simples/duplo/triplo (ex.: "2 LP", "Duplo"). O que estiver impresso na capa tem prioridade sobre suposições.` : ""}
 
-Pesquise EXCLUSIVAMENTE no Discogs (discogs.com) — não use nenhuma outra fonte. Encontre a edição/lançamento exato que corresponde a este título, artista${year ? " e ano" : ""}${hasImage ? " e à capa" : ""}. Confira a tracklist, a gravadora, o país, o formato e os canais (mono/estéreo) na página do release no Discogs.
+Pesquise EXCLUSIVAMENTE no Discogs (discogs.com) — não use nenhuma outra fonte. Use o NÚMERO DE CATÁLOGO ("${catalog}") junto com o artista para localizar o RELEASE EXATO (a versão/edição específica) no Discogs — o número de catálogo identifica a prensagem exata. Confira nessa página do release o título, a tracklist, a gravadora, o país, o ano, o formato e os canais (mono/estéreo).
 
 Depois responda APENAS com um JSON válido (sem texto antes ou depois), em português do Brasil, com estas chaves:
 {
+  "title": "título exato do álbum (conforme o Discogs)",
   "genre": "estilo musical",
   "nationality": "nacionalidade do artista",
   "year": ano como número ou null,
@@ -61,9 +64,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Chave da IA não configurada." }, { status: 500 });
     }
 
-    const { title, artist, year, imageBase64, mediaType } = await req.json();
-    if (!title || !artist) {
-      return NextResponse.json({ error: "Informe título e artista antes de usar a IA." }, { status: 400 });
+    const { artist, catalog, year, imageBase64, mediaType } = await req.json();
+    if (!artist || !catalog) {
+      return NextResponse.json({ error: "Informe o artista e o número de catálogo antes de usar a IA." }, { status: 400 });
     }
 
     const client = anthropic();
@@ -71,7 +74,7 @@ export async function POST(req: Request) {
     if (imageBase64) {
       content.push({ type: "image", source: { type: "base64", media_type: mediaType || "image/jpeg", data: imageBase64 } });
     }
-    content.push({ type: "text", text: prompt(title, artist, year, !!imageBase64) });
+    content.push({ type: "text", text: prompt(artist, catalog, year, !!imageBase64) });
 
     // max_tokens generoso: o pensamento adaptativo + os resumos da busca web
     // consomem o orçamento antes do JSON final (todas as faixas + histórico +
