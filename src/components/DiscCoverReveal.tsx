@@ -4,12 +4,11 @@ import { useState, type ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 /**
- * Envolve o disco na subpágina: a capa (quadrada, esmaecida) fica escondida e
- * "sobe" como fundo alinhada ao disco ao clicar em Ver capa. O disco continua
- * na frente, girando/tocando. O botão fica ACIMA do disco.
+ * "Ver capa" na subpágina: a capa (quadrada) SOBE e o disco DESCE, como um vinil
+ * saindo/entrando na capa — animação suave nos dois sentidos. O botão fica acima.
  *
- * `discOffset` desloca o fundo para baixo (rem) quando o disco não está no topo
- * do bloco (ex.: TrackVinyl tem uma legenda acima do disco).
+ * `discOffset` (rem) desloca a capa para baixo quando o disco não está no topo do
+ * bloco (ex.: TrackVinyl tem uma legenda acima do disco).
  */
 export default function DiscCoverReveal({
   coverUrl,
@@ -22,6 +21,8 @@ export default function DiscCoverReveal({
 }) {
   const [show, setShow] = useState(false);
   if (!coverUrl) return <>{children}</>;
+
+  const ease = "cubic-bezier(0.22, 1, 0.36, 1)";
 
   return (
     <div className="mx-auto max-w-md">
@@ -37,24 +38,32 @@ export default function DiscCoverReveal({
       </div>
 
       <div className="relative">
-        {/* fundo: capa quadrada alinhada ao disco, que sobe suavemente */}
+        {/* capa quadrada: sobe ao mostrar, desce/some ao ocultar */}
         <div
           aria-hidden
           className="pointer-events-none absolute left-0 z-0 aspect-square w-full overflow-hidden rounded-2xl border border-line shadow-2xl"
           style={{
             top: `${discOffset}rem`,
-            transform: show ? "translateY(-5%) scale(1)" : "translateY(10%) scale(0.98)",
+            transform: show ? "translateY(-3.5rem) scale(1)" : "translateY(1.5rem) scale(0.94)",
             opacity: show ? 1 : 0,
-            transition: "transform 0.8s cubic-bezier(0.22,1,0.36,1), opacity 0.55s ease",
+            transition: `transform 0.85s ${ease}, opacity 0.5s ease`,
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={coverUrl} alt="Capa do disco" className="h-full w-full object-cover" style={{ filter: show ? "brightness(0.66) saturate(1.05)" : "brightness(0.4)" }} />
-          <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 50% 44%, transparent 46%, rgba(0,0,0,0.5))" }} />
+          <img src={coverUrl} alt="Capa do disco" className="h-full w-full object-cover" style={{ filter: show ? "brightness(0.72) saturate(1.05)" : "brightness(0.4)" }} />
+          <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 50% 42%, transparent 48%, rgba(0,0,0,0.5))" }} />
         </div>
 
-        {/* disco na frente */}
-        <div className="relative z-10">{children}</div>
+        {/* disco na frente: desce ao mostrar a capa, volta ao ocultar */}
+        <div
+          className="relative z-10"
+          style={{
+            transform: show ? "translateY(4rem)" : "translateY(0)",
+            transition: `transform 0.85s ${ease}`,
+          }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

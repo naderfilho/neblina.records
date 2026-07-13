@@ -10,18 +10,18 @@ import { BookOpen } from "lucide-react";
 export default function GatefoldViewer({ cover, inner, dir }: { cover: string; inner: string; dir: "side" | "down" }) {
   const [open, setOpen] = useState(false);
   const side = dir === "side";
-  const CLOSED = "9rem";
-  const OPEN = "18rem";
+  const CLOSED = "13rem";
+  const OPEN = "26rem";
 
   return (
-    <div>
+    <div className="flex flex-col items-center">
       <div
         className="relative"
         style={{
           width: side ? (open ? OPEN : CLOSED) : CLOSED,
           height: side ? CLOSED : (open ? OPEN : CLOSED),
-          transition: "width .8s cubic-bezier(0.5,0,0.2,1), height .8s cubic-bezier(0.5,0,0.2,1)",
-          perspective: "1400px",
+          transition: "width .9s cubic-bezier(0.5,0,0.2,1), height .9s cubic-bezier(0.5,0,0.2,1)",
+          perspective: "1800px",
         }}
       >
         {/* arte interna revelada */}
@@ -50,8 +50,12 @@ export default function GatefoldViewer({ cover, inner, dir }: { cover: string; i
           ) : <div className="h-full w-full bg-panel" />}
         </button>
       </div>
-      <button type="button" onClick={() => setOpen((o) => !o)} className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-brand hover:underline">
-        <BookOpen size={13} /> {open ? "Fechar capa" : `Abrir capa dupla (gatefold ${side ? "→" : "↓"})`}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="btn-brand mt-5 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-lg transition-transform hover:scale-[1.03]"
+      >
+        <BookOpen size={16} /> {open ? "Fechar capa" : "Abrir capa (gatefold)"}
       </button>
     </div>
   );
