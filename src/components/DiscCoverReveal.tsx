@@ -4,11 +4,12 @@ import { useState, type ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 /**
- * "Ver capa" na subpágina: a capa (quadrada) SOBE e o disco DESCE, como um vinil
- * saindo/entrando na capa — animação suave nos dois sentidos. O botão fica acima.
+ * "Ver capa" na subpágina: ao clicar, a CAPA sobe e fica POR CIMA do disco (bem
+ * visível), enquanto o disco desce um pouco e vai para trás — como tirar o vinil
+ * da capa. Animação suave nos dois sentidos. O botão fica acima.
  *
- * `discOffset` (rem) desloca a capa para baixo quando o disco não está no topo do
- * bloco (ex.: TrackVinyl tem uma legenda acima do disco).
+ * `discOffset` (rem) alinha a capa ao disco quando ele não está no topo do bloco
+ * (ex.: TrackVinyl tem uma legenda acima do disco).
  */
 export default function DiscCoverReveal({
   coverUrl,
@@ -38,32 +39,37 @@ export default function DiscCoverReveal({
       </div>
 
       <div className="relative">
-        {/* capa quadrada: sobe ao mostrar, desce/some ao ocultar */}
+        {/* disco: desce e recua para trás quando a capa sobe */}
         <div
-          aria-hidden
-          className="pointer-events-none absolute left-0 z-0 aspect-square w-full overflow-hidden rounded-2xl border border-line shadow-2xl"
+          className="relative"
           style={{
-            top: `${discOffset}rem`,
-            transform: show ? "translateY(-3.5rem) scale(1)" : "translateY(1.5rem) scale(0.94)",
-            opacity: show ? 1 : 0,
-            transition: `transform 0.85s ${ease}, opacity 0.5s ease`,
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={coverUrl} alt="Capa do disco" className="h-full w-full object-cover" style={{ filter: show ? "brightness(0.72) saturate(1.05)" : "brightness(0.4)" }} />
-          <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 50% 42%, transparent 48%, rgba(0,0,0,0.5))" }} />
-        </div>
-
-        {/* disco na frente: desce ao mostrar a capa, volta ao ocultar */}
-        <div
-          className="relative z-10"
-          style={{
-            transform: show ? "translateY(4rem)" : "translateY(0)",
-            transition: `transform 0.85s ${ease}`,
+            zIndex: show ? 0 : 10,
+            transform: show ? "translateY(3.5rem) scale(0.9)" : "translateY(0) scale(1)",
+            opacity: show ? 0.85 : 1,
+            transition: `transform 0.85s ${ease}, opacity 0.6s ease`,
           }}
         >
           {children}
         </div>
+
+        {/* capa: sobe de baixo e fica POR CIMA do disco, bem visível */}
+        <button
+          type="button"
+          onClick={() => setShow(false)}
+          aria-label="Ocultar capa"
+          className="absolute left-0 aspect-square w-full cursor-zoom-out overflow-hidden rounded-2xl border border-line shadow-2xl"
+          style={{
+            top: `${discOffset}rem`,
+            zIndex: show ? 30 : 0,
+            transform: show ? "translateY(-0.5rem) scale(1)" : "translateY(3rem) scale(0.9)",
+            opacity: show ? 1 : 0,
+            pointerEvents: show ? "auto" : "none",
+            transition: `transform 0.85s ${ease}, opacity 0.5s ease`,
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={coverUrl} alt="Capa do disco" className="h-full w-full object-cover" draggable={false} />
+        </button>
       </div>
     </div>
   );
