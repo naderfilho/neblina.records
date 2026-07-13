@@ -48,7 +48,7 @@ export default async function ContaPage() {
           className="mb-6 flex items-center justify-between rounded-2xl border border-brand/40 bg-brand/10 px-5 py-4 transition-colors hover:bg-brand/15"
         >
           <span className="flex items-center gap-3 text-brand">
-            <ShieldCheck size={20} /> Você é administrador — acessar painel
+            <ShieldCheck size={20} /> Você é administrador, acesse seu painel
           </span>
           <LayoutDashboard size={20} className="text-brand" />
         </Link>

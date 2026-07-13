@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Disc3, Eye, Music2, Check, PenLine } from "lucide-react";
+import { ArrowLeft, Disc3, Music2, Check, PenLine } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { QUALITY_META } from "@/lib/constants";
@@ -9,6 +9,7 @@ import Vinyl from "@/components/Vinyl";
 import TrackVinyl from "@/components/TrackVinyl";
 import BuyButtons from "@/components/BuyButtons";
 import DiscCoverReveal from "@/components/DiscCoverReveal";
+import GatefoldViewer from "@/components/GatefoldViewer";
 import FavoriteButton from "@/components/FavoriteButton";
 import GradingHelp from "@/components/GradingHelp";
 import ShippingCalculator from "@/components/ShippingCalculator";
@@ -110,7 +111,7 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
       <div className="grid gap-10 md:grid-cols-2">
         {/* Vinil */}
         <div className="md:sticky md:top-24 md:self-start">
-          <DiscCoverReveal coverUrl={r.cover_image_url}>
+          <DiscCoverReveal coverUrl={r.cover_image_url} discOffset={r.tracks?.length ? 2 : 0}>
             {r.tracks && r.tracks.length > 0 ? (
               <TrackVinyl tracks={r.tracks} coverUrl={r.cover_image_url} coverUrlB={r.cover_image_url_b} config={r.disc_config} title={r.title} />
             ) : (
@@ -124,10 +125,18 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
               />
             )}
           </DiscCoverReveal>
-          <p className="mt-4 flex items-center justify-center gap-4 text-xs text-faint">
-            <span className="flex items-center gap-1"><Eye size={13} /> {r.views_count} visitas</span>
-            {!r.tracks?.length && r.audio_url && <span className="flex items-center gap-1"><Music2 size={13} /> Passe o mouse para ouvir</span>}
-          </p>
+          {!r.tracks?.length && r.audio_url && (
+            <p className="mt-4 flex items-center justify-center gap-4 text-xs text-faint">
+              <span className="flex items-center gap-1"><Music2 size={13} /> Passe o mouse para ouvir</span>
+            </p>
+          )}
+
+          {r.is_gatefold && r.gatefold_image_url && (
+            <div className="mt-8 flex flex-col items-center">
+              <p className="mb-3 text-xs uppercase tracking-[0.3em] text-teal">Capa dupla</p>
+              <GatefoldViewer cover={r.cover_image_url || ""} inner={r.gatefold_image_url} dir={r.gatefold_dir === "down" ? "down" : "side"} />
+            </div>
+          )}
         </div>
 
         {/* Info */}

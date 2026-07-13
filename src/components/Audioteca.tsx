@@ -656,9 +656,6 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
 
               {disc ? (
                 <>
-                  {disc.is_gatefold && disc.gatefold_image_url && (
-                    <GatefoldCover cover={disc.cover_image_url || ""} inner={disc.gatefold_image_url} dir={disc.gatefold_dir === "down" ? "down" : "side"} />
-                  )}
                   <p className="font-display text-lg leading-tight text-ink">{entry?.track.title}</p>
                   <Link href={`/disco/${disc.id}`} className="text-sm text-muted hover:text-brand">{disc.title} — {disc.artist}</Link>
 
@@ -844,53 +841,6 @@ function SoundControl({ label, icon, value, min, max, step, onChange, display }:
         <span className="text-xs font-semibold text-brand">{display}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} className="w-full accent-brand" />
-    </div>
-  );
-}
-
-/* ---------- capa gatefold que abre e fecha (lado ou baixo) ---------- */
-function GatefoldCover({ cover, inner, dir }: { cover: string; inner: string; dir: "side" | "down" }) {
-  const [open, setOpen] = useState(false);
-  const side = dir === "side";
-  return (
-    <div className="mb-3">
-      <div
-        className="relative"
-        style={{
-          width: side ? (open ? "12rem" : "6rem") : "6rem",
-          height: side ? "6rem" : (open ? "12rem" : "6rem"),
-          transition: "width .8s cubic-bezier(0.5,0,0.2,1), height .8s cubic-bezier(0.5,0,0.2,1)",
-          perspective: "1000px",
-        }}
-      >
-        {/* arte interna (spread) revelada */}
-        <div
-          className="absolute left-0 top-0 overflow-hidden rounded-md border border-black/40"
-          style={{ width: side ? "12rem" : "6rem", height: side ? "6rem" : "12rem", opacity: open ? 1 : 0, transition: "opacity .6s .2s" }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={inner} alt="" className="h-full w-full object-cover" />
-        </div>
-        {/* capa frontal que abre como um livro */}
-        <button
-          type="button" onClick={() => setOpen((o) => !o)} aria-label={open ? "Fechar capa" : "Abrir capa gatefold"}
-          className="absolute left-0 top-0 h-24 w-24 overflow-hidden rounded-md border border-black/50 shadow-xl"
-          style={{
-            transformOrigin: side ? "left center" : "center top",
-            transform: open ? (side ? "rotateY(-158deg)" : "rotateX(-160deg)") : "none",
-            transition: "transform .9s cubic-bezier(0.5,0,0.2,1)",
-            backfaceVisibility: "hidden",
-          }}
-        >
-          {cover ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={cover} alt="" className="h-full w-full object-cover" />
-          ) : <div className="h-full w-full bg-panel" />}
-        </button>
-      </div>
-      <button type="button" onClick={() => setOpen((o) => !o)} className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-brand hover:underline">
-        <BookOpen size={12} /> {open ? "Fechar capa" : `Abrir capa (gatefold ${side ? "→" : "↓"})`}
-      </button>
     </div>
   );
 }
