@@ -39,20 +39,21 @@ export default function DiscCoverReveal({
       </div>
 
       <div className="relative">
-        {/* disco: desce e recua para trás quando a capa sobe */}
+        {/* disco: recua para trás (encolhe) quando a capa sobe — fica todo coberto */}
         <div
           className="relative"
           style={{
             zIndex: show ? 0 : 10,
-            transform: show ? "translateY(3.5rem) scale(0.9)" : "translateY(0) scale(1)",
-            opacity: show ? 0.85 : 1,
+            transform: show ? "scale(0.82)" : "scale(1)",
+            opacity: show ? 0.6 : 1,
             transition: `transform 0.85s ${ease}, opacity 0.6s ease`,
           }}
         >
           {children}
         </div>
 
-        {/* capa: sobe de baixo e fica POR CIMA do disco, bem visível */}
+        {/* capa: sobe e fica POR CIMA do disco; ao mostrar cresce (scale) do centro
+            para cobrir o disco por completo (sem sobrar disco embaixo) */}
         <button
           type="button"
           onClick={() => setShow(false)}
@@ -60,8 +61,9 @@ export default function DiscCoverReveal({
           className="absolute left-0 aspect-square w-full cursor-zoom-out overflow-hidden rounded-2xl border border-line shadow-2xl"
           style={{
             top: `${discOffset}rem`,
+            transformOrigin: "center center",
             zIndex: show ? 30 : 0,
-            transform: show ? "translateY(-0.5rem) scale(1)" : "translateY(3rem) scale(0.9)",
+            transform: show ? "translateY(0) scale(1.1)" : "translateY(2.5rem) scale(0.9)",
             opacity: show ? 1 : 0,
             pointerEvents: show ? "auto" : "none",
             transition: `transform 0.85s ${ease}, opacity 0.5s ease`,

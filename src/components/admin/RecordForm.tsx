@@ -18,6 +18,7 @@ import type {
   ConditionInfo, IncludedContent, HistoryInfo, MarketInfo, IdentificationInfo, SaleInfo,
 } from "@/lib/types";
 import VinylDesigner from "@/components/admin/VinylDesigner";
+import Vinyl from "@/components/Vinyl";
 import AudioTrimmer from "@/components/admin/AudioTrimmer";
 import ImageCropper from "@/components/admin/ImageCropper";
 import { logAction } from "@/lib/audit";
@@ -158,9 +159,10 @@ export default function RecordForm({
   const [aiProgress, setAiProgress] = useState(0);
   const [lastCost, setLastCost] = useState<number | null>(null);
 
-  const [cropper, setCropper] = useState<{ file: File; onApply: (b: Blob) => void } | null>(null);
+  const [cropper, setCropper] = useState<{ file: File; onApply: (b: Blob) => void; round?: boolean } | null>(null);
 
   const coverInput = useRef<HTMLInputElement>(null);
+  const labelAInput = useRef<HTMLInputElement>(null);
   const coverBInput = useRef<HTMLInputElement>(null);
   const autographInput = useRef<HTMLInputElement>(null);
   const gatefoldInput = useRef<HTMLInputElement>(null);
@@ -208,11 +210,27 @@ export default function RecordForm({
     e.target.value = "";
   }
 
+  // Lado A do centro (label) — recorte redondo, escreve na capa principal
+  function onLabelA(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setCropper({
+      file: f,
+      round: true,
+      onApply: (blob) => {
+        setCoverFile(new File([blob], "cover.jpg", { type: "image/jpeg" }));
+        setCoverPreview(URL.createObjectURL(blob));
+      },
+    });
+    e.target.value = "";
+  }
+
   function onCoverB(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
     setCropper({
       file: f,
+      round: true,
       onApply: (blob) => {
         setCoverBFile(new File([blob], "cover-b.jpg", { type: "image/jpeg" }));
         setCoverBPreview(URL.createObjectURL(blob));
@@ -615,11 +633,11 @@ export default function RecordForm({
             <div>
               <p className="mb-2 text-xs uppercase tracking-wider text-muted">Capa Lado A</p>
               <div className="flex items-center gap-3">
-                {coverPreview ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={coverPreview} alt="Centro Lado A" className="h-20 w-20 rounded-full border border-line object-cover" />
-                ) : <div className="flex h-20 w-20 items-center justify-center rounded-full border border-dashed border-line text-faint"><ImageIcon size={18} /></div>}
-                <button type="button" onClick={() => coverInput.current?.click()} className="rounded-lg border border-line bg-panel px-3 py-2 text-xs hover:border-brand/50">
+                <div className="h-24 w-24 shrink-0">
+                  <Vinyl config={discConfig} coverUrl={coverPreview} interactive={false} noNeedle title="Prévia Lado A" />
+                </div>
+                <input ref={labelAInput} type="file" accept="image/*" hidden onChange={onLabelA} />
+                <button type="button" onClick={() => labelAInput.current?.click()} className="rounded-lg border border-line bg-panel px-3 py-2 text-xs hover:border-brand/50">
                   {coverPreview ? "Trocar / ajustar" : "Enviar e ajustar"}
                 </button>
               </div>
@@ -627,10 +645,9 @@ export default function RecordForm({
             <div>
               <p className="mb-2 text-xs uppercase tracking-wider text-muted">Capa Lado B (verso)</p>
               <div className="flex items-center gap-3">
-                {coverBPreview ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={coverBPreview} alt="Centro Lado B" className="h-20 w-20 rounded-full border border-line object-cover" />
-                ) : <div className="flex h-20 w-20 items-center justify-center rounded-full border border-dashed border-line text-faint"><ImageIcon size={18} /></div>}
+                <div className="h-24 w-24 shrink-0">
+                  <Vinyl config={discConfig} coverUrl={coverBPreview ?? coverPreview} interactive={false} noNeedle title="Prévia Lado B" />
+                </div>
                 <div className="flex flex-col gap-1.5">
                   <button type="button" onClick={() => coverBInput.current?.click()} className="rounded-lg border border-line bg-panel px-3 py-2 text-xs hover:border-brand/50">
                     {coverBPreview ? "Trocar / ajustar" : "Enviar e ajustar"}
@@ -1037,6 +1054,7 @@ export default function RecordForm({
       {cropper && (
         <ImageCropper
           file={cropper.file}
+          round={cropper.round}
           onCancel={() => setCropper(null)}
           onDone={(blob) => { cropper.onApply(blob); setCropper(null); }}
         />

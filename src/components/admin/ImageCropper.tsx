@@ -10,10 +10,13 @@ export default function ImageCropper({
   file,
   onDone,
   onCancel,
+  round = false,
 }: {
   file: File;
   onDone: (blob: Blob) => void;
   onCancel: () => void;
+  /** guia circular (para o centro/label do disco, que é redondo) */
+  round?: boolean;
 }) {
   const [url] = useState(() => URL.createObjectURL(file));
   const [nat, setNat] = useState({ w: 0, h: 0 });
@@ -60,6 +63,7 @@ export default function ImageCropper({
           <h3 className="font-display text-lg text-ink">Ajustar foto</h3>
           <button type="button" onClick={onCancel} className="text-faint hover:text-ink"><X size={18} /></button>
         </div>
+        {round && <p className="mb-2 text-xs text-muted">Enquadre a parte que vai aparecer no <strong className="text-ink">centro redondo</strong> do disco (label).</p>}
 
         <div
           className="relative mx-auto overflow-hidden rounded-xl border border-line bg-black"
@@ -83,6 +87,12 @@ export default function ImageCropper({
             onLoad={(e) => setNat({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
             style={{ position: "absolute", left, top, width: dispW, height: dispH, maxWidth: "none" }}
           />
+          {round && (
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{ boxShadow: "0 0 0 9999px rgba(0,0,0,0.55) inset", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.7)" }}
+            />
+          )}
         </div>
 
         <div className="mt-4 flex items-center gap-2">
