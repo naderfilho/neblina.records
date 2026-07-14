@@ -1,12 +1,16 @@
 import Link from "next/link";
-import { MessageSquare, Heart, Bell } from "lucide-react";
+import { MessageSquare, Heart, Bell, ShoppingBag } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import NotifUser from "@/components/admin/NotifUser";
 
 export const revalidate = 0;
 
+// só considera abandono depois de ~10 min sem finalizar (dá tempo do cliente
+// concluir pelo WhatsApp antes de virar notificação).
+const CART_ABANDON_MINUTES = 10;
+
 type Notif = {
-  kind: "comment" | "favorite";
+  kind: "comment" | "favorite" | "cart";
   created_at: string;
   userId: string | null;
   userName: string;
@@ -14,6 +18,7 @@ type Notif = {
   phone: string | null;
   recordId: string;
   recordTitle: string;
+  recordArtist?: string | null;
   body?: string;
   isQuestion?: boolean;
 };
@@ -29,24 +34,34 @@ function when(iso: string) {
 export default async function NotificacoesPage() {
   const supabase = await createClient();
 
-  const [{ data: comments }, { data: favorites }] = await Promise.all([
+  const cartCutoff = new Date(Date.now() - CART_ABANDON_MINUTES * 60 * 1000).toISOString();
+
+  const [{ data: comments }, { data: favorites }, { data: carts }] = await Promise.all([
     supabase.from("comments").select("id,body,is_question,created_at,record_id,user_id").order("created_at", { ascending: false }).limit(40),
     supabase.from("favorites").select("record_id,user_id,created_at").order("created_at", { ascending: false }).limit(40),
+    supabase
+      .from("cart_intents")
+      .select("record_id,user_id,created_at")
+      .is("finalized_at", null)
+      .lte("created_at", cartCutoff)
+      .order("created_at", { ascending: false })
+      .limit(40),
   ]);
 
   const cs = (comments ?? []) as { body: string; is_question: boolean; created_at: string; record_id: string; user_id: string | null }[];
   const fs = (favorites ?? []) as { record_id: string; user_id: string | null; created_at: string }[];
+  const carts_ = (carts ?? []) as { record_id: string; user_id: string | null; created_at: string }[];
 
-  const userIds = [...new Set([...cs, ...fs].map((x) => x.user_id).filter(Boolean))] as string[];
-  const recordIds = [...new Set([...cs, ...fs].map((x) => x.record_id))];
+  const userIds = [...new Set([...cs, ...fs, ...carts_].map((x) => x.user_id).filter(Boolean))] as string[];
+  const recordIds = [...new Set([...cs, ...fs, ...carts_].map((x) => x.record_id))];
 
   const [{ data: profs }, { data: recs }] = await Promise.all([
     userIds.length ? supabase.from("profiles").select("id,first_name,last_name,email,phone").in("id", userIds) : Promise.resolve({ data: [] }),
-    recordIds.length ? supabase.from("records").select("id,title").in("id", recordIds) : Promise.resolve({ data: [] }),
+    recordIds.length ? supabase.from("records").select("id,title,artist").in("id", recordIds) : Promise.resolve({ data: [] }),
   ]);
 
   const pMap = new Map((profs ?? []).map((p: { id: string; first_name: string | null; last_name: string | null; email: string | null; phone: string | null }) => [p.id, p]));
-  const rMap = new Map((recs ?? []).map((r: { id: string; title: string }) => [r.id, r.title]));
+  const rMap = new Map((recs ?? []).map((r: { id: string; title: string; artist: string | null }) => [r.id, r]));
 
   const nameOf = (uid: string | null) => {
     const p = uid ? pMap.get(uid) : null;
@@ -59,7 +74,7 @@ export default async function NotificacoesPage() {
       return {
         kind: "comment", created_at: c.created_at, userId: c.user_id, userName: nameOf(c.user_id),
         email: p?.email ?? null, phone: p?.phone ?? null,
-        recordId: c.record_id, recordTitle: rMap.get(c.record_id) ?? "disco", body: c.body, isQuestion: c.is_question,
+        recordId: c.record_id, recordTitle: rMap.get(c.record_id)?.title ?? "disco", body: c.body, isQuestion: c.is_question,
       };
     }),
     ...fs.map((f): Notif => {
@@ -67,7 +82,16 @@ export default async function NotificacoesPage() {
       return {
         kind: "favorite", created_at: f.created_at, userId: f.user_id, userName: nameOf(f.user_id),
         email: p?.email ?? null, phone: p?.phone ?? null,
-        recordId: f.record_id, recordTitle: rMap.get(f.record_id) ?? "disco",
+        recordId: f.record_id, recordTitle: rMap.get(f.record_id)?.title ?? "disco",
+      };
+    }),
+    ...carts_.map((c): Notif => {
+      const p = c.user_id ? pMap.get(c.user_id) : null;
+      const r = rMap.get(c.record_id);
+      return {
+        kind: "cart", created_at: c.created_at, userId: c.user_id, userName: nameOf(c.user_id),
+        email: p?.email ?? null, phone: p?.phone ?? null,
+        recordId: c.record_id, recordTitle: r?.title ?? "disco", recordArtist: r?.artist ?? null,
       };
     }),
   ].sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).slice(0, 60);
@@ -76,7 +100,7 @@ export default async function NotificacoesPage() {
     <div className="p-6 md:p-10">
       <div className="mb-6">
         <h1 className="flex items-center gap-2 font-display text-3xl text-ink"><Bell size={26} className="text-brand" /> Notificações</h1>
-        <p className="text-muted">Comentários e favoritos recentes dos clientes. Clique no nome para ver o contato.</p>
+        <p className="text-muted">Comentários, favoritos e carrinhos não finalizados dos clientes. Clique no nome para ver o contato.</p>
       </div>
 
       {notifs.length === 0 ? (
@@ -86,15 +110,24 @@ export default async function NotificacoesPage() {
           {notifs.map((n, i) => (
             <div key={i} className="flex items-start gap-3 rounded-2xl border border-line bg-panel p-4">
               <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bg-soft">
-                {n.kind === "comment" ? <MessageSquare size={16} className="text-teal" /> : <Heart size={16} className="text-red-400" />}
+                {n.kind === "comment"
+                  ? <MessageSquare size={16} className="text-teal" />
+                  : n.kind === "cart"
+                    ? <ShoppingBag size={16} className="text-brand" />
+                    : <Heart size={16} className="text-red-400" />}
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-ink">
                   <NotifUser name={n.userName} email={n.email} phone={n.phone} />{" "}
                   {n.kind === "comment"
                     ? <>{n.isQuestion ? "perguntou" : "comentou"} em </>
-                    : <>adicionou aos favoritos </>}
-                  <Link href={`/disco/${n.recordId}`} className="font-medium text-ink hover:text-brand">“{n.recordTitle}”</Link>
+                    : n.kind === "cart"
+                      ? <>adicionou o disco </>
+                      : <>adicionou aos favoritos </>}
+                  <Link href={`/disco/${n.recordId}`} className="font-medium text-ink hover:text-brand">
+                    “{n.kind === "cart" && n.recordArtist ? `${n.recordArtist} — ${n.recordTitle}` : n.recordTitle}”
+                  </Link>
+                  {n.kind === "cart" && <span className="text-muted"> e não finalizou via WhatsApp</span>}
                 </p>
                 {n.kind === "comment" && n.body && (
                   <p className="mt-1 line-clamp-2 rounded-lg bg-bg-soft px-3 py-2 text-sm text-muted">{n.body}</p>

@@ -22,17 +22,29 @@ export default function IntroCurtain() {
 
   // calcula o "voo" do disco da abertura até o disco do hero (magic-move)
   function computeFly(): Fly {
-    const disc = discRef.current?.getBoundingClientRect();
-    const hero = document.getElementById("hero-vinyl-disc")?.getBoundingClientRect();
-    if (!disc || !hero || hero.width === 0) {
-      // fallback: sobe um pouco e mantém o tamanho
-      return { x: 0, y: -60, scale: 1 };
-    }
+    const discEl = discRef.current;
+    const heroEl = document.getElementById("hero-vinyl-disc");
+    if (!discEl || !heroEl) return { x: 0, y: -60, scale: 1 }; // fallback: sobe um pouco
+
+    const disc = discEl.getBoundingClientRect();
+    const hero = heroEl.getBoundingClientRect();
+    // IMPORTANTE: o disco da intro está GIRANDO. getBoundingClientRect() devolve a
+    // bounding box alinhada aos eixos, que num quadrado girando é MAIOR que o lado
+    // real (256px a 0°/90°, ~362px a 45°). Se usássemos disc.width como tamanho, o
+    // scale sairia pequeno demais e o disco pousaria MENOR que o hero → "expandia"
+    // (virava um disco maior) no handoff. offsetWidth é o tamanho de LAYOUT, imune
+    // à rotação, então dá o diâmetro real e o disco chega no tamanho EXATO do hero.
+    const discSize = discEl.offsetWidth;
+    const heroSize = heroEl.offsetWidth;
+    if (!heroSize || !discSize) return { x: 0, y: -60, scale: 1 };
+
+    // o centro da bounding box coincide com o centro do disco mesmo girando
+    // (a rotação é em torno do centro), então o posicionamento continua correto.
     const dcx = disc.left + disc.width / 2;
     const dcy = disc.top + disc.height / 2;
     const hcx = hero.left + hero.width / 2;
     const hcy = hero.top + hero.height / 2;
-    return { x: hcx - dcx, y: hcy - dcy, scale: hero.width / disc.width };
+    return { x: hcx - dcx, y: hcy - dcy, scale: heroSize / discSize };
   }
 
   function startExit() {

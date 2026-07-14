@@ -47,6 +47,7 @@ export default function BuyButtons({ id, title, artist, price, coverUrl }: Props
   async function buyWhatsApp() {
     if (!(await ensureAuth())) return;
     window.open(whatsappLink(STORE.whatsappPrimary, message()), "_blank");
+    cart.finalize(id); // comprou este disco pelo WhatsApp → não é abandono
   }
 
   return (

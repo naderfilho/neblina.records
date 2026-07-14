@@ -30,6 +30,7 @@ export default function CartDrawer() {
       cart.total,
     )}*`;
     window.open(whatsappLink(STORE.whatsappPrimary, msg), "_blank");
+    cart.finalize(); // finalizou pelo WhatsApp → tira todos da lista de abandono
   }
 
   return (

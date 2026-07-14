@@ -1,6 +1,13 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  trackCartAdd,
+  untrackCartItem,
+  untrackAllPending,
+  finalizeCartItem,
+  finalizeAllPending,
+} from "@/lib/cart-intents";
 
 export type CartItem = {
   id: string;
@@ -18,6 +25,8 @@ type CartCtx = {
   remove: (id: string) => void;
   clear: () => void;
   has: (id: string) => boolean;
+  /** marca como finalizado (checkout). Sem id = todos os itens pendentes. */
+  finalize: (id?: string) => void;
   open: boolean;
   setOpen: (v: boolean) => void;
 };
@@ -48,10 +57,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
       count: items.length,
       total: items.reduce((s, i) => s + (i.price || 0), 0),
       add: (item) =>
-        setItems((prev) => (prev.some((p) => p.id === item.id) ? prev : [...prev, item])),
-      remove: (id) => setItems((prev) => prev.filter((p) => p.id !== id)),
-      clear: () => setItems([]),
+        setItems((prev) => {
+          if (prev.some((p) => p.id === item.id)) return prev;
+          void trackCartAdd(item.id); // registra intenção (best-effort, só se logado)
+          return [...prev, item];
+        }),
+      remove: (id) =>
+        setItems((prev) => {
+          void untrackCartItem(id); // tirou do carrinho → não é abandono
+          return prev.filter((p) => p.id !== id);
+        }),
+      clear: () => {
+        void untrackAllPending();
+        setItems([]);
+      },
       has: (id) => items.some((p) => p.id === id),
+      finalize: (id) => {
+        if (id) void finalizeCartItem(id);
+        else void finalizeAllPending();
+      },
       open,
       setOpen,
     };
