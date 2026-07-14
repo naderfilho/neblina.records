@@ -42,10 +42,15 @@ export default function IntroCurtain() {
     document.documentElement.classList.add("intro-seen");
     // quando o disco "chega" na home (fim do voo), a home revela o disco girando
     // e a música entra — o disco da intro NÃO se funde num disco pré-existente.
+    // margem além da duração do voo (1.85s): a animação de escala do framer
+    // começa 1 render DEPOIS deste timer (precisa do setFly re-renderizar), então
+    // ela termina um pouco depois de 1850ms. Revelar o disco do hero só em 2050ms
+    // garante que o disco voador JÁ chegou no tamanho final (= hero) — sem o
+    // "pulo"/expansão em que o hero (maior) aparece antes do voo terminar.
     window.setTimeout(() => {
       document.documentElement.classList.add("disc-ready");
       window.dispatchEvent(new Event("neblina:disc-arrived"));
-    }, 1850); // = duração do flyTransition
+    }, 2050);
   }
 
   useEffect(() => {
@@ -53,7 +58,9 @@ export default function IntroCurtain() {
     setShow(true);
     document.body.style.overflow = "hidden";
     const t1 = setTimeout(startExit, 2600);
-    const t2 = setTimeout(finish, 4700);
+    // finish = fim do voo (2050) + tempo do cross-fade do disco voador saindo por
+    // cima do hero (0.95s). Dá sobreposição suficiente pro handoff ficar contínuo.
+    const t2 = setTimeout(finish, 5600);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -64,7 +71,7 @@ export default function IntroCurtain() {
   function skip() {
     if (exiting) return;
     startExit();
-    setTimeout(finish, 2100);
+    setTimeout(finish, 3000);
   }
 
   // easing de "encaixe": desacelera bem no fim p/ o disco assentar suave no hero
@@ -125,10 +132,11 @@ export default function IntroCurtain() {
                 }}
               >
                 <div className="absolute inset-0 rounded-full ring-1 ring-white/10" />
-                {/* label = logo */}
-                <div className="absolute left-1/2 top-1/2 flex h-[46%] w-[46%] -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden rounded-full bg-[#0b0b0b] ring-2 ring-brand/70">
+                {/* label = logo — MESMA proporção do disco do hero (44% / logo 86%)
+                    pra não haver mudança de tamanho do logo no handoff */}
+                <div className="absolute left-1/2 top-1/2 flex h-[44%] w-[44%] -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden rounded-full bg-[#0b0b0b] ring-2 ring-brand/70">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/logo.png" alt="Neblina" className="h-[88%] w-[88%] object-contain" />
+                  <img src="/logo.png" alt="Neblina" className="h-[86%] w-[86%] object-contain" />
                 </div>
                 <div className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black shadow-[inset_0_0_3px_rgba(255,255,255,.4)]" />
               </motion.div>

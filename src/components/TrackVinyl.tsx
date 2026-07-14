@@ -231,10 +231,20 @@ export default function TrackVinyl({
     };
     const up = (e: PointerEvent) => {
       const rNorm = pointerRadius(e.clientX, e.clientY);
+      const t = rNorm != null ? trackAtRadius(rNorm) : null;
+      // Fixa o descanso do braço no sulco escolhido ANTES de sair do modo drag.
+      // Sem isso, ao soltar o braço primeiro volta pro restAngle antigo (ou 5°) e
+      // só depois vai pro sulco novo — o "volta antes de ir". Setando o restAngle
+      // aqui, a transição sai do ponto do arrasto direto pro sulco, sem recuo.
+      if (t) {
+        const list = side === "A" ? sideA : sideB;
+        const rC = grooveCenter(list, t.id);
+        const target = rC != null ? angleForRadius(rC) : null;
+        if (target != null) setRestAngle(target);
+      }
       setArmDrag(false);
       setArmAngle(null);
       setHoverId(null);
-      const t = rNorm != null ? trackAtRadius(rNorm) : null;
       if (t) play(t);
     };
     window.addEventListener("pointermove", move, { passive: false });
