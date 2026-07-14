@@ -39,16 +39,11 @@ export default function DiscCoverReveal({
       </div>
 
       <div className="relative">
-        {/* disco: recua para trás (encolhe) quando a capa sobe — fica todo coberto */}
-        <div
-          className="relative"
-          style={{
-            zIndex: show ? 0 : 10,
-            transform: show ? "scale(0.82)" : "scale(1)",
-            opacity: show ? 0.6 : 1,
-            transition: `transform 0.85s ${ease}, opacity 0.6s ease`,
-          }}
-        >
+        {/* Só o DISCO fica atrás da capa (via z-index). Não apagamos/encolhemos o
+            bloco inteiro: os botões Lado A/Lado B e a lista de faixas ficam abaixo
+            do disco e devem continuar visíveis e clicáveis com a capa aberta —
+            dá pra tocar as faixas mesmo sem os sulcos aparentes. */}
+        <div className="relative" style={{ zIndex: show ? 0 : 10 }}>
           {children}
         </div>
 

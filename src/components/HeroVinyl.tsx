@@ -1,24 +1,33 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Vinyl from "@/components/Vinyl";
 
 // Disco do hero: mesmo componente interativo/mixável, com a logo Neblina.
 // Nasce invisível (CSS); só aparece quando o disco da intro "chega" — ou de
 // imediato em visitas seguintes (quando a intro não roda).
 export default function HeroVinyl() {
+  // agulha: durante a intro fica LEVANTADA (esperando o disco chegar); quando a
+  // cortina sai e o disco assenta, ela DESCE sobre o disco, como pousar a agulha.
+  const [armDown, setArmDown] = useState(false);
+
   useEffect(() => {
     const reveal = () => document.documentElement.classList.add("disc-ready");
-    // intro já vista nesta sessão -> mostra já (a intro não vai rodar)
+    // intro já vista nesta sessão -> mostra já e agulha já em repouso
     if (typeof window !== "undefined" && sessionStorage.getItem("neblina_intro_seen")) {
       reveal();
+      setArmDown(true);
       return;
     }
     window.addEventListener("neblina:disc-arrived", reveal);
-    // rede de segurança: nunca deixa o disco preso invisível
-    const fallback = window.setTimeout(reveal, 6000);
+    // baixa a agulha só depois que a cortina termina de sair (disco já no lugar)
+    const onFinished = () => window.setTimeout(() => setArmDown(true), 550);
+    window.addEventListener("neblina:intro-finished", onFinished);
+    // rede de segurança: nunca deixa preso invisível / agulha pra sempre no ar
+    const fallback = window.setTimeout(() => { reveal(); setArmDown(true); }, 6500);
     return () => {
       window.removeEventListener("neblina:disc-arrived", reveal);
+      window.removeEventListener("neblina:intro-finished", onFinished);
       clearTimeout(fallback);
     };
   }, []);
@@ -43,11 +52,15 @@ export default function HeroVinyl() {
         />
       </div>
 
-      {/* braço/agulha decorativo */}
+      {/* braço/agulha decorativo — pivô no canto sup-direito (176,24 do viewBox) */}
       <svg
         viewBox="0 0 200 200"
         className="pointer-events-none absolute -right-2 -top-2 h-[62%] w-[62%] drop-shadow-xl"
-        style={{ transform: "rotate(6deg)" }}
+        style={{
+          transformOrigin: "88% 12%",
+          transform: `rotate(${armDown ? 6 : -26}deg)`,
+          transition: "transform 0.9s cubic-bezier(0.34, 1.2, 0.64, 1)",
+        }}
         aria-hidden
       >
         <defs>

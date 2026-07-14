@@ -18,6 +18,8 @@ export default function IntroCurtain() {
     sessionStorage.setItem(KEY, "1");
     document.documentElement.classList.add("intro-seen"); // esconde o shell SSR
     document.body.style.overflow = "";
+    // sinaliza que a cortina saiu → o hero baixa a agulha sobre o disco
+    window.dispatchEvent(new Event("neblina:intro-finished"));
   }
 
   // calcula o "voo" do disco da abertura até o disco do hero (magic-move)
@@ -70,9 +72,9 @@ export default function IntroCurtain() {
     setShow(true);
     document.body.style.overflow = "hidden";
     const t1 = setTimeout(startExit, 2600);
-    // finish = fim do voo (2050) + tempo do cross-fade do disco voador saindo por
-    // cima do hero (0.95s). Dá sobreposição suficiente pro handoff ficar contínuo.
-    const t2 = setTimeout(finish, 5600);
+    // finish logo após o disco assentar (disc-ready em 2050): o disco voador não
+    // fica "por cima" muito tempo. Aí a cortina sai e o hero baixa a agulha.
+    const t2 = setTimeout(finish, 4900);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -83,7 +85,7 @@ export default function IntroCurtain() {
   function skip() {
     if (exiting) return;
     startExit();
-    setTimeout(finish, 3000);
+    setTimeout(finish, 2300);
   }
 
   // easing de "encaixe": desacelera bem no fim p/ o disco assentar suave no hero
@@ -99,7 +101,7 @@ export default function IntroCurtain() {
           initial={{ opacity: 1 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.95, ease: "easeInOut" }}
+          transition={{ duration: 0.6, ease: "easeInOut" }}
         >
           {/* fundo (névoa) — some para revelar a home enquanto o disco voa */}
           <motion.div

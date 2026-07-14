@@ -211,7 +211,11 @@ export default function Vinyl({
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (!interactive) return;
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    // No toque, NÃO capturamos o ponteiro: com touch-action pan-y o navegador
+    // ainda faz o scroll vertical (rolar a página passando o dedo sobre o disco)
+    // e manda pointercancel; o toque tem captura implícita pro scratch horizontal.
+    // No mouse/caneta capturamos normalmente pra arrastar/mixar.
+    if (e.pointerType !== "touch") (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     draggingRef.current = true;
     setDragging(true);
     movedRef.current = false;
@@ -279,7 +283,7 @@ export default function Vinyl({
   return (
     <div
       ref={containerRef}
-      className={cn("relative aspect-square w-full select-none touch-none", interactive && !noNeedle && "needle-zone", dragging && "dragging", className)}
+      className={cn("relative aspect-square w-full select-none touch-pan-y", interactive && !noNeedle && "needle-zone", dragging && "dragging", className)}
       aria-label={title}
       {...hoverProps}
       onPointerDown={onPointerDown}

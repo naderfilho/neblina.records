@@ -21,9 +21,10 @@ type Filters = {
   format: string;
   quality: string;
   tag: string;
+  sort: string; // "" | "price_asc" | "price_desc"
 };
 
-const EMPTY: Filters = { q: "", genre: "", nationality: "", artist: "", format: "", quality: "", tag: "" };
+const EMPTY: Filters = { q: "", genre: "", nationality: "", artist: "", format: "", quality: "", tag: "", sort: "" };
 
 function Select({
   value,
@@ -89,7 +90,7 @@ export default function RecordGrid({ records, tags = [] }: { records: RecordItem
 
   const filtered = useMemo(() => {
     const q = f.q.trim().toLowerCase();
-    return records.filter((r) => {
+    const list = records.filter((r) => {
       if (f.genre && !genreMatches(r.genre, f.genre)) return false;
       if (f.nationality && r.nationality !== f.nationality) return false;
       if (f.artist && r.artist !== f.artist) return false;
@@ -100,9 +101,13 @@ export default function RecordGrid({ records, tags = [] }: { records: RecordItem
         return false;
       return true;
     });
+    if (f.sort === "price_asc") list.sort((a, b) => (a.price || 0) - (b.price || 0));
+    else if (f.sort === "price_desc") list.sort((a, b) => (b.price || 0) - (a.price || 0));
+    return list;
   }, [records, f]);
 
-  const activeCount = Object.entries(f).filter(([, v]) => v).length;
+  // "sort" é uma ordenação, não um filtro — não conta no badge de filtros ativos
+  const activeCount = Object.entries(f).filter(([k, v]) => v && k !== "sort").length;
 
   return (
     <div>
@@ -199,7 +204,19 @@ export default function RecordGrid({ records, tags = [] }: { records: RecordItem
                 ))}
               </select>
             </div>
-            {activeCount > 0 && (
+            <div>
+              <label className="mb-1.5 block text-xs uppercase tracking-wider text-muted">Ordenar por preço</label>
+              <select
+                value={f.sort}
+                onChange={(e) => setF((s) => ({ ...s, sort: e.target.value }))}
+                className="w-full rounded-xl border border-line bg-panel px-3 py-2.5 text-sm text-ink outline-none focus:border-brand/60"
+              >
+                <option value="">Padrão</option>
+                <option value="price_asc">Menor preço</option>
+                <option value="price_desc">Maior preço</option>
+              </select>
+            </div>
+            {(activeCount > 0 || f.sort) && (
               <button
                 onClick={() => setF(EMPTY)}
                 className="flex items-center justify-center gap-1.5 rounded-xl border border-line px-3 py-2.5 text-sm text-muted hover:text-brand sm:col-span-2 lg:col-span-4"
@@ -220,12 +237,21 @@ export default function RecordGrid({ records, tags = [] }: { records: RecordItem
           >
             Todos
           </button>
-          {usedTags.map((t) => (
-            <button key={t.id} onClick={() => setF((s) => ({ ...s, tag: s.tag === t.id ? "" : t.id }))}
-              className={`rounded-full transition ${f.tag === t.id ? "ring-2 ring-brand" : "opacity-80 hover:opacity-100"}`}>
-              <TagBadge tag={t} size="md" />
-            </button>
-          ))}
+          {usedTags.map((t) => {
+            const on = f.tag === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setF((s) => ({ ...s, tag: s.tag === t.id ? "" : t.id }))}
+                className="rounded-full outline-none transition"
+                // selecionado = anel fino da marca com um respiro na cor do fundo
+                // (limpo e do tamanho do chip; sem "borda grossa")
+                style={on ? { boxShadow: "0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-brand)" } : { opacity: 0.75 }}
+              >
+                <TagBadge tag={t} size="md" />
+              </button>
+            );
+          })}
         </div>
       )}
 
