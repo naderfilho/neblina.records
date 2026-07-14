@@ -26,12 +26,17 @@ export const QUALITY_META: Record<QualityGrade, { label: string; color: string }
 export const RECORD_FORMATS = [
   "LP",
   "LP Duplo",
+  "LP Triplo",
+  "Álbum Duplo",
+  "Álbum Triplo",
   "EP",
   'Single 7"',
+  'Single 12"',
   "Compacto",
   "Promo de Rádio",
   "78 RPM",
   "CD",
+  "CD Duplo",
   "Box Set",
   "Picture Disc",
   "Coletânea",
@@ -69,6 +74,38 @@ export const POPULAR_GENRES = [
   "Gospel", "Clássica", "Trilha Sonora", "Forró", "Pagode", "Sertanejo", "Axé",
   "Bolero", "Salsa", "World Music",
 ] as const;
+
+/** Árvore de gêneros: gênero principal -> subgêneros. Ao filtrar por um principal,
+ *  a home também traz os discos dos subgêneros. */
+export const GENRE_TREE: Record<string, string[]> = {
+  "MPB": ["Bossa Nova", "Samba", "Samba-Canção", "Choro", "Tropicália", "Forró", "Baião", "Clube da Esquina", "Música Popular Brasileira"],
+  "Rock": ["Hard Rock", "Rock Progressivo", "Punk", "Post-Punk", "New Wave", "Grunge", "Psicodelia", "Indie", "Alternativo", "Rockabilly", "Rock Nacional"],
+  "Heavy Metal": ["Thrash Metal", "Death Metal", "Power Metal", "Doom Metal", "Hard Rock"],
+  "Pop": ["Pop Rock", "Synth-Pop", "Dance-Pop", "New Wave", "Pop Nacional"],
+  "Soul / Funk": ["Soul", "Funk", "R&B", "Disco", "Motown", "Rhythm and Blues"],
+  "Jazz": ["Bebop", "Cool Jazz", "Jazz Fusion", "Free Jazz", "Smooth Jazz"],
+  "Blues": ["Delta Blues", "Chicago Blues", "Rhythm and Blues"],
+  "Reggae": ["Ska", "Dub", "Roots Reggae", "Dancehall"],
+  "Eletrônica": ["House", "Techno", "Ambient", "Drum and Bass", "Trance", "Synth-Pop"],
+  "Hip Hop": ["Rap", "Trap", "Boom Bap"],
+  "Clássica": ["Ópera", "Barroco", "Romântico", "Erudito", "Trilha Sonora"],
+  "Regional / Raiz": ["Forró", "Sertanejo", "Música Caipira", "Xote", "Baião", "Frevo"],
+  "Samba / Pagode": ["Samba", "Pagode", "Samba-Enredo", "Partido Alto"],
+};
+
+/** Termos a casar ao filtrar por um gênero (o principal + seus subgêneros). */
+export function genreFilterTerms(selected: string): string[] {
+  const subs = GENRE_TREE[selected];
+  return subs ? [selected, ...subs] : [selected];
+}
+
+/** Um disco casa com o gênero selecionado (considerando subgêneros e texto livre). */
+export function genreMatches(recordGenre: string | null | undefined, selected: string): boolean {
+  if (!selected) return true;
+  if (!recordGenre) return false;
+  const rg = recordGenre.toLowerCase();
+  return genreFilterTerms(selected).some((t) => rg.includes(t.toLowerCase()));
+}
 
 /** 30+ nacionalidades mais populares */
 export const POPULAR_NATIONALITIES = [

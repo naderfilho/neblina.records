@@ -293,10 +293,14 @@ export default function RecordForm({
     history?: HistoryInfo; market?: MarketInfo; identification?: IdentificationInfo;
     tracks?: { side?: string; title?: string }[];
   }) {
-    fill(setTitle, d.title);
-    fill(setGenre, d.genre); fill(setNationality, d.nationality); fill(setLabelCompany, d.label_company);
-    fill(setFormat, d.format); fill(setDescription, d.description);
-    fill(setYear, d.year != null ? String(d.year) : undefined);
+    // NÃO sobrescreve o que o admin preencheu manualmente (título, ano, formato,
+    // nacionalidade) — só completa se estiver vazio.
+    if (!title.trim()) fill(setTitle, d.title);
+    if (!year.trim()) fill(setYear, d.year != null ? String(d.year) : undefined);
+    if (!format) fill(setFormat, d.format);
+    if (!nationality.trim()) fill(setNationality, d.nationality);
+    // campos que a IA é responsável por trazer
+    fill(setGenre, d.genre); fill(setLabelCompany, d.label_company); fill(setDescription, d.description);
     if (d.history) setHistory((h) => ({ ...h, ...d.history }));
     if (d.market) setMarket((m) => ({ ...m, ...d.market }));
     if (d.identification) setIdent((i) => ({ ...i, ...d.identification }));
@@ -332,7 +336,11 @@ export default function RecordForm({
       const res = await fetch("/api/ai/research", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ artist: a, catalog: cat, year, imageBase64: b.data, mediaType: b.mediaType }),
+        body: JSON.stringify({
+          title: title.trim(), artist: a, catalog: cat, year,
+          nationality: nationality.trim(), format,
+          imageBase64: b.data, mediaType: b.mediaType,
+        }),
       });
       const j = await readJsonResponse(res);
       applyResearch(j.data ?? {});
@@ -502,11 +510,18 @@ export default function RecordForm({
               <Sparkles size={13} /> Neblina IA - Agente Discogs
             </p>
             <p className="mb-2.5 text-[11px] text-muted">
-              Informe o artista e o nº de catálogo (aparece como “Selo” no Discogs, ex.: <span className="text-mist">EMI - 31C 164 422831/2</span>). A IA lê a capa e acha a versão exata no Discogs.
+              Preencha o máximo possível abaixo — <strong className="text-mist">quanto mais completo, mais rápida e barata a pesquisa</strong> (a IA busca menos no Discogs e evita timeout). O nº de catálogo aparece como “Selo” no Discogs (ex.: <span className="text-mist">EMI - 31C 164 422831/2</span>).
             </p>
             <div className="mb-2.5 grid gap-2 sm:grid-cols-2">
-              <input className="ipt" placeholder="Nome do artista *" value={artist} onChange={(e) => setArtist(e.target.value)} />
+              <input className="ipt" placeholder="Nome do disco" value={title} onChange={(e) => setTitle(e.target.value)} />
+              <input className="ipt" placeholder="Artista *" value={artist} onChange={(e) => setArtist(e.target.value)} />
               <input className="ipt" placeholder="Nº de catálogo / Selo *" value={catalog} onChange={(e) => setCatalog(e.target.value)} />
+              <input className="ipt" type="number" placeholder="Ano" value={year} onChange={(e) => setYear(e.target.value)} />
+              <input className="ipt" placeholder="Nacionalidade da prensa (ex.: Brasil)" value={nationality} onChange={(e) => setNationality(e.target.value)} />
+              <select className="ipt" value={format} onChange={(e) => setFormat(e.target.value)}>
+                <option value="">Tipo de disco</option>
+                {RECORD_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
+              </select>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <button

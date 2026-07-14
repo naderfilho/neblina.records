@@ -6,17 +6,25 @@ export const runtime = "nodejs";
 // no Hobby o teto é 60s.
 export const maxDuration = 300;
 
-function prompt(artist: string, catalog: string, year?: string, hasImage?: boolean) {
-  return `Você é um especialista em discos de vinil e catalogação no Discogs. Sua prioridade é PRECISÃO — nada de inventar.
+function prompt(f: { title?: string; artist: string; catalog: string; year?: string; nationality?: string; format?: string }, hasImage?: boolean) {
+  const known = [
+    f.title ? `Título: "${f.title}"` : "",
+    `Artista: "${f.artist}"`,
+    `Número de catálogo (no Discogs = "Selo"): "${f.catalog}"`,
+    f.year ? `Ano: ${f.year}` : "",
+    f.nationality ? `Nacionalidade da prensa/país da edição: "${f.nationality}"` : "",
+    f.format ? `Tipo de disco: "${f.format}"` : "",
+  ].filter(Boolean).join("\n");
 
-Dados informados pelo administrador (são a verdade — use-os como referência principal):
-Artista: "${artist}"
-Número de catálogo (no Discogs aparece como "Selo"): "${catalog}"${year ? `\nAno aproximado: ${year}` : ""}
-${hasImage ? `\nHá uma FOTO DA CAPA anexada. Leia-a com MUITA ATENÇÃO: título, ano, gravadora, se está impresso "STEREO" ou "MONO", e se é disco simples/duplo/triplo (ex.: "2 LP", "Duplo"). O que estiver impresso na capa tem prioridade sobre suposições.` : ""}
+  return `Você é um especialista em discos de vinil e catalogação no Discogs. PRECISÃO acima de tudo — nada de inventar.
 
-Pesquise EXCLUSIVAMENTE no Discogs (discogs.com) — não use nenhuma outra fonte. Use o NÚMERO DE CATÁLOGO ("${catalog}") junto com o artista para localizar o RELEASE EXATO (a versão/edição específica) no Discogs — o número de catálogo identifica a prensagem exata. Confira nessa página do release o título, a tracklist, a gravadora, o país, o ano, o formato e os canais (mono/estéreo).
+O administrador JÁ FORNECEU estes dados (são a VERDADE — NÃO pesquise por eles, apenas reutilize-os):
+${known}
+${hasImage ? `\nHá uma FOTO DA CAPA anexada — use-a só para confirmar a edição e ler "STEREO"/"MONO" e nº de discos, se visível.` : ""}
 
-Depois responda APENAS com um JSON válido (sem texto antes ou depois), em português do Brasil, com estas chaves:
+SEJA RÁPIDO E ECONÔMICO: faça no MÁXIMO 2 a 3 buscas na web. Use o número de catálogo + artista para abrir DIRETO a página do release exato no Discogs (discogs.com) e ler a TRACKLIST. Os campos de HISTÓRIA você pode preencher com seu próprio conhecimento (sem buscar). Só busque o MERCADO (preços) se conseguir rápido. Não gaste buscas com o que já foi fornecido acima.
+
+Responda APENAS com um JSON válido (sem texto antes ou depois), em português do Brasil, com estas chaves:
 {
   "title": "título exato do álbum (conforme o Discogs)",
   "genre": "estilo musical",
@@ -64,7 +72,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Chave da IA não configurada." }, { status: 500 });
     }
 
-    const { artist, catalog, year, imageBase64, mediaType } = await req.json();
+    const { title, artist, catalog, year, nationality, format, imageBase64, mediaType } = await req.json();
     if (!artist || !catalog) {
       return NextResponse.json({ error: "Informe o artista e o número de catálogo antes de usar a IA." }, { status: 400 });
     }
@@ -74,18 +82,18 @@ export async function POST(req: Request) {
     if (imageBase64) {
       content.push({ type: "image", source: { type: "base64", media_type: mediaType || "image/jpeg", data: imageBase64 } });
     }
-    content.push({ type: "text", text: prompt(artist, catalog, year, !!imageBase64) });
+    content.push({ type: "text", text: prompt({ title, artist, catalog, year, nationality, format }, !!imageBase64) });
 
-    // max_tokens generoso: o pensamento adaptativo + os resumos da busca web
-    // consomem o orçamento antes do JSON final (todas as faixas + histórico +
-    // mercado). Com pouco orçamento o JSON vinha truncado e a pesquisa falhava.
+    // Menos buscas (3) e teto de tokens menor: com os dados fornecidos pelo admin,
+    // a IA precisa basicamente confirmar o release e trazer a tracklist — isso
+    // reduz o tempo (evita timeout na Vercel) e o custo por pesquisa.
     const msg = await client.messages.create({
       model: AI_MODEL,
-      max_tokens: 16000,
+      max_tokens: 9000,
       thinking: { type: "adaptive" },
       output_config: { effort: "low" },
       // busca restrita ao Discogs (allowed_domains) — nada de outras fontes
-      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 6, allowed_domains: ["discogs.com"] } as never],
+      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 3, allowed_domains: ["discogs.com"] } as never],
       messages: [{ role: "user", content: content as never }],
     });
 

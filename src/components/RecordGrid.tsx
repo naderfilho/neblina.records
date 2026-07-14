@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import RecordCard from "@/components/RecordCard";
 import TagBadge from "@/components/TagBadge";
-import { QUALITY_GRADES, QUALITY_META, POPULAR_GENRES, POPULAR_NATIONALITIES, RECORD_FORMATS } from "@/lib/constants";
+import { QUALITY_GRADES, QUALITY_META, POPULAR_NATIONALITIES, RECORD_FORMATS, GENRE_TREE, genreMatches } from "@/lib/constants";
 import type { RecordItem, Tag } from "@/lib/types";
 
 function uniqueSorted(values: (string | null)[]): string[] {
@@ -63,10 +63,13 @@ export default function RecordGrid({ records, tags = [] }: { records: RecordItem
     return tags.filter((t) => ids.has(t.id));
   }, [records, tags]);
 
-  const genres = useMemo(
-    () => uniqueSorted([...records.map((r) => r.genre), ...POPULAR_GENRES]),
-    [records],
-  );
+  // gêneros dos discos que não estão na árvore (para o grupo "Outros")
+  const otherGenres = useMemo(() => {
+    const known = new Set(
+      Object.entries(GENRE_TREE).flatMap(([main, subs]) => [main.toLowerCase(), ...subs.map((s) => s.toLowerCase())]),
+    );
+    return uniqueSorted(records.map((r) => r.genre)).filter((g) => !known.has(g.toLowerCase()));
+  }, [records]);
   const nationalities = useMemo(
     () => uniqueSorted([...records.map((r) => r.nationality), ...POPULAR_NATIONALITIES]),
     [records],
@@ -79,7 +82,7 @@ export default function RecordGrid({ records, tags = [] }: { records: RecordItem
   // Artistas dependem do estilo/nacionalidade selecionados
   const artists = useMemo(() => {
     let pool = records;
-    if (f.genre) pool = pool.filter((r) => r.genre === f.genre);
+    if (f.genre) pool = pool.filter((r) => genreMatches(r.genre, f.genre));
     if (f.nationality) pool = pool.filter((r) => r.nationality === f.nationality);
     return uniqueSorted(pool.map((r) => r.artist));
   }, [records, f.genre, f.nationality]);
@@ -87,7 +90,7 @@ export default function RecordGrid({ records, tags = [] }: { records: RecordItem
   const filtered = useMemo(() => {
     const q = f.q.trim().toLowerCase();
     return records.filter((r) => {
-      if (f.genre && r.genre !== f.genre) return false;
+      if (f.genre && !genreMatches(r.genre, f.genre)) return false;
       if (f.nationality && r.nationality !== f.nationality) return false;
       if (f.artist && r.artist !== f.artist) return false;
       if (f.format && r.format !== f.format) return false;
@@ -133,12 +136,28 @@ export default function RecordGrid({ records, tags = [] }: { records: RecordItem
           <div className="mt-3 grid gap-3 rounded-2xl border border-line bg-bg-soft p-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <label className="mb-1.5 block text-xs uppercase tracking-wider text-muted">Estilo musical</label>
-              <Select
+              <select
                 value={f.genre}
-                onChange={(v) => setF((s) => ({ ...s, genre: v, artist: "" }))}
-                options={genres}
-                placeholder="Todos os estilos"
-              />
+                onChange={(e) => setF((s) => ({ ...s, genre: e.target.value, artist: "" }))}
+                className="w-full rounded-xl border border-line bg-panel px-3 py-2.5 text-sm text-ink outline-none focus:border-brand/60"
+              >
+                <option value="">Todos os estilos</option>
+                {Object.entries(GENRE_TREE).map(([main, subs]) => (
+                  <optgroup key={main} label={main}>
+                    <option value={main}>{main} (todos)</option>
+                    {subs.map((s) => (
+                      <option key={main + s} value={s}>&nbsp;&nbsp;{s}</option>
+                    ))}
+                  </optgroup>
+                ))}
+                {otherGenres.length > 0 && (
+                  <optgroup label="Outros">
+                    {otherGenres.map((g) => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
             </div>
             <div>
               <label className="mb-1.5 block text-xs uppercase tracking-wider text-muted">Nacionalidade</label>
