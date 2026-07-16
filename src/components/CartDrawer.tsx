@@ -74,8 +74,8 @@ export default function CartDrawer() {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-ink">{i.title}</p>
-                    <p className="truncate text-sm text-muted">{i.artist}</p>
+                    <p translate="no" className="notranslate truncate font-medium text-ink">{i.title}</p>
+                    <p translate="no" className="notranslate truncate text-sm text-muted">{i.artist}</p>
                     <p className="text-sm font-semibold text-brand">{formatBRL(i.price)}</p>
                   </div>
                   <button

@@ -71,7 +71,7 @@ export default function HomeMiniPlayer({ song }: { song: HomeSong }) {
       {/* info + etiqueta: em cima do disco (centralizado) */}
       <div className="pointer-events-none absolute left-1/2 top-[11%] z-20 flex -translate-x-1/2 flex-col items-center gap-1.5">
         {song.tag && <TagBadge tag={song.tag} size="sm" />}
-        <div className="pointer-events-auto max-w-[220px] rounded-xl bg-black/50 px-3 py-1.5 text-center backdrop-blur-sm">
+        <div translate="no" className="notranslate pointer-events-auto max-w-[220px] rounded-xl bg-black/50 px-3 py-1.5 text-center backdrop-blur-sm">
           <p className="truncate text-[13px] font-semibold leading-tight text-ink">{song.trackTitle}</p>
           <Link href={`/disco/${song.recordId}`} className="block truncate text-[11px] leading-tight text-mist transition-colors hover:text-brand">
             {song.recordTitle} — {song.artist}

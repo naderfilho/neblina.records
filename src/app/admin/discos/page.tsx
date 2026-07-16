@@ -2,13 +2,16 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import AdminRecordsTable from "@/components/admin/AdminRecordsTable";
-import type { RecordItem } from "@/lib/types";
+import type { RecordItem, Tag } from "@/lib/types";
 
 export const revalidate = 0;
 
 export default async function AdminDiscosPage() {
   const supabase = await createClient();
-  const { data } = await supabase.from("records").select("*").order("created_at", { ascending: false });
+  const [{ data }, { data: tagData }] = await Promise.all([
+    supabase.from("records").select("*").order("created_at", { ascending: false }),
+    supabase.from("tags").select("*").order("created_at"),
+  ]);
 
   return (
     <div className="p-6 md:p-10">
@@ -22,7 +25,7 @@ export default async function AdminDiscosPage() {
         </Link>
       </div>
 
-      <AdminRecordsTable records={(data as RecordItem[]) ?? []} />
+      <AdminRecordsTable records={(data as RecordItem[]) ?? []} tags={(tagData as Tag[]) ?? []} />
     </div>
   );
 }

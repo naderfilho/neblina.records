@@ -68,11 +68,12 @@ export default function RecordCard({ record, tags = [] }: { record: RecordItem; 
       <div className="mt-3 w-full px-1 text-center">
         <Link
           href={`/disco/${record.id}`}
-          className="line-clamp-1 font-display text-[15px] leading-tight text-ink transition-colors hover:text-brand"
+          translate="no"
+          className="notranslate line-clamp-1 font-display text-[15px] leading-tight text-ink transition-colors hover:text-brand"
         >
           {record.title}
         </Link>
-        <p className="line-clamp-1 text-xs text-muted">{record.artist}</p>
+        <p translate="no" className="notranslate line-clamp-1 text-xs text-muted">{record.artist}</p>
         <div className="mt-1.5 flex items-center justify-center gap-2">
           <span className="font-semibold text-brand">{formatBRL(record.price)}</span>
           {quality && (

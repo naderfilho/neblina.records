@@ -58,8 +58,10 @@ export default function HeroVinyl() {
         className="pointer-events-none absolute -right-2 -top-2 h-[62%] w-[62%] drop-shadow-xl"
         style={{
           transformOrigin: "88% 12%",
-          transform: `rotate(${armDown ? 6 : -26}deg)`,
-          transition: "transform 0.9s cubic-bezier(0.34, 1.2, 0.64, 1)",
+          // esperando: -52° estaciona a cabeça à DIREITA, fora do disco (como o
+          // descanso do braço), sem tocar o disco em nenhum momento; repouso: 6°
+          transform: `rotate(${armDown ? 6 : -52}deg)`,
+          transition: "transform 1s cubic-bezier(0.22, 1, 0.36, 1)",
         }}
         aria-hidden
       >

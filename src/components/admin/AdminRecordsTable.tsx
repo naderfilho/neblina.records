@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Eye, EyeOff, Search } from "lucide-react";
@@ -8,17 +8,35 @@ import { createClient } from "@/lib/supabase/client";
 import { logAction } from "@/lib/audit";
 import { formatBRL } from "@/lib/utils";
 import { AVAILABILITY } from "@/lib/constants";
-import type { RecordItem } from "@/lib/types";
+import type { RecordItem, Tag } from "@/lib/types";
 
-export default function AdminRecordsTable({ records }: { records: RecordItem[] }) {
+type SortKey = "recent" | "artist" | "price_desc" | "price_asc";
+
+export default function AdminRecordsTable({ records, tags = [] }: { records: RecordItem[]; tags?: Tag[] }) {
   const router = useRouter();
   const [items, setItems] = useState(records);
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<SortKey>("recent");
+  const [tagFilter, setTagFilter] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
 
-  const filtered = items.filter((r) =>
-    `${r.title} ${r.artist} ${r.genre ?? ""}`.toLowerCase().includes(q.toLowerCase()),
-  );
+  // só mostra no filtro as tags realmente usadas em algum disco
+  const usedTags = useMemo(() => {
+    const ids = new Set(items.flatMap((r) => r.tag_ids ?? []));
+    return tags.filter((t) => ids.has(t.id));
+  }, [items, tags]);
+
+  const filtered = useMemo(() => {
+    const query = q.toLowerCase();
+    const list = items.filter((r) => {
+      if (tagFilter && !(r.tag_ids ?? []).includes(tagFilter)) return false;
+      return `${r.title} ${r.artist} ${r.genre ?? ""}`.toLowerCase().includes(query);
+    });
+    if (sort === "artist") list.sort((a, b) => (a.artist || "").localeCompare(b.artist || "", "pt-BR"));
+    else if (sort === "price_desc") list.sort((a, b) => (b.price || 0) - (a.price || 0));
+    else if (sort === "price_asc") list.sort((a, b) => (a.price || 0) - (b.price || 0));
+    return list;
+  }, [items, q, sort, tagFilter]);
 
   async function togglePublish(r: RecordItem) {
     setBusy(r.id);
@@ -46,14 +64,49 @@ export default function AdminRecordsTable({ records }: { records: RecordItem[] }
 
   return (
     <div>
-      <div className="relative mb-4 max-w-sm">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar disco…"
-          className="w-full rounded-xl border border-line bg-panel py-2.5 pl-10 pr-4 text-sm text-ink outline-none focus:border-brand/50"
-        />
+      {/* contagem */}
+      <p className="mb-3 text-sm text-muted">
+        <span className="font-semibold text-ink">{items.length}</span> disco{items.length === 1 ? "" : "s"} cadastrado{items.length === 1 ? "" : "s"}
+        {filtered.length !== items.length && <span className="text-faint"> · {filtered.length} no filtro</span>}
+      </p>
+
+      {/* controles: busca, ordenar, filtrar por tag */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="relative min-w-[200px] flex-1 sm:max-w-sm">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar disco…"
+            className="w-full rounded-xl border border-line bg-panel py-2.5 pl-10 pr-4 text-sm text-ink outline-none focus:border-brand/50"
+          />
+        </div>
+
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value as SortKey)}
+          className="rounded-xl border border-line bg-panel px-3 py-2.5 text-sm text-ink outline-none focus:border-brand/50"
+          aria-label="Ordenar"
+        >
+          <option value="recent">Mais recentes</option>
+          <option value="artist">Artista (A–Z)</option>
+          <option value="price_desc">Mais caros</option>
+          <option value="price_asc">Mais baratos</option>
+        </select>
+
+        {usedTags.length > 0 && (
+          <select
+            value={tagFilter}
+            onChange={(e) => setTagFilter(e.target.value)}
+            className="rounded-xl border border-line bg-panel px-3 py-2.5 text-sm text-ink outline-none focus:border-brand/50"
+            aria-label="Filtrar por tag"
+          >
+            <option value="">Todas as tags</option>
+            {usedTags.map((t) => (
+              <option key={t.id} value={t.id}>{t.label}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-line">

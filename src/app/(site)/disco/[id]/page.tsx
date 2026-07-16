@@ -155,8 +155,8 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
             )}
           </div>
 
-          <h1 className="font-display text-4xl leading-tight text-ink">{r.title}</h1>
-          <p className="mt-1 text-lg text-muted">{r.artist}</p>
+          <h1 translate="no" className="notranslate font-display text-4xl leading-tight text-ink">{r.title}</h1>
+          <p translate="no" className="notranslate mt-1 text-lg text-muted">{r.artist}</p>
 
           <div className="mt-5 flex items-center gap-3">
             <span
@@ -234,7 +234,7 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
               {specs.filter((s) => s.value).map((s) => (
                 <div key={s.label} className="flex flex-col">
                   <dt className="text-[11px] uppercase tracking-wider text-faint">{s.label}</dt>
-                  <dd className="text-sm text-ink">{s.value}</dd>
+                  <dd className={`text-sm text-ink ${["Artista", "Gravadora"].includes(s.label) ? "notranslate" : ""}`}>{s.value}</dd>
                 </div>
               ))}
             </dl>
