@@ -58,7 +58,10 @@ export default function DiscCoverReveal({
             top: `${discOffset}rem`,
             transformOrigin: "center center",
             zIndex: show ? 30 : 0,
-            transform: show ? "translateY(0) scale(1.1)" : "translateY(2.5rem) scale(0.9)",
+            // scale(1) e não 1.1: a capa tem a MESMA largura do disco (w-full), então
+            // 1.1 a deixava 10% mais larga que o container e estourava a tela no
+            // mobile. Em 1 ela já cobre o disco inteiro (quadrado sobre o círculo).
+            transform: show ? "translateY(0) scale(1)" : "translateY(2.5rem) scale(0.9)",
             opacity: show ? 1 : 0,
             pointerEvents: show ? "auto" : "none",
             transition: `transform 0.85s ${ease}, opacity 0.5s ease`,

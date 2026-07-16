@@ -68,7 +68,6 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
   const condition = r.condition ?? {};
   const content = r.included_content ?? {};
   const history = r.history ?? {};
-  const market = r.market ?? {};
   const sale = r.sale_info ?? {};
 
   const conditionRows = [
@@ -99,8 +98,6 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
     { label: "Garantia", value: sale.warranty },
     { label: "Devolução", value: sale.return_policy },
   ].filter((x) => x.value);
-
-  const hasMarket = market.price_range || market.avg_international || market.avg_brazil || market.rarity;
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
@@ -305,25 +302,8 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
-      {/* mercado (antes do histórico) */}
-      {hasMarket && (
-        <section className="mt-16">
-          <h2 className="mb-5 font-display text-2xl text-ink">Mercado</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {market.price_range && <MarketCard label="Faixa de preço atual" value={market.price_range} />}
-            {market.avg_international && <MarketCard label="Média internacional" value={market.avg_international} />}
-            {market.avg_brazil && <MarketCard label="Média no Brasil" value={market.avg_brazil} />}
-            {market.rarity ? (
-              <div className="card p-5">
-                <p className="text-[11px] uppercase tracking-wider text-faint">Raridade</p>
-                <p className="mt-1 text-xl text-brand">
-                  {"★".repeat(market.rarity)}<span className="text-faint">{"☆".repeat(5 - market.rarity)}</span>
-                </p>
-              </div>
-            ) : null}
-          </div>
-        </section>
-      )}
+      {/* A seção "Mercado" (faixa de preço, médias, raridade) é INTERNA: fica só
+          no painel do admin. O público precisa saber apenas o preço de venda. */}
 
       {/* histórico — apresentação editorial premium */}
       {historyRows.length > 0 && (
@@ -366,15 +346,6 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
         userName={profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() : null}
         isAdmin={profile?.role === "admin"}
       />
-    </div>
-  );
-}
-
-function MarketCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="card p-5">
-      <p className="text-[11px] uppercase tracking-wider text-faint">{label}</p>
-      <p className="mt-1 font-display text-xl text-ink">{value}</p>
     </div>
   );
 }

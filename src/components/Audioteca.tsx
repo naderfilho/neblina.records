@@ -494,31 +494,53 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
   }, [disc, entry, side, playing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ---------- arrastar da estante ---------- */
+  // O disco sendo arrastado fica num ref: assim o efeito abaixo registra os
+  // listeners UMA vez por arraste (dep = id do disco) em vez de remover e
+  // re-registrar a cada pointermove, o que no mobile fazia perder eventos.
+  const dragRecRef = useRef<RecordItem | null>(null);
+  const dragId = drag?.rec.id ?? null;
+
   useEffect(() => {
-    if (!drag) return;
+    if (!dragId) return;
+    const inDrop = (ev: PointerEvent) => {
+      const dz = dropRef.current?.getBoundingClientRect();
+      return !!dz && ev.clientX >= dz.left && ev.clientX <= dz.right && ev.clientY >= dz.top && ev.clientY <= dz.bottom;
+    };
     const move = (ev: PointerEvent) => {
       setDrag((d) => (d ? { ...d, x: ev.clientX, y: ev.clientY } : d));
-      const dz = dropRef.current?.getBoundingClientRect();
-      setOverDrop(!!dz && ev.clientX >= dz.left && ev.clientX <= dz.right && ev.clientY >= dz.top && ev.clientY <= dz.bottom);
+      setOverDrop(inDrop(ev));
     };
-    const up = (ev: PointerEvent) => {
-      const dz = dropRef.current?.getBoundingClientRect();
-      if (dz && ev.clientX >= dz.left && ev.clientX <= dz.right && ev.clientY >= dz.top && ev.clientY <= dz.bottom) place(drag.rec);
+    const end = (ev: PointerEvent, cancelled: boolean) => {
+      const rec = dragRecRef.current;
+      if (!cancelled && rec && inDrop(ev)) place(rec);
+      dragRecRef.current = null;
       setDrag(null); setOverDrop(false); setOpenId(null);
     };
-    window.addEventListener("pointermove", move);
+    const up = (ev: PointerEvent) => end(ev, false);
+    // pointercancel é obrigatório: se o navegador assume o gesto (scroll da
+    // estante, gesto do sistema), ele para de mandar pointermove e SÓ manda
+    // cancel. Sem tratar, o `drag` nunca era limpo e o disco fantasma ficava
+    // preso na tela travando a página.
+    const cancel = (ev: PointerEvent) => end(ev, true);
+    window.addEventListener("pointermove", move, { passive: false });
     window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", cancel);
     document.body.style.userSelect = "none";
     return () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
       document.body.style.userSelect = "";
     };
-  }, [drag]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dragId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function startDrag(rec: RecordItem, e: React.PointerEvent) {
     e.preventDefault();
     e.stopPropagation();
+    dragRecRef.current = rec;
+    // captura o ponteiro: no toque, garante que os eventos continuem chegando
+    // mesmo se o dedo sair de cima do disco
+    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
     setDrag({ rec, x: e.clientX, y: e.clientY });
   }
 
@@ -879,7 +901,13 @@ function Shelf({
               <div className={cn("relative h-40 w-56 transition", locked && "opacity-70 grayscale")}>
                 {/* disco atrás — sai da capa; a ponta (à direita) é a alça de arraste */}
                 <div
-                  className={cn("absolute left-0 top-0 h-40 w-40 transition-transform duration-500 ease-out", open ? "cursor-grab active:cursor-grabbing" : "")}
+                  className={cn(
+                    "absolute left-0 top-0 h-40 w-40 transition-transform duration-500 ease-out",
+                    // touch-none só quando o disco está pra fora (arrastável): sem isso, no
+                    // mobile a estante (overflow-x auto) rouba o gesto pra rolar, dispara
+                    // pointercancel e o arraste morre no meio. Fechado, deixa rolar normal.
+                    open && !locked ? "cursor-grab touch-none active:cursor-grabbing" : "",
+                  )}
                   style={{ transform: open ? "translateX(46%) rotate(5deg)" : "translateX(4%)" }}
                   onPointerDown={(e) => { if (open && !locked) onGrab(r, e); }}
                 >

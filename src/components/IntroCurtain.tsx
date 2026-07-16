@@ -7,6 +7,19 @@ const KEY = "neblina_intro_seen";
 
 type Fly = { x: number; y: number; scale: number };
 
+/**
+ * Trava/destrava o scroll da página.
+ * IMPORTANTE: o CSS põe `overflow-x: hidden` em `html` E em `body`, o que faz o
+ * overflow-y dos dois computar como `auto` — e quem realmente rola a página é o
+ * `html`. Travar só o `body` não segurava nada (o disco da intro descia junto
+ * com o scroll e bagunçava o voo). Por isso travamos os dois.
+ */
+function lockScroll(on: boolean) {
+  const v = on ? "hidden" : "";
+  document.documentElement.style.overflow = v;
+  document.body.style.overflow = v;
+}
+
 export default function IntroCurtain() {
   const [show, setShow] = useState(false);
   const [exiting, setExiting] = useState(false);
@@ -23,7 +36,7 @@ export default function IntroCurtain() {
 
   // cortina 100% fora da tela → libera o scroll e manda o hero baixar a agulha
   function afterExit() {
-    document.body.style.overflow = "";
+    lockScroll(false);
     window.dispatchEvent(new Event("neblina:intro-finished"));
   }
 
@@ -75,18 +88,21 @@ export default function IntroCurtain() {
   useEffect(() => {
     if (sessionStorage.getItem(KEY)) return;
     setShow(true);
-    document.body.style.overflow = "hidden";
+    // trava o scroll já no início: sem isso, rolar durante a intro fazia o disco
+    // do voo descer junto com a página e bagunçar o pouso no hero
+    lockScroll(true);
+    window.scrollTo(0, 0);
     const t1 = setTimeout(startExit, 2600);
     // finish logo após o disco assentar (disc-ready em 2050): o disco voador não
     // fica "por cima" muito tempo. Aí a cortina sai e o hero baixa a agulha.
     const t2 = setTimeout(finish, 4900);
     // rede de segurança: se o onExitComplete não disparar, libera o scroll assim mesmo
-    const t3 = setTimeout(() => { document.body.style.overflow = ""; }, 7000);
+    const t3 = setTimeout(() => lockScroll(false), 7000);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
-      document.body.style.overflow = "";
+      lockScroll(false);
     };
   }, []);
 

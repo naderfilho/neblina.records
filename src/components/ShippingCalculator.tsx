@@ -95,9 +95,11 @@ export default function ShippingCalculator({ weightGrams }: { weightGrams: numbe
   }
 
   return (
-    <div className="rounded-2xl border border-line bg-panel p-5">
+    // max-w-full + overflow-hidden: o card nunca passa da largura da coluna,
+    // mesmo com fonte grande do sistema ou nome de país comprido
+    <div className="max-w-full overflow-hidden rounded-2xl border border-line bg-panel p-4 sm:p-5">
       <h3 className="mb-1 flex items-center gap-2 font-display text-lg text-ink">
-        <Truck size={19} className="text-brand" /> Calcular frete
+        <Truck size={19} className="shrink-0 text-brand" /> Calcular frete
       </h3>
       <p className="mb-4 text-sm text-muted">Enviamos para o Brasil e para o mundo todo.</p>
 
@@ -116,12 +118,14 @@ export default function ShippingCalculator({ weightGrams }: { weightGrams: numbe
         </button>
       </div>
 
+      {/* min-w-0 nos filhos: sem isso um item flex não encolhe abaixo do próprio
+          min-content (nome de país longo) e a linha estoura pra fora do card */}
       <div className="flex gap-2">
         {intl ? (
           <select
             value={country}
             onChange={(e) => setCountry(e.target.value)}
-            className="flex-1 rounded-lg border border-line bg-bg-soft px-3 py-2.5 text-sm text-ink outline-none focus:border-brand/50"
+            className="min-w-0 flex-1 rounded-lg border border-line bg-bg-soft px-3 py-2.5 text-sm text-ink outline-none focus:border-brand/50"
           >
             {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
           </select>
@@ -131,10 +135,10 @@ export default function ShippingCalculator({ weightGrams }: { weightGrams: numbe
             onChange={(e) => setCep(e.target.value)}
             placeholder="Seu CEP"
             inputMode="numeric"
-            className="flex-1 rounded-lg border border-line bg-bg-soft px-3 py-2.5 text-sm text-ink outline-none focus:border-brand/50"
+            className="min-w-0 flex-1 rounded-lg border border-line bg-bg-soft px-3 py-2.5 text-sm text-ink outline-none focus:border-brand/50"
           />
         )}
-        <button onClick={calcular} disabled={loading} className="btn-brand rounded-lg px-4 py-2.5 text-sm disabled:opacity-60">
+        <button onClick={calcular} disabled={loading} className="btn-brand shrink-0 rounded-lg px-4 py-2.5 text-sm disabled:opacity-60">
           {loading ? <Loader2 size={16} className="animate-spin" /> : "Calcular"}
         </button>
       </div>
@@ -143,8 +147,9 @@ export default function ShippingCalculator({ weightGrams }: { weightGrams: numbe
 
       {result && (
         <div className="mt-4 rounded-xl border border-line bg-bg-soft p-4">
-          <p className="flex items-center gap-1.5 text-sm text-muted">
-            <MapPin size={14} className="text-teal" /> {result.label}
+          <p className="flex items-start gap-1.5 text-sm text-muted">
+            <MapPin size={14} className="mt-0.5 shrink-0 text-teal" />
+            <span className="min-w-0 break-words">{result.label}</span>
           </p>
           <p className="mt-1 font-display text-2xl text-brand">{formatBRL(result.value)}</p>
           <p className="text-xs text-faint">Prazo estimado: {result.days} · valor final confirmado no atendimento</p>

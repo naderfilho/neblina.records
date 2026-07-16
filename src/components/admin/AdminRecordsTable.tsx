@@ -18,6 +18,7 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<SortKey>("recent");
   const [tagFilter, setTagFilter] = useState("");
+  const [artistFilter, setArtistFilter] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
 
   // só mostra no filtro as tags realmente usadas em algum disco
@@ -26,17 +27,30 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
     return tags.filter((t) => ids.has(t.id));
   }, [items, tags]);
 
+  // artistas que existem no acervo (com quantos discos cada um tem)
+  const artists = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of items) {
+      const a = (r.artist ?? "").trim();
+      if (a) m.set(a, (m.get(a) ?? 0) + 1);
+    }
+    return [...m.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0], "pt-BR"))
+      .map(([name, count]) => ({ name, count }));
+  }, [items]);
+
   const filtered = useMemo(() => {
     const query = q.toLowerCase();
     const list = items.filter((r) => {
       if (tagFilter && !(r.tag_ids ?? []).includes(tagFilter)) return false;
+      if (artistFilter && (r.artist ?? "").trim() !== artistFilter) return false;
       return `${r.title} ${r.artist} ${r.genre ?? ""}`.toLowerCase().includes(query);
     });
     if (sort === "artist") list.sort((a, b) => (a.artist || "").localeCompare(b.artist || "", "pt-BR"));
     else if (sort === "price_desc") list.sort((a, b) => (b.price || 0) - (a.price || 0));
     else if (sort === "price_asc") list.sort((a, b) => (a.price || 0) - (b.price || 0));
     return list;
-  }, [items, q, sort, tagFilter]);
+  }, [items, q, sort, tagFilter, artistFilter]);
 
   async function togglePublish(r: RecordItem) {
     setBusy(r.id);
@@ -93,6 +107,20 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
           <option value="price_desc">Mais caros</option>
           <option value="price_asc">Mais baratos</option>
         </select>
+
+        {artists.length > 0 && (
+          <select
+            value={artistFilter}
+            onChange={(e) => setArtistFilter(e.target.value)}
+            className="max-w-[220px] rounded-xl border border-line bg-panel px-3 py-2.5 text-sm text-ink outline-none focus:border-brand/50"
+            aria-label="Filtrar por artista"
+          >
+            <option value="">Todos os artistas</option>
+            {artists.map((a) => (
+              <option key={a.name} value={a.name}>{a.name} ({a.count})</option>
+            ))}
+          </select>
+        )}
 
         {usedTags.length > 0 && (
           <select
