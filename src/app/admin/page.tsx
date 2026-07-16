@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Disc3, DollarSign, Users, Eye, CalendarDays, Plus, TrendingUp, Package } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import PrivateStat from "@/components/admin/PrivateStat";
 import { formatBRL } from "@/lib/utils";
 import type { RecordItem } from "@/lib/types";
 
@@ -24,7 +25,8 @@ export default async function AdminDashboard() {
 
   const stats = [
     { icon: Disc3, label: "Discos cadastrados", value: String(recs.length), sub: `${published} publicados` },
-    { icon: DollarSign, label: "Valor do inventário", value: formatBRL(inventoryValue), sub: `${totalUnits} disponíveis` },
+    // `secret`: valor + quantidade do inventário ficam atrás do "olhinho"
+    { icon: DollarSign, label: "Valor do inventário", value: formatBRL(inventoryValue), sub: `${totalUnits} disponíveis`, secret: true },
     { icon: Users, label: "Usuários", value: String(userCount ?? 0), sub: "cadastrados" },
     { icon: CalendarDays, label: "Pedidos de evento", value: String(eventCount ?? 0), sub: "novos" },
   ];
@@ -43,13 +45,19 @@ export default async function AdminDashboard() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
-          <div key={s.label} className="card p-5">
+          <div key={s.label} className="card relative p-5">
             <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-brand/15 text-brand">
               <s.icon size={20} />
             </div>
-            <p className="font-display text-2xl text-ink">{s.value}</p>
-            <p className="text-sm text-muted">{s.label}</p>
-            <p className="mt-0.5 text-xs text-faint">{s.sub}</p>
+            {s.secret ? (
+              <PrivateStat value={s.value} label={s.label} sub={s.sub} />
+            ) : (
+              <>
+                <p className="font-display text-2xl text-ink">{s.value}</p>
+                <p className="text-sm text-muted">{s.label}</p>
+                <p className="mt-0.5 text-xs text-faint">{s.sub}</p>
+              </>
+            )}
           </div>
         ))}
       </div>
