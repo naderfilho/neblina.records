@@ -14,11 +14,16 @@ export default function IntroCurtain() {
   const discRef = useRef<HTMLDivElement>(null);
 
   function finish() {
-    setShow(false);
+    setShow(false); // inicia a saída (fade); o scroll só é liberado quando a
+    // cortina termina de sair (onExitComplete), pra não haver um instante com o
+    // overlay fixo + página rolando (no mobile isso "duplicava" o disco).
     sessionStorage.setItem(KEY, "1");
     document.documentElement.classList.add("intro-seen"); // esconde o shell SSR
+  }
+
+  // cortina 100% fora da tela → libera o scroll e manda o hero baixar a agulha
+  function afterExit() {
     document.body.style.overflow = "";
-    // sinaliza que a cortina saiu → o hero baixa a agulha sobre o disco
     window.dispatchEvent(new Event("neblina:intro-finished"));
   }
 
@@ -75,9 +80,12 @@ export default function IntroCurtain() {
     // finish logo após o disco assentar (disc-ready em 2050): o disco voador não
     // fica "por cima" muito tempo. Aí a cortina sai e o hero baixa a agulha.
     const t2 = setTimeout(finish, 4900);
+    // rede de segurança: se o onExitComplete não disparar, libera o scroll assim mesmo
+    const t3 = setTimeout(() => { document.body.style.overflow = ""; }, 7000);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      clearTimeout(t3);
       document.body.style.overflow = "";
     };
   }, []);
@@ -92,7 +100,7 @@ export default function IntroCurtain() {
   const flyTransition = { duration: 1.85, ease: [0.22, 1, 0.36, 1] as const };
 
   return (
-    <AnimatePresence>
+    <AnimatePresence onExitComplete={afterExit}>
       {show && (
         <motion.div
           key="intro"

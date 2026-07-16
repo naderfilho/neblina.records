@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { anthropic, AI_MODEL, estimateCostUsd, isAdminRequest, extractJson } from "@/lib/ai";
+import { anthropic, AI_MODEL, estimateCostUsd, isAdminRequest, extractJson, recordAiUsage } from "@/lib/ai";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -53,6 +53,7 @@ export async function POST(req: Request) {
     const text = textBlock && "text" in textBlock ? textBlock.text : "";
     const data = extractJson(text);
     const costUsd = estimateCostUsd(AI_MODEL, msg.usage);
+    await recordAiUsage("identify", AI_MODEL, msg.usage, costUsd); // antes não registrava → gasto some do painel
 
     return NextResponse.json({ ok: true, data, costUsd });
   } catch (err) {

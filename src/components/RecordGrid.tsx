@@ -243,10 +243,11 @@ export default function RecordGrid({ records, tags = [] }: { records: RecordItem
               <button
                 key={t.id}
                 onClick={() => setF((s) => ({ ...s, tag: s.tag === t.id ? "" : t.id }))}
-                className="rounded-full outline-none transition"
+                // inline-flex faz o botão abraçar o badge (sem o vão do line-height,
+                // que deixava a caixa em 30px e o anel laranja "fora" do chip de 16px)
+                className="inline-flex rounded-full outline-none transition"
                 // selecionado = anel fino da marca com um respiro na cor do fundo
-                // (limpo e do tamanho do chip; sem "borda grossa")
-                style={on ? { boxShadow: "0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-brand)" } : { opacity: 0.75 }}
+                style={on ? { boxShadow: "0 0 0 2px var(--color-bg), 0 0 0 3px var(--color-brand)" } : { opacity: 0.75 }}
               >
                 <TagBadge tag={t} size="md" />
               </button>
