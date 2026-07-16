@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Eye, EyeOff, Search } from "lucide-react";
+import { Pencil, Trash2, Eye, EyeOff, Search, Copy } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAction } from "@/lib/audit";
 import { formatBRL } from "@/lib/utils";
@@ -162,10 +162,18 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
-                    <Link href={`/admin/discos/${r.id}`} className="rounded-lg p-2 text-muted hover:bg-panel-2 hover:text-brand" aria-label="Editar">
+                    <Link href={`/admin/discos/${r.id}`} className="rounded-lg p-2 text-muted hover:bg-panel-2 hover:text-brand" aria-label="Editar" title="Editar">
                       <Pencil size={15} />
                     </Link>
-                    <button onClick={() => remove(r)} disabled={busy === r.id} className="rounded-lg p-2 text-muted hover:bg-panel-2 hover:text-red-400" aria-label="Excluir">
+                    <Link
+                      href={`/admin/discos/novo?clone=${r.id}`}
+                      className="rounded-lg p-2 text-muted hover:bg-panel-2 hover:text-brand"
+                      aria-label="Clonar disco"
+                      title="Clonar disco"
+                    >
+                      <Copy size={15} />
+                    </Link>
+                    <button onClick={() => remove(r)} disabled={busy === r.id} className="rounded-lg p-2 text-muted hover:bg-panel-2 hover:text-red-400" aria-label="Excluir" title="Excluir">
                       <Trash2 size={15} />
                     </button>
                   </div>

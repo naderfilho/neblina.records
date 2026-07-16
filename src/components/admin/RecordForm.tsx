@@ -74,13 +74,17 @@ export default function RecordForm({
   record,
   existingPhotos = [],
   suggestions,
+  clone = false,
 }: {
   record?: RecordItem;
   existingPhotos?: RecordPhoto[];
   suggestions: Suggestions;
+  /** Clonar: usa o `record` só para PREENCHER o formulário, mas cria um disco
+   *  novo (não edita o original). */
+  clone?: boolean;
 }) {
   const router = useRouter();
-  const isEdit = !!record;
+  const isEdit = !!record && !clone;
 
   const [title, setTitle] = useState(record?.title ?? "");
   const [artist, setArtist] = useState(record?.artist ?? "");
@@ -452,7 +456,10 @@ export default function RecordForm({
         extra_blocks: blocks,
       };
 
-      let recordId = record?.id;
+      // No clone, `record` é só a fonte dos dados — nunca o alvo. Sem isso, o
+      // id do original vazaria para o bloco de fotos abaixo (que apaga as fotos
+      // do record_id) antes do insert devolver o id novo.
+      let recordId = isEdit ? record?.id : undefined;
       if (isEdit) {
         await step("salvar as alterações do disco", async () => {
           const { error } = await supabase.from("records").update(payload).eq("id", record!.id);
