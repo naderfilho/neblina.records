@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Search, SlidersHorizontal, X, ChevronLeft, ChevronRight } from "lucide-react";
 import RecordCard from "@/components/RecordCard";
 import TagBadge from "@/components/TagBadge";
 import { QUALITY_GRADES, QUALITY_META, POPULAR_NATIONALITIES, RECORD_FORMATS, GENRE_TREE, genreMatches } from "@/lib/constants";
@@ -25,6 +25,21 @@ type Filters = {
 };
 
 const EMPTY: Filters = { q: "", genre: "", nationality: "", artist: "", format: "", quality: "", tag: "", sort: "" };
+
+const PER_PAGE = 100;
+
+/** Lista de páginas com reticências: 1 … 4 5 [6] 7 8 … 30 */
+function pageList(current: number, total: number): (number | "…")[] {
+  const out: (number | "…")[] = [];
+  for (let i = 1; i <= total; i++) {
+    if (i === 1 || i === total || (i >= current - 1 && i <= current + 1)) {
+      out.push(i);
+    } else if (out[out.length - 1] !== "…") {
+      out.push("…");
+    }
+  }
+  return out;
+}
 
 function Select({
   value,
@@ -109,8 +124,30 @@ export default function RecordGrid({ records, tags = [] }: { records: RecordItem
   // "sort" é uma ordenação, não um filtro — não conta no badge de filtros ativos
   const activeCount = Object.entries(f).filter(([k, v]) => v && k !== "sort").length;
 
+  // ---- paginação (100 por página) ----
+  const topRef = useRef<HTMLDivElement>(null);
+  const [page, setPage] = useState(1);
+  // ao mexer em qualquer filtro/busca, volta pra primeira página. `f` é um objeto
+  // novo a cada mudança de filtro, então comparar com o anterior detecta a troca —
+  // ajustar o estado durante o render (padrão do React) evita um useEffect extra.
+  const [prevF, setPrevF] = useState(f);
+  if (prevF !== f) {
+    setPrevF(f);
+    setPage(1);
+  }
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const safePage = Math.min(page, pageCount);
+  const pageItems = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
+
+  function goTo(p: number) {
+    const next = Math.min(Math.max(1, p), pageCount);
+    setPage(next);
+    // rola pro topo do acervo (o cabeçalho fixo tem scroll-mt na seção)
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
-    <div>
+    <div ref={topRef}>
       {/* barra de filtros */}
       <div className="mb-8">
         <div className="flex items-center gap-3">
@@ -260,6 +297,7 @@ export default function RecordGrid({ records, tags = [] }: { records: RecordItem
       <p className="mb-5 text-sm text-muted">
         {filtered.length} {filtered.length === 1 ? "disco" : "discos"}
         {activeCount > 0 && " encontrados"}
+        {pageCount > 1 && <span className="text-faint"> · página {safePage} de {pageCount}</span>}
       </p>
 
       {filtered.length === 0 ? (
@@ -268,15 +306,57 @@ export default function RecordGrid({ records, tags = [] }: { records: RecordItem
           <p className="mt-1 text-sm text-faint">Tente ajustar os filtros.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {filtered.map((r) => (
-            <RecordCard
-              key={r.id}
-              record={r}
-              tags={(r.tag_ids ?? []).map((id) => tagMap.get(id)).filter((t): t is Tag => !!t)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {pageItems.map((r) => (
+              <RecordCard
+                key={r.id}
+                record={r}
+                tags={(r.tag_ids ?? []).map((id) => tagMap.get(id)).filter((t): t is Tag => !!t)}
+              />
+            ))}
+          </div>
+
+          {/* paginação */}
+          {pageCount > 1 && (
+            <nav className="mt-12 flex flex-wrap items-center justify-center gap-1.5" aria-label="Paginação">
+              <button
+                onClick={() => goTo(safePage - 1)}
+                disabled={safePage === 1}
+                className="flex h-9 items-center gap-1 rounded-lg border border-line px-3 text-sm text-muted transition hover:border-brand/50 hover:text-brand disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeft size={16} /> <span className="hidden sm:inline">Anterior</span>
+              </button>
+
+              {pageList(safePage, pageCount).map((p, i) =>
+                p === "…" ? (
+                  <span key={`gap-${i}`} className="px-1.5 text-faint">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => goTo(p)}
+                    aria-current={p === safePage ? "page" : undefined}
+                    className={`h-9 min-w-9 rounded-lg border px-2 text-sm font-medium transition ${
+                      p === safePage
+                        ? "border-brand bg-brand text-black"
+                        : "border-line text-muted hover:border-brand/50 hover:text-brand"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ),
+              )}
+
+              <button
+                onClick={() => goTo(safePage + 1)}
+                disabled={safePage === pageCount}
+                className="flex h-9 items-center gap-1 rounded-lg border border-line px-3 text-sm text-muted transition hover:border-brand/50 hover:text-brand disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <span className="hidden sm:inline">Próxima</span> <ChevronRight size={16} />
+              </button>
+            </nav>
+          )}
+        </>
       )}
     </div>
   );

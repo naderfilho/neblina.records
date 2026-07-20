@@ -8,20 +8,45 @@ import type { RecordItem, Tag, Track } from "@/lib/types";
 
 export const revalidate = 0;
 
-export default async function HomePage() {
-  const supabase = await createClient();
-  const [{ data }, { data: tagData }, { data: settings }] = await Promise.all([
-    supabase
+// Colunas que a vitrine (grade + filtros) usa — evita baixar os campos pesados
+// (tracks, history, extra_blocks…) de milhares de discos à toa.
+const GRID_COLS =
+  "id,title,artist,genre,nationality,format,disc_quality,tag_ids,label_company,price,cover_image_url,disc_config,audio_url,audio_start,audio_end";
+
+/**
+ * Busca TODOS os discos publicados. O Supabase/PostgREST limita cada resposta a
+ * 1000 linhas, então paginamos por `range` até esgotar. `id` entra na ordenação
+ * como desempate para o fatiamento entre páginas ser determinístico.
+ */
+async function fetchAllPublished(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<RecordItem[]> {
+  const SIZE = 1000;
+  const all: RecordItem[] = [];
+  for (let from = 0; ; from += SIZE) {
+    const { data, error } = await supabase
       .from("records")
-      .select("*")
+      .select(GRID_COLS)
       .eq("is_published", true)
       .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, from + SIZE - 1);
+    if (error || !data?.length) break;
+    all.push(...(data as unknown as RecordItem[]));
+    if (data.length < SIZE) break;
+  }
+  return all;
+}
+
+export default async function HomePage() {
+  const supabase = await createClient();
+  const [records, { data: tagData }, { data: settings }] = await Promise.all([
+    fetchAllPublished(supabase),
     supabase.from("tags").select("*"),
     supabase.from("site_settings").select("*").eq("id", "main").maybeSingle(),
   ]);
 
-  const records = (data ?? []) as RecordItem[];
   const tags = (tagData ?? []) as Tag[];
 
   // música da home (mini-player sobre o disco Neblina)
