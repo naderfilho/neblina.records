@@ -2,10 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllRange } from "@/lib/fetchAllRange";
 import RecordForm from "@/components/admin/RecordForm";
 import type { RecordItem, RecordPhoto } from "@/lib/types";
 
 export const revalidate = 0;
+
+type Suggestion = { genre: string | null; nationality: string | null; artist: string | null };
 
 function uniq(arr: (string | null)[]) {
   return Array.from(new Set(arr.filter((v): v is string => !!v))).sort();
@@ -15,14 +18,16 @@ export default async function EditarDiscoPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: record }, { data: photos }, { data: all }] = await Promise.all([
+  const [{ data: record }, { data: photos }, rows] = await Promise.all([
     supabase.from("records").select("*").eq("id", id).single(),
     supabase.from("record_photos").select("*").eq("record_id", id).order("sort_order"),
-    supabase.from("records").select("genre,nationality,artist"),
+    // sugestões de TODO o acervo (não só dos 1000 primeiros)
+    fetchAllRange<Suggestion>((from, to) =>
+      supabase.from("records").select("genre,nationality,artist").order("id").range(from, to),
+    ),
   ]);
 
   if (!record) notFound();
-  const rows = all ?? [];
 
   return (
     <div className="p-6 md:p-10">

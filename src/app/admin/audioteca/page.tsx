@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Search, Disc3, Check, HelpCircle, Loader2, Info, EyeOff } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Search, Disc3, Check, HelpCircle, Loader2, Info, EyeOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { fetchAllRange } from "@/lib/fetchAllRange";
 import { logAction } from "@/lib/audit";
 import { AUDIOTECA_TIERS, type AudiotecaTier } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,16 @@ type Rec = {
   audioCount: number; // nº de faixas COM áudio
 };
 
+const PER_PAGE = 100;
+function pageList(current: number, total: number): (number | "…")[] {
+  const out: (number | "…")[] = [];
+  for (let i = 1; i <= total; i++) {
+    if (i === 1 || i === total || (i >= current - 1 && i <= current + 1)) out.push(i);
+    else if (out[out.length - 1] !== "…") out.push("…");
+  }
+  return out;
+}
+
 export default function AdminAudiotecaPage() {
   const supabase = createClient();
   const [records, setRecords] = useState<Rec[]>([]);
@@ -25,15 +36,21 @@ export default function AdminAudiotecaPage() {
   const [audioFilter, setAudioFilter] = useState<"all" | "with" | "without">("all");
 
   useEffect(() => {
-    supabase.from("records").select("id,title,artist,cover_image_url,audioteca_tier,tracks").order("created_at", { ascending: false }).then(({ data }) => {
-      const rows = ((data as (Omit<Rec, "audioCount"> & { tracks: { audio_url?: string | null }[] | null })[]) ?? []).map((r) => ({
+    (async () => {
+      // busca TODO o acervo (paginado — o PostgREST corta em 1000)
+      const data = await fetchAllRange<Omit<Rec, "audioCount"> & { tracks: { audio_url?: string | null }[] | null }>(
+        (from, to) =>
+          supabase.from("records").select("id,title,artist,cover_image_url,audioteca_tier,tracks")
+            .order("created_at", { ascending: false }).order("id").range(from, to),
+      );
+      const rows = data.map((r) => ({
         id: r.id, title: r.title, artist: r.artist, cover_image_url: r.cover_image_url,
         audioteca_tier: r.audioteca_tier,
         audioCount: Array.isArray(r.tracks) ? r.tracks.filter((t) => t.audio_url).length : 0,
       }));
       setRecords(rows);
       setLoading(false);
-    });
+    })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function setTier(id: string, tier: AudiotecaTier) {
@@ -57,8 +74,22 @@ export default function AdminAudiotecaPage() {
   const withCount = records.filter((r) => r.audioCount > 0).length;
   const withoutCount = records.length - withCount;
 
+  // paginação (100 por página) sobre o resultado filtrado
+  const topRef = useRef<HTMLDivElement>(null);
+  const [page, setPage] = useState(1);
+  const sig = `${q}|${audioFilter}`;
+  const [prevSig, setPrevSig] = useState(sig);
+  if (prevSig !== sig) { setPrevSig(sig); setPage(1); }
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const safePage = Math.min(page, pageCount);
+  const pageItems = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
+  function goTo(p: number) {
+    setPage(Math.min(Math.max(1, p), pageCount));
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
-    <div className="p-6 md:p-10">
+    <div ref={topRef} className="p-6 md:p-10">
       <div className="mb-2">
         <h1 className="font-display text-3xl text-ink">Audioteca</h1>
         <p className="text-muted">Defina o nível de acesso de cada disco na Audioteca. Os discos com áudio aparecem na estante, mas só ficam coloridos/tocáveis para quem tem acesso.</p>
@@ -108,7 +139,10 @@ export default function AdminAudiotecaPage() {
         <p className="text-muted">Carregando…</p>
       ) : (
         <div className="space-y-2">
-          {filtered.map((r) => (
+          {pageCount > 1 && (
+            <p className="pb-1 text-xs text-faint">{filtered.length} discos · página {safePage} de {pageCount}</p>
+          )}
+          {pageItems.map((r) => (
             <div key={r.id} className="flex flex-col gap-3 rounded-2xl border border-line bg-panel p-3 sm:flex-row sm:items-center">
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 {r.cover_image_url ? (
@@ -143,6 +177,30 @@ export default function AdminAudiotecaPage() {
             </div>
           ))}
           {filtered.length === 0 && <p className="text-sm text-faint">Nenhum disco encontrado.</p>}
+
+          {pageCount > 1 && (
+            <nav className="mt-4 flex flex-wrap items-center justify-center gap-1.5" aria-label="Paginação">
+              <button onClick={() => goTo(safePage - 1)} disabled={safePage === 1}
+                className="flex h-9 items-center gap-1 rounded-lg border border-line px-3 text-sm text-muted transition hover:border-brand/50 hover:text-brand disabled:cursor-not-allowed disabled:opacity-40">
+                <ChevronLeft size={16} /> <span className="hidden sm:inline">Anterior</span>
+              </button>
+              {pageList(safePage, pageCount).map((p, i) =>
+                p === "…" ? (
+                  <span key={`gap-${i}`} className="px-1.5 text-faint">…</span>
+                ) : (
+                  <button key={p} onClick={() => goTo(p)} aria-current={p === safePage ? "page" : undefined}
+                    className={cn("h-9 min-w-9 rounded-lg border px-2 text-sm font-medium transition",
+                      p === safePage ? "border-brand bg-brand text-black" : "border-line text-muted hover:border-brand/50 hover:text-brand")}>
+                    {p}
+                  </button>
+                ),
+              )}
+              <button onClick={() => goTo(safePage + 1)} disabled={safePage === pageCount}
+                className="flex h-9 items-center gap-1 rounded-lg border border-line px-3 text-sm text-muted transition hover:border-brand/50 hover:text-brand disabled:cursor-not-allowed disabled:opacity-40">
+                <span className="hidden sm:inline">Próxima</span> <ChevronRight size={16} />
+              </button>
+            </nav>
+          )}
         </div>
       )}
     </div>

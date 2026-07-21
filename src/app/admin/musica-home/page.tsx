@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Save, Search, Plus, Check, Music, Disc3, VolumeX } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { fetchAllRange } from "@/lib/fetchAllRange";
 import { logAction } from "@/lib/audit";
 import TagBadge from "@/components/TagBadge";
 import AudioTrimmer from "@/components/admin/AudioTrimmer";
@@ -40,12 +41,15 @@ export default function MusicaHomePage() {
 
   useEffect(() => {
     (async () => {
-      const [{ data: recs }, { data: tg }, { data: settings }] = await Promise.all([
-        supabase.from("records").select("id,title,artist,cover_image_url,tracks,audio_url").order("created_at", { ascending: false }),
+      const [recs, { data: tg }, { data: settings }] = await Promise.all([
+        fetchAllRange<Rec>((from, to) =>
+          supabase.from("records").select("id,title,artist,cover_image_url,tracks,audio_url")
+            .order("created_at", { ascending: false }).order("id").range(from, to),
+        ),
         supabase.from("tags").select("*").order("created_at"),
         supabase.from("site_settings").select("*").eq("id", "main").single(),
       ]);
-      setRecords((recs as Rec[]) ?? []);
+      setRecords(recs);
       setTags((tg as Tag[]) ?? []);
       if (settings) {
         setHomeRecordId(settings.home_record_id ?? null);
@@ -89,6 +93,8 @@ export default function MusicaHomePage() {
   }
 
   const filtered = records.filter((r) => `${r.title} ${r.artist}`.toLowerCase().includes(q.trim().toLowerCase()));
+  // seletor: renderiza no máximo 60 resultados (o acervo tem milhares) — refine a busca
+  const shown = filtered.slice(0, 60);
 
   return (
     <div className="p-6 md:p-10">
@@ -150,7 +156,12 @@ export default function MusicaHomePage() {
             </div>
 
             <div className="space-y-3">
-              {filtered.map((r) => {
+              {filtered.length > shown.length && (
+                <p className="text-xs text-faint">
+                  Mostrando {shown.length} de {filtered.length} discos — refine a busca para encontrar outros.
+                </p>
+              )}
+              {shown.map((r) => {
                 const tracks = r.tracks ?? [];
                 return (
                   <div key={r.id} className={cn("rounded-2xl border p-4", homeRecordId === r.id ? "border-brand/50 bg-brand/5" : "border-line bg-panel")}>

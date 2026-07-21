@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft, Copy } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllRange } from "@/lib/fetchAllRange";
 import RecordForm from "@/components/admin/RecordForm";
 import type { RecordItem, RecordPhoto } from "@/lib/types";
 
 export const revalidate = 0;
+
+type Suggestion = { genre: string | null; nationality: string | null; artist: string | null };
 
 function uniq(arr: (string | null)[]) {
   return Array.from(new Set(arr.filter((v): v is string => !!v))).sort();
@@ -17,8 +20,10 @@ export default async function NovoDiscoPage({
 }) {
   const { clone: cloneId } = await searchParams;
   const supabase = await createClient();
-  const { data } = await supabase.from("records").select("genre,nationality,artist");
-  const rows = data ?? [];
+  // sugestões (estilo/nacionalidade/artista) de TODO o acervo, não só dos 1000 primeiros
+  const rows = await fetchAllRange<Suggestion>((from, to) =>
+    supabase.from("records").select("genre,nationality,artist").order("id").range(from, to),
+  );
 
   // "Clonar disco": carrega o disco de origem só para PREENCHER o formulário.
   // O original não é tocado — o form fica em modo de criação (prop `clone`).
