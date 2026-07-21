@@ -304,7 +304,9 @@ export default function Vinyl({
           {showPhoto && coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={coverUrl} alt={title ?? "Capa"} className="h-full w-full object-cover" draggable={false} />
-          ) : isLogo ? (
+          ) : isLogo || showPhoto ? (
+            // label de foto ainda sem capa → mostra o logo da Neblina como padrão
+            // (quando o admin enviar a capa, ela assume o centro automaticamente)
             <div className="flex h-full w-full items-center justify-center bg-[#0b0b0b]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="Neblina" className="h-[86%] w-[86%] object-contain" draggable={false} />
