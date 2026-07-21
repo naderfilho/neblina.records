@@ -7,24 +7,51 @@ import type { RecordItem } from "@/lib/types";
 
 export const revalidate = 0;
 
+/**
+ * Estatísticas do acervo inteiro. O Supabase/PostgREST corta cada resposta em
+ * 1000 linhas, então paginamos por `range` para somar/contar TODOS os discos
+ * (senão o painel mostra no máximo 1000).
+ */
+async function fetchAllForStats(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<{ price: number | null; availability: string | null; is_published: boolean }[]> {
+  const all: { price: number | null; availability: string | null; is_published: boolean }[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from("records")
+      .select("price,availability,is_published")
+      .order("id")
+      .range(from, from + 999);
+    if (error || !data?.length) break;
+    all.push(...(data as typeof all));
+    if (data.length < 1000) break;
+  }
+  return all;
+}
+
 export default async function AdminDashboard() {
   const supabase = await createClient();
 
-  const [{ data: records }, { count: userCount }, { count: eventCount }] = await Promise.all([
-    supabase.from("records").select("id,title,artist,price,availability,views_count,is_published,cover_image_url,disc_config"),
+  const [statRows, { data: mostVisitedData }, { count: userCount }, { count: eventCount }] = await Promise.all([
+    fetchAllForStats(supabase),
+    supabase
+      .from("records")
+      .select("id,title,artist,price,availability,views_count,is_published,cover_image_url,disc_config")
+      .order("views_count", { ascending: false })
+      .limit(6),
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("event_requests").select("*", { count: "exact", head: true }).eq("status", "new"),
   ]);
 
-  const recs = (records ?? []) as RecordItem[];
-  const available = recs.filter((r) => r.availability !== "sold");
-  const inventoryValue = available.reduce((s, r) => s + (r.price || 0), 0);
+  const available = statRows.filter((r) => r.availability !== "sold");
+  const inventoryValue = available.reduce((s, r) => s + (Number(r.price) || 0), 0);
   const totalUnits = available.length;
-  const published = recs.filter((r) => r.is_published).length;
-  const mostVisited = [...recs].sort((a, b) => b.views_count - a.views_count).slice(0, 6);
+  const published = statRows.filter((r) => r.is_published).length;
+  const recsCount = statRows.length;
+  const mostVisited = (mostVisitedData ?? []) as RecordItem[];
 
   const stats = [
-    { icon: Disc3, label: "Discos cadastrados", value: String(recs.length), sub: `${published} publicados` },
+    { icon: Disc3, label: "Discos cadastrados", value: String(recsCount), sub: `${published} publicados` },
     // `secret`: valor + quantidade do inventário ficam atrás do "olhinho"
     { icon: DollarSign, label: "Valor do inventário", value: formatBRL(inventoryValue), sub: `${totalUnits} disponíveis`, secret: true },
     { icon: Users, label: "Usuários", value: String(userCount ?? 0), sub: "cadastrados" },
