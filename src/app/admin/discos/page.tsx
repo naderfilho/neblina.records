@@ -6,10 +6,32 @@ import type { RecordItem, Tag } from "@/lib/types";
 
 export const revalidate = 0;
 
+// Colunas usadas pela tabela do admin (sem os campos pesados: tracks, history…).
+const TABLE_COLS = "id,title,artist,genre,price,availability,views_count,is_published,cover_image_url,tag_ids";
+
+/** Busca TODOS os discos paginando por `range` (o PostgREST corta em 1000). */
+async function fetchAllRecords(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<RecordItem[]> {
+  const all: RecordItem[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from("records")
+      .select(TABLE_COLS)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, from + 999);
+    if (error || !data?.length) break;
+    all.push(...(data as unknown as RecordItem[]));
+    if (data.length < 1000) break;
+  }
+  return all;
+}
+
 export default async function AdminDiscosPage() {
   const supabase = await createClient();
-  const [{ data }, { data: tagData }] = await Promise.all([
-    supabase.from("records").select("*").order("created_at", { ascending: false }),
+  const [data, { data: tagData }] = await Promise.all([
+    fetchAllRecords(supabase),
     supabase.from("tags").select("*").order("created_at"),
   ]);
 

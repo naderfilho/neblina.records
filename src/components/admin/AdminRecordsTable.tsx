@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Eye, EyeOff, Search, Copy } from "lucide-react";
+import { Pencil, Trash2, Eye, EyeOff, Search, Copy, ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAction } from "@/lib/audit";
 import { formatBRL } from "@/lib/utils";
@@ -11,6 +11,18 @@ import { AVAILABILITY } from "@/lib/constants";
 import type { RecordItem, Tag } from "@/lib/types";
 
 type SortKey = "recent" | "artist" | "price_desc" | "price_asc";
+
+const PER_PAGE = 100;
+
+/** 1 … 4 5 [6] 7 8 … 30 */
+function pageList(current: number, total: number): (number | "…")[] {
+  const out: (number | "…")[] = [];
+  for (let i = 1; i <= total; i++) {
+    if (i === 1 || i === total || (i >= current - 1 && i <= current + 1)) out.push(i);
+    else if (out[out.length - 1] !== "…") out.push("…");
+  }
+  return out;
+}
 
 export default function AdminRecordsTable({ records, tags = [] }: { records: RecordItem[]; tags?: Tag[] }) {
   const router = useRouter();
@@ -52,6 +64,20 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
     return list;
   }, [items, q, sort, tagFilter, artistFilter]);
 
+  // paginação (100 por página) — sobre o resultado filtrado
+  const topRef = useRef<HTMLDivElement>(null);
+  const [page, setPage] = useState(1);
+  const sig = `${q}|${sort}|${tagFilter}|${artistFilter}`;
+  const [prevSig, setPrevSig] = useState(sig);
+  if (prevSig !== sig) { setPrevSig(sig); setPage(1); } // volta pra pág. 1 ao filtrar
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const safePage = Math.min(page, pageCount);
+  const pageItems = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
+  function goTo(p: number) {
+    setPage(Math.min(Math.max(1, p), pageCount));
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   async function togglePublish(r: RecordItem) {
     setBusy(r.id);
     const supabase = createClient();
@@ -77,11 +103,12 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
   }
 
   return (
-    <div>
+    <div ref={topRef}>
       {/* contagem */}
       <p className="mb-3 text-sm text-muted">
         <span className="font-semibold text-ink">{items.length}</span> disco{items.length === 1 ? "" : "s"} cadastrado{items.length === 1 ? "" : "s"}
         {filtered.length !== items.length && <span className="text-faint"> · {filtered.length} no filtro</span>}
+        {pageCount > 1 && <span className="text-faint"> · página {safePage} de {pageCount}</span>}
       </p>
 
       {/* controles: busca, ordenar, filtrar por tag */}
@@ -151,7 +178,7 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {filtered.map((r) => (
+            {pageItems.map((r) => (
               <tr key={r.id} className="hover:bg-panel/50">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
@@ -216,6 +243,42 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
           </tbody>
         </table>
       </div>
+
+      {/* paginação */}
+      {pageCount > 1 && (
+        <nav className="mt-5 flex flex-wrap items-center justify-center gap-1.5" aria-label="Paginação">
+          <button
+            onClick={() => goTo(safePage - 1)}
+            disabled={safePage === 1}
+            className="flex h-9 items-center gap-1 rounded-lg border border-line px-3 text-sm text-muted transition hover:border-brand/50 hover:text-brand disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <ChevronLeft size={16} /> <span className="hidden sm:inline">Anterior</span>
+          </button>
+          {pageList(safePage, pageCount).map((p, i) =>
+            p === "…" ? (
+              <span key={`gap-${i}`} className="px-1.5 text-faint">…</span>
+            ) : (
+              <button
+                key={p}
+                onClick={() => goTo(p)}
+                aria-current={p === safePage ? "page" : undefined}
+                className={`h-9 min-w-9 rounded-lg border px-2 text-sm font-medium transition ${
+                  p === safePage ? "border-brand bg-brand text-black" : "border-line text-muted hover:border-brand/50 hover:text-brand"
+                }`}
+              >
+                {p}
+              </button>
+            ),
+          )}
+          <button
+            onClick={() => goTo(safePage + 1)}
+            disabled={safePage === pageCount}
+            className="flex h-9 items-center gap-1 rounded-lg border border-line px-3 text-sm text-muted transition hover:border-brand/50 hover:text-brand disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <span className="hidden sm:inline">Próxima</span> <ChevronRight size={16} />
+          </button>
+        </nav>
+      )}
     </div>
   );
 }
