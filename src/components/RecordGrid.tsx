@@ -4,7 +4,8 @@ import { useMemo, useRef, useState } from "react";
 import { Search, SlidersHorizontal, X, ChevronLeft, ChevronRight } from "lucide-react";
 import RecordCard from "@/components/RecordCard";
 import TagBadge from "@/components/TagBadge";
-import { QUALITY_GRADES, QUALITY_META, POPULAR_NATIONALITIES, RECORD_FORMATS, GENRE_TREE, genreMatches } from "@/lib/constants";
+import { QUALITY_GRADES, QUALITY_META, POPULAR_NATIONALITIES, RECORD_FORMATS, GENRE_TREE, genreMatches, homeGridClass } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import type { RecordItem, Tag } from "@/lib/types";
 
 function uniqueSorted(values: (string | null)[]): string[] {
@@ -68,7 +69,16 @@ function Select({
   );
 }
 
-export default function RecordGrid({ records, tags = [] }: { records: RecordItem[]; tags?: Tag[] }) {
+export default function RecordGrid({
+  records,
+  tags = [],
+  columns,
+}: {
+  records: RecordItem[];
+  tags?: Tag[];
+  /** discos por linha no desktop (definido pelo admin) */
+  columns?: number | null;
+}) {
   const [f, setF] = useState<Filters>(EMPTY);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -307,7 +317,7 @@ export default function RecordGrid({ records, tags = [] }: { records: RecordItem
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          <div className={cn("grid gap-x-5 gap-y-9", homeGridClass(columns))}>
             {pageItems.map((r) => (
               <RecordCard
                 key={r.id}

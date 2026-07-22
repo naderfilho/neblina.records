@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { type DiscConfig, DEFAULT_DISC_CONFIG, resolveDiscColor, resolveBorderColor } from "@/lib/constants";
-import { claimAudio, releaseAudio } from "@/lib/audio-bus";
+import { claimAudio, releaseAudio, claimDisc, releaseDisc } from "@/lib/audio-bus";
 import { useCoarsePointer } from "@/lib/use-coarse-pointer";
 import { cn } from "@/lib/utils";
 
@@ -160,19 +160,25 @@ export default function Vinyl({
     }
   }, [audioUrl, audioStart, audioEnd]);
 
-  const start = useCallback(() => {
-    activeRef.current = true;
-    setActive(true);
-    ensureRaf();
-    playAudio();
-  }, [ensureRaf, playAudio]);
-
-  const stop = useCallback(() => {
+  // Função nomeada: o barramento guarda ESTA referência como "o disco ativo",
+  // e ela precisa conseguir se remover de lá (por isso o nome `stopFn`).
+  const stop = useCallback(function stopFn() {
     activeRef.current = false;
     setActive(false);
     const a = audioRef.current;
     if (a) { a.pause(); releaseAudio(a); }
+    releaseDisc(stopFn);
   }, []);
+
+  const start = useCallback(() => {
+    // assume o posto de disco ativo: para o anterior por completo (giro + som),
+    // mesmo que este disco aqui não tenha áudio nenhum.
+    if (!autoSpin) claimDisc(stop);
+    activeRef.current = true;
+    setActive(true);
+    ensureRaf();
+    playAudio();
+  }, [ensureRaf, playAudio, autoSpin, stop]);
 
   // se outro disco roubar o áudio, para o giro
   useEffect(() => {
@@ -209,25 +215,26 @@ export default function Vinyl({
     return Math.atan2(clientY - (r.top + r.height / 2), clientX - (r.left + r.width / 2)) * (180 / Math.PI);
   };
 
-  const onPointerDown = (e: React.PointerEvent) => {
-    if (!interactive) return;
-    // No toque, NÃO capturamos o ponteiro: com touch-action pan-y o navegador
-    // ainda faz o scroll vertical (rolar a página passando o dedo sobre o disco)
-    // e manda pointercancel; o toque tem captura implícita pro scratch horizontal.
-    // No mouse/caneta capturamos normalmente pra arrastar/mixar.
-    if (e.pointerType !== "touch") (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-    draggingRef.current = true;
-    setDragging(true);
-    movedRef.current = false;
-    wasActiveOnDownRef.current = activeRef.current;
-    lastAngleRef.current = angleFromEvent(e.clientX, e.clientY);
-    if (!activeRef.current) start();
-    ensureRaf();
-  };
+  // Ponteiro pressionado. O "scratch" só começa depois de um movimento mínimo:
+  // antes disso o gesto ainda pode virar rolagem da página (essencial no toque).
+  const downRef = useRef<{ x: number; y: number; touch: boolean } | null>(null);
+  const winRef = useRef<null | { move: (e: PointerEvent) => void; up: () => void }>(null);
 
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!draggingRef.current) return;
-    const ang = angleFromEvent(e.clientX, e.clientY);
+  const detachWindow = useCallback(() => {
+    const h = winRef.current;
+    if (!h) return;
+    window.removeEventListener("pointermove", h.move);
+    window.removeEventListener("pointerup", h.up);
+    window.removeEventListener("pointercancel", h.up);
+    winRef.current = null;
+  }, []);
+
+  // se o componente sumir no meio de um arrasto (ex.: trocar de página da loja),
+  // os listeners da janela precisam sair junto
+  useEffect(() => detachWindow, [detachWindow]);
+
+  const scratch = useCallback((clientX: number, clientY: number) => {
+    const ang = angleFromEvent(clientX, clientY);
     let delta = ang - lastAngleRef.current;
     if (delta > 180) delta -= 360;
     if (delta < -180) delta += 360;
@@ -246,12 +253,14 @@ export default function Vinyl({
       t = Math.max(lo, Math.min(hi, t));
       try { a.currentTime = t; } catch {}
     }
-  };
+  }, [audioUrl, audioStart, audioEnd]);
 
-  const endDrag = () => {
-    if (!draggingRef.current) return;
-    draggingRef.current = false;
-    setDragging(false);
+  const endDrag = useCallback(() => {
+    detachWindow();
+    const wasDown = downRef.current !== null;
+    downRef.current = null;
+    if (draggingRef.current) { draggingRef.current = false; setDragging(false); }
+    if (!wasDown) return;
 
     if (!movedRef.current) {
       // toque/clique sem arrastar
@@ -260,10 +269,51 @@ export default function Vinyl({
       } else {
         onOpen?.(); // desktop: clique abre
       }
-    } else {
+    } else if (activeRef.current) {
       // terminou de mixar: retoma a reprodução normal
-      if (activeRef.current) playAudio();
+      playAudio();
     }
+  }, [coarse, onOpen, playAudio, detachWindow]);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (!interactive) return;
+    downRef.current = { x: e.clientX, y: e.clientY, touch: e.pointerType === "touch" };
+    movedRef.current = false;
+    wasActiveOnDownRef.current = activeRef.current;
+    lastAngleRef.current = angleFromEvent(e.clientX, e.clientY);
+    if (!activeRef.current) start();
+    ensureRaf();
+
+    // Escutamos na JANELA (não só no disco): se o ponteiro for solto fora dele —
+    // ou o navegador assumir o gesto pra rolar e mandar `pointercancel` em outro
+    // alvo — o arrasto ainda termina. Sem isso o estado "arrastando" ficava preso
+    // e o disco nunca mais girava nem tocava.
+    detachWindow();
+    const move = (ev: PointerEvent) => {
+      const d = downRef.current;
+      if (!d) return;
+      if (!draggingRef.current) {
+        const dx = ev.clientX - d.x;
+        const dy = ev.clientY - d.y;
+        if (Math.hypot(dx, dy) < 6) return; // ainda indeciso
+        // no toque, gesto predominantemente vertical = rolar a página, não scratch
+        if (d.touch && Math.abs(dy) > Math.abs(dx)) {
+          movedRef.current = true; // não conta como clique (não abre o disco)
+          endDrag();
+          return;
+        }
+        draggingRef.current = true;
+        setDragging(true);
+        lastAngleRef.current = angleFromEvent(ev.clientX, ev.clientY);
+        return;
+      }
+      scratch(ev.clientX, ev.clientY);
+    };
+    const up = () => endDrag();
+    winRef.current = { move, up };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
   };
 
   // hover no desktop
@@ -287,9 +337,6 @@ export default function Vinyl({
       aria-label={title}
       {...hoverProps}
       onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
     >
       <div className="absolute inset-[6%] rounded-full bg-black/60 blur-xl" aria-hidden />
 

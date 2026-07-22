@@ -107,6 +107,26 @@ export function genreMatches(recordGenre: string | null | undefined, selected: s
   return genreFilterTerms(selected).some((t) => rg.includes(t.toLowerCase()));
 }
 
+/** Discos por linha na vitrine — configurável pelo admin (site_settings.home_columns). */
+export const HOME_COLUMN_OPTIONS = [3, 4, 5, 6] as const;
+export const DEFAULT_HOME_COLUMNS = 4;
+
+/**
+ * Classes do grid por quantidade. O Tailwind só gera o CSS de classes escritas
+ * por extenso no código, então nada de montar `lg:grid-cols-${n}` na mão.
+ * Celular fica sempre em 2 e tablet em 3 — abaixo disso o disco fica minúsculo.
+ */
+const HOME_GRID_CLASS: Record<number, string> = {
+  3: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-3",
+  4: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",
+  5: "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5",
+  6: "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6",
+};
+
+export function homeGridClass(cols?: number | null): string {
+  return HOME_GRID_CLASS[cols ?? DEFAULT_HOME_COLUMNS] ?? HOME_GRID_CLASS[DEFAULT_HOME_COLUMNS];
+}
+
 /** 30+ nacionalidades mais populares */
 export const POPULAR_NATIONALITIES = [
   "Brasil", "Estados Unidos", "Reino Unido", "Jamaica", "Argentina", "México",

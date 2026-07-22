@@ -134,7 +134,7 @@ export default async function HomePage() {
             </p>
           </div>
         ) : (
-          <RecordGrid records={records} tags={tags} />
+          <RecordGrid records={records} tags={tags} columns={settings?.home_columns} />
         )}
       </section>
     </>

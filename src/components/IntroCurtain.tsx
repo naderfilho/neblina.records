@@ -23,6 +23,7 @@ function lockScroll(on: boolean) {
 export default function IntroCurtain() {
   const [show, setShow] = useState(false);
   const [exiting, setExiting] = useState(false);
+  const [landed, setLanded] = useState(false);
   const [fly, setFly] = useState<Fly | null>(null);
   const discRef = useRef<HTMLDivElement>(null);
 
@@ -82,6 +83,13 @@ export default function IntroCurtain() {
     window.setTimeout(() => {
       document.documentElement.classList.add("disc-ready");
       window.dispatchEvent(new Event("neblina:disc-arrived"));
+      // O disco POUSOU no hero: a partir daqui o scroll já pode ser solto.
+      // Antes esperávamos a cortina terminar de sair (~1s a mais) porque, com o
+      // overlay fixo ainda visível, rolar a página "duplicava" o disco. Agora
+      // escondemos o disco voador no mesmo instante (o disco do hero já está
+      // revelado exatamente no mesmo lugar), então não há o que duplicar.
+      setLanded(true);
+      lockScroll(false);
     }, 2050);
   }
 
@@ -156,7 +164,7 @@ export default function IntroCurtain() {
                 initial={{ scale: 1, opacity: 1, rotate: 0, x: 0, y: 0 }}
                 animate={
                   fly
-                    ? { scale: fly.scale, opacity: 1, rotate: 360, x: fly.x, y: fly.y }
+                    ? { scale: fly.scale, opacity: landed ? 0 : 1, rotate: 360, x: fly.x, y: fly.y }
                     : { scale: 1, opacity: 1, rotate: 360, x: 0, y: 0 }
                 }
                 transition={{
@@ -166,7 +174,8 @@ export default function IntroCurtain() {
                   scale: fly ? flyTransition : { duration: 0 },
                   x: flyTransition,
                   y: flyTransition,
-                  opacity: { duration: 0.4 },
+                  // some rápido ao pousar (o disco do hero já está no lugar)
+                  opacity: { duration: landed ? 0.18 : 0.4 },
                 }}
               >
                 <div className="absolute inset-0 rounded-full ring-1 ring-white/10" />
