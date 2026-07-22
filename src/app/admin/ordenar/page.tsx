@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Save, Loader2, Check, Search, X, Hand, CornerDownLeft, ChevronsUp, ChevronsDown,
+  Save, Loader2, Check, Search, X, CornerDownLeft, ChevronsUp, ChevronsDown, ChevronUp, ChevronDown,
   ChevronLeft, ChevronRight, Music, Image as ImageIcon, Info,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -48,8 +48,8 @@ export default function AdminOrdenarPage() {
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
 
-  // "pegar e soltar": o disco pego fica preso até você escolher onde soltar
-  const [picked, setPicked] = useState<string | null>(null);
+  // rascunho do campo "#" de cada disco — só aplica quando você confirma no "Mover"
+  const [posDraft, setPosDraft] = useState<Record<string, string>>({});
 
   // filtros (só para ENCONTRAR discos — a ordem salva continua sendo a manual)
   const [q, setQ] = useState("");
@@ -102,12 +102,6 @@ export default function AdminOrdenarPage() {
     setSaved(false);
   }
 
-  const dropOn = (targetId: string) => {
-    if (!picked || picked === targetId) return setPicked(null);
-    moveTo(picked, indexById.get(targetId) ?? 0);
-    setPicked(null);
-  };
-
   async function save() {
     setSaving(true);
     setSaved(false);
@@ -159,8 +153,29 @@ export default function AdminOrdenarPage() {
   const safePage = Math.min(page, pageCount);
   const pageItems = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
 
-  const pickedRec = picked ? items.find((r) => r.id === picked) ?? null : null;
-  const canDrop = viewSort === "order"; // soltar só faz sentido vendo a ordem real
+  /**
+   * Sobe/desce um disco em relação ao que está VISÍVEL na tela. Sem filtro isso é
+   * exatamente "uma posição"; com filtro, ele pula para antes/depois do vizinho
+   * que você está vendo (senão o botão pareceria não fazer nada, porque o vizinho
+   * real estaria escondido pelo filtro).
+   */
+  function moveRelative(id: string, dir: -1 | 1) {
+    const viewIdx = filtered.findIndex((r) => r.id === id);
+    const neighbor = filtered[viewIdx + dir];
+    if (!neighbor) return; // já é o primeiro/último da visualização
+    const target = indexById.get(neighbor.id);
+    if (target === undefined) return;
+    moveTo(id, target);
+  }
+
+  /** Aplica o número digitado no campo "#" (confirmado pelo botão Mover). */
+  function applyPosition(id: string) {
+    const n = parseInt(posDraft[id] ?? "", 10);
+    if (Number.isNaN(n)) return;
+    moveTo(id, Math.max(0, Math.min(items.length - 1, n - 1)));
+    setPosDraft((d) => ({ ...d, [id]: "" }));
+  }
+
   const filtersOn = !!(q || tagFilter || audioFilter !== "all" || coverFilter !== "all");
 
   return (
@@ -169,8 +184,8 @@ export default function AdminOrdenarPage() {
         <div>
           <h1 className="font-display text-3xl text-ink">Ordenar discos da home</h1>
           <p className="text-muted">
-            Use <strong className="text-ink">Mover</strong> para pegar um disco e <strong className="text-ink">Soltar aqui</strong> na posição desejada —
-            ou digite a posição direto no campo <strong className="text-ink">#</strong>.
+            Use as setas para subir/descer, ou digite a nova posição no campo <strong className="text-ink">#</strong> e
+            confirme no <strong className="text-ink">Mover</strong>. Não esqueça de <strong className="text-ink">Salvar</strong> no fim.
           </p>
         </div>
         <button
@@ -255,12 +270,11 @@ export default function AdminOrdenarPage() {
         )}
       </div>
 
-      {!canDrop && (
+      {viewSort !== "order" && (
         <p className="mb-4 flex items-start gap-2 rounded-xl border border-brand/25 bg-brand/5 p-3 text-sm text-mist">
           <Info size={16} className="mt-0.5 shrink-0 text-brand" />
-          Você está vendo numa ordem diferente da home, então <strong className="text-ink">&ldquo;Soltar aqui&rdquo; fica desativado</strong> (a posição seria enganosa).
-          O campo <strong className="text-ink">#</strong> e os botões Topo/Fim continuam funcionando. Volte para
-          &ldquo;Ver na ordem da home&rdquo; para arrastar posições.
+          Você está vendo numa ordem diferente da home (só para visualizar). O número <strong className="text-ink">#</strong> mostra
+          a posição real de cada disco, e mover funciona normalmente — a home usa sempre a ordem que você salvar.
         </p>
       )}
 
@@ -277,14 +291,10 @@ export default function AdminOrdenarPage() {
           <div className={cn("grid gap-4", homeGridClass(columns))}>
             {pageItems.map((r) => {
               const pos = (indexById.get(r.id) ?? 0) + 1;
-              const isPicked = picked === r.id;
               return (
                 <div
                   key={r.id}
-                  className={cn(
-                    "group relative flex flex-col items-center rounded-2xl border bg-panel p-3 transition",
-                    isPicked ? "border-brand ring-2 ring-brand" : "border-line",
-                  )}
+                  className="group relative flex flex-col items-center rounded-2xl border border-line bg-panel p-3 transition"
                 >
                   <span className="absolute left-2 top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full bg-black/70 px-1.5 text-xs font-bold text-brand">
                     {pos}
@@ -305,50 +315,48 @@ export default function AdminOrdenarPage() {
                   </div>
 
                   {/* ações */}
-                  <div className="mt-2 flex w-full flex-wrap items-center justify-center gap-1">
-                    {picked && !isPicked ? (
-                      <button
-                        onClick={() => dropOn(r.id)}
-                        disabled={!canDrop}
-                        className="inline-flex items-center gap-1 rounded-lg border border-brand bg-brand/15 px-2 py-1.5 text-xs font-medium text-brand disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        <CornerDownLeft size={12} /> Soltar aqui
+                  <div className="mt-2 flex w-full flex-col items-stretch gap-1.5">
+                    {/* subir / descer (relativo ao que está na tela) + topo / fim */}
+                    <div className="flex items-center justify-center gap-1">
+                      <button onClick={() => moveTo(r.id, 0)} title="Mandar para o topo"
+                        className="rounded-lg border border-line p-1.5 text-muted hover:border-brand/50 hover:text-brand">
+                        <ChevronsUp size={14} />
                       </button>
-                    ) : (
-                      <button
-                        onClick={() => setPicked(isPicked ? null : r.id)}
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs transition",
-                          isPicked ? "border-brand bg-brand text-black" : "border-line text-muted hover:border-brand/50 hover:text-brand",
-                        )}
-                      >
-                        <Hand size={12} /> {isPicked ? "Cancelar" : "Mover"}
+                      <button onClick={() => moveRelative(r.id, -1)} title="Subir uma posição"
+                        className="rounded-lg border border-line p-1.5 text-muted hover:border-brand/50 hover:text-brand">
+                        <ChevronUp size={14} />
                       </button>
-                    )}
+                      <button onClick={() => moveRelative(r.id, 1)} title="Descer uma posição"
+                        className="rounded-lg border border-line p-1.5 text-muted hover:border-brand/50 hover:text-brand">
+                        <ChevronDown size={14} />
+                      </button>
+                      <button onClick={() => moveTo(r.id, items.length - 1)} title="Mandar para o fim"
+                        className="rounded-lg border border-line p-1.5 text-muted hover:border-brand/50 hover:text-brand">
+                        <ChevronsDown size={14} />
+                      </button>
+                    </div>
 
-                    <button onClick={() => moveTo(r.id, 0)} title="Mandar para o topo"
-                      className="rounded-lg border border-line p-1.5 text-muted hover:border-brand/50 hover:text-brand">
-                      <ChevronsUp size={13} />
-                    </button>
-                    <button onClick={() => moveTo(r.id, items.length - 1)} title="Mandar para o fim"
-                      className="rounded-lg border border-line p-1.5 text-muted hover:border-brand/50 hover:text-brand">
-                      <ChevronsDown size={13} />
-                    </button>
-
-                    <input
-                      type="number"
-                      min={1}
-                      max={items.length}
-                      placeholder="#"
-                      title="Digite a posição e tecle Enter"
-                      onKeyDown={(e) => {
-                        if (e.key !== "Enter") return;
-                        const n = parseInt((e.target as HTMLInputElement).value, 10);
-                        if (!Number.isNaN(n)) moveTo(r.id, n - 1);
-                        (e.target as HTMLInputElement).value = "";
-                      }}
-                      className="h-7 w-14 rounded-lg border border-line bg-bg-soft px-1.5 text-center text-xs text-ink outline-none focus:border-brand/50"
-                    />
+                    {/* posição direta: digita o número e confirma no Mover */}
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={1}
+                        max={items.length}
+                        value={posDraft[r.id] ?? ""}
+                        onChange={(e) => setPosDraft((d) => ({ ...d, [r.id]: e.target.value }))}
+                        onKeyDown={(e) => { if (e.key === "Enter") applyPosition(r.id); }}
+                        placeholder={`# (agora ${pos})`}
+                        title="Digite a nova posição e clique em Mover"
+                        className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-bg-soft px-2 text-center text-xs text-ink outline-none focus:border-brand/50"
+                      />
+                      <button
+                        onClick={() => applyPosition(r.id)}
+                        disabled={!posDraft[r.id]?.trim()}
+                        className="inline-flex items-center gap-1 rounded-lg border border-brand bg-brand/15 px-2.5 py-1.5 text-xs font-medium text-brand transition hover:bg-brand/25 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <CornerDownLeft size={12} /> Mover
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -379,24 +387,6 @@ export default function AdminOrdenarPage() {
             </nav>
           )}
         </>
-      )}
-
-      {/* barra fixa do disco "na mão" */}
-      {pickedRec && (
-        <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-brand/50 bg-panel/95 px-4 py-3 shadow-2xl backdrop-blur">
-          <Hand size={16} className="text-brand" />
-          <span className="max-w-[46vw] truncate text-sm text-ink">
-            Movendo <strong>{pickedRec.title}</strong>
-            <span className="text-muted"> — {pickedRec.artist}</span>
-          </span>
-          <button onClick={() => { moveTo(pickedRec.id, 0); setPicked(null); }}
-            className="rounded-lg border border-line px-2.5 py-1.5 text-xs text-muted hover:border-brand/50 hover:text-brand">
-            Para o topo
-          </button>
-          <button onClick={() => setPicked(null)} className="rounded-lg p-1.5 text-faint hover:text-red-400" aria-label="Cancelar">
-            <X size={16} />
-          </button>
-        </div>
       )}
     </div>
   );
