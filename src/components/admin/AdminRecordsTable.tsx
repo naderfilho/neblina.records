@@ -164,7 +164,7 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-line">
+      <div className="overflow-x-auto rounded-2xl border border-line bg-panel">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="bg-bg-soft text-xs uppercase tracking-wider text-muted">
             <tr>
@@ -174,7 +174,10 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
               <th className="px-4 py-3">Disponibilidade</th>
               <th className="px-4 py-3">Visitas</th>
               <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Ações</th>
+              {/* Ações fica FIXA à direita: mesmo quando a tabela é mais larga que a
+                  tela (e rola na horizontal), os botões editar/clonar/excluir ficam
+                  sempre visíveis (antes sumiam e só apareciam com zoom out). */}
+              <th className="sticky right-0 z-10 bg-bg-soft px-4 py-3 text-right">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
@@ -215,7 +218,7 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
                     {r.is_published ? "Publicado" : "Oculto"}
                   </button>
                 </td>
-                <td className="px-4 py-3">
+                <td className="sticky right-0 bg-panel px-4 py-3 shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.5)]">
                   <div className="flex items-center justify-end gap-1">
                     <Link href={`/admin/discos/${r.id}`} className="rounded-lg p-2 text-muted hover:bg-panel-2 hover:text-brand" aria-label="Editar" title="Editar">
                       <Pencil size={15} />

@@ -23,12 +23,22 @@ export default function CartDrawer() {
       return;
     }
 
-    const lines = cart.items
-      .map((i, idx) => `${idx + 1}) ${i.title} — ${i.artist} — ${formatBRL(i.price)}`)
-      .join("\n");
-    const msg = `Olá, Neblina Records! Quero finalizar meu pedido:\n\n${lines}\n\n*Total: ${formatBRL(
-      cart.total,
-    )}*`;
+    // nome do cliente (para a saudação da mensagem)
+    const { data: profile } = await supabase
+      .from("profiles").select("first_name,last_name").eq("id", user.id).maybeSingle();
+    const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
+    const hello = name ? `Me chamo ${name} e tenho` : "Tenho";
+
+    const multi = cart.items.length > 1;
+    const items = cart.items
+      .map((i, idx) => {
+        const link = `${STORE.siteUrl}/disco/${i.id}`;
+        const head = multi ? `${idx + 1}) ` : "";
+        return `${head}${i.title} — ${i.artist} — ${formatBRL(i.price)}\n${link}`;
+      })
+      .join("\n\n");
+    const intro = `Olá, Neblina Records! ${hello} interesse ${multi ? "nos seguintes discos" : "no seguinte disco"}:`;
+    const msg = `${intro}\n\n${items}${multi ? `\n\nTotal: ${formatBRL(cart.total)}` : ""}`;
     window.open(whatsappLink(STORE.whatsappPrimary, msg), "_blank");
     cart.finalize(); // finalizou pelo WhatsApp → tira todos da lista de abandono
   }

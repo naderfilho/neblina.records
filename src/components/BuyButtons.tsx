@@ -28,25 +28,26 @@ export default function BuyButtons({ id, title, artist, price, coverUrl }: Props
   const router = useRouter();
   const inCart = cart.has(id);
 
-  async function ensureAuth(): Promise<boolean> {
+  async function getName(): Promise<string | null> {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push(`/login?next=/disco/${id}`);
-      return false;
-    }
-    return true;
+    if (!user) { router.push(`/login?next=/disco/${id}`); return null; }
+    const { data: profile } = await supabase
+      .from("profiles").select("first_name,last_name").eq("id", user.id).maybeSingle();
+    return [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
   }
 
-  function message() {
-    return `Olá, Neblina Records! Tenho interesse no disco:\n\n*${title}* — ${artist}\nValor: ${formatBRL(
-      price,
-    )}\n\nLink: ${typeof window !== "undefined" ? window.location.href : ""}`;
+  function message(name: string) {
+    const hello = name ? `Me chamo ${name} e tenho` : "Tenho";
+    // link SEMPRE no domínio próprio (nunca a URL da Vercel)
+    const link = `${STORE.siteUrl}/disco/${id}`;
+    return `Olá, Neblina Records! ${hello} interesse no seguinte disco:\n\n${title} — ${artist} — ${formatBRL(price)}\n${link}`;
   }
 
   async function buyWhatsApp() {
-    if (!(await ensureAuth())) return;
-    window.open(whatsappLink(STORE.whatsappPrimary, message()), "_blank");
+    const name = await getName();
+    if (name === null) return; // não logado → redirecionado
+    window.open(whatsappLink(STORE.whatsappPrimary, message(name)), "_blank");
     cart.finalize(id); // comprou este disco pelo WhatsApp → não é abandono
   }
 

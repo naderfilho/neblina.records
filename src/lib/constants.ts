@@ -2,6 +2,9 @@ export const STORE = {
   name: "Neblina Records",
   tagline: "Records",
   city: "Nova Friburgo, RJ",
+  // domínio próprio (canônico) — usado em links compartilhados (ex.: WhatsApp),
+  // pra nunca vazar a URL da Vercel quando o site é aberto por lá.
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.neblinarecords.com.br",
   whatsappPrimary: process.env.NEXT_PUBLIC_WHATSAPP_PRIMARY ?? "5522992657509",
   whatsappSecondary: process.env.NEXT_PUBLIC_WHATSAPP_SECONDARY ?? "5522998382007",
   telegram: process.env.NEXT_PUBLIC_TELEGRAM_USERNAME ?? "neblinarecords",
