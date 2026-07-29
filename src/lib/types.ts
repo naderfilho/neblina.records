@@ -29,6 +29,8 @@ export type Track = {
   side: "A" | "B";
   title: string;
   audio_url: string | null;
+  /** número do disco (1, 2, 3…) para álbuns duplos/triplos. Ausente = disco 1. */
+  disc?: number;
 };
 
 export type ConditionInfo = {
@@ -162,6 +164,32 @@ export type Comment = {
   body: string;
   is_question: boolean;
   parent_id: string | null;
+  created_at: string;
+};
+
+export type StoreEvent = {
+  id: string;
+  title: string;
+  location: string | null;
+  starts_at: string;
+  ends_at: string | null;
+  description: string | null;
+  url: string | null;
+  is_published: boolean;
+  created_at: string;
+};
+
+export type NotificationType = "event_presence" | "disc_promo" | "weekly_promo" | "custom";
+
+export type UserNotification = {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  link: string | null;
+  record_id: string | null;
+  read_at: string | null;
   created_at: string;
 };
 

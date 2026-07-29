@@ -144,11 +144,20 @@ export default function RecordForm({
   const [audioStart, setAudioStart] = useState(record?.audio_start ?? 0);
   const [audioEnd, setAudioEnd] = useState<number | null>(record?.audio_end ?? null);
 
-  type TrackItem = { id: string; side: "A" | "B"; title: string; audioUrl: string | null; file?: File };
+  type TrackItem = { id: string; side: "A" | "B"; title: string; audioUrl: string | null; file?: File; disc: number };
   const [tracks, setTracks] = useState<TrackItem[]>(
-    (record?.tracks ?? []).map((t) => ({ id: t.id, side: t.side, title: t.title, audioUrl: t.audio_url })),
+    (record?.tracks ?? []).map((t) => ({ id: t.id, side: t.side, title: t.title, audioUrl: t.audio_url, disc: t.disc ?? 1 })),
   );
   const [homeTrackId, setHomeTrackId] = useState<string | null>(record?.home_track_id ?? null);
+  // número de discos do álbum (duplo/triplo/quádruplo)
+  const [discCount, setDiscCount] = useState<number>(() =>
+    Math.min(4, Math.max(1, ...(record?.tracks ?? []).map((t) => t.disc ?? 1))),
+  );
+  function changeDiscCount(n: number) {
+    // ao reduzir, traz as faixas dos discos removidos para o último disco (não some com elas)
+    setTracks((ts) => ts.map((t) => ((t.disc ?? 1) > n ? { ...t, disc: n } : t)));
+    setDiscCount(n);
+  }
 
   const [blocks, setBlocks] = useState<ExtraBlock[]>(
     Array.isArray(record?.extra_blocks) ? (record!.extra_blocks as ExtraBlock[]) : [],
@@ -194,8 +203,8 @@ export default function RecordForm({
     [homeTrackObj?.file, homeTrackObj?.audioUrl],
   );
 
-  function addTrack(side: "A" | "B") {
-    setTracks((t) => [...t, { id: crypto.randomUUID(), side, title: "", audioUrl: null }]);
+  function addTrack(side: "A" | "B", disc = 1) {
+    setTracks((t) => [...t, { id: crypto.randomUUID(), side, title: "", audioUrl: null, disc }]);
   }
   function onTrackAudio(id: string, file: File) {
     setTracks((t) => t.map((x) => (x.id === id ? { ...x, file, audioUrl: URL.createObjectURL(file) } : x)));
@@ -328,7 +337,7 @@ export default function RecordForm({
     if (d.identification) setIdent((i) => ({ ...i, ...d.identification }));
     if (Array.isArray(d.tracks) && d.tracks.length) {
       setTracks(d.tracks.map((t) => ({
-        id: crypto.randomUUID(), side: t.side === "B" ? "B" : "A", title: t.title || "Faixa", audioUrl: null,
+        id: crypto.randomUUID(), side: t.side === "B" ? "B" : "A", title: t.title || "Faixa", audioUrl: null, disc: 1,
       })));
     }
   }
@@ -415,11 +424,11 @@ export default function RecordForm({
         finalPhotos.push({ url, category: p.category || "outro" });
       }
 
-      const finalTracks: { id: string; side: "A" | "B"; title: string; audio_url: string | null }[] = [];
+      const finalTracks: { id: string; side: "A" | "B"; title: string; audio_url: string | null; disc: number }[] = [];
       for (const t of tracks) {
         let url = t.audioUrl;
         if (t.file) url = await step(`enviar o áudio da faixa "${t.title || "sem nome"}"`, () => uploadFile("audio", t.file!, "track-"));
-        finalTracks.push({ id: t.id, side: t.side, title: t.title.trim() || "Faixa", audio_url: url });
+        finalTracks.push({ id: t.id, side: t.side, title: t.title.trim() || "Faixa", audio_url: url, disc: t.disc ?? 1 });
       }
       const homeTrack = finalTracks.find((t) => t.id === homeTrackId);
 
@@ -771,41 +780,61 @@ export default function RecordForm({
       </Section>
 
       {/* 4. Faixas */}
-      <Section title="Faixas — Lado A e Lado B" desc="Viram os sulcos do disco na página: hover mostra o nome, clique toca. Marque qual toca na home.">
-        <div className="grid gap-6 md:grid-cols-2">
-          {(["A", "B"] as const).map((side) => {
-            const sideTracks = tracks.filter((t) => t.side === side);
-            return (
-              <div key={side}>
-                <div className="mb-2 flex items-center justify-between">
-                  <h3 className="font-display text-lg text-ink">Lado {side}</h3>
-                  <button type="button" onClick={() => addTrack(side)} className="flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-xs text-muted hover:border-brand/50 hover:text-brand">
-                    <Plus size={14} /> Faixa
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {sideTracks.length === 0 && <p className="text-xs text-faint">Nenhuma faixa.</p>}
-                  {sideTracks.map((t, idx) => (
-                    <div key={t.id} className="flex items-center gap-2 rounded-lg border border-line bg-bg-soft p-2">
-                      <span className="w-4 text-center text-xs text-faint">{idx + 1}</span>
-                      <input className="ipt flex-1" placeholder="Nome da faixa" value={t.title}
-                        onChange={(e) => setTracks((ts) => ts.map((x) => (x.id === t.id ? { ...x, title: e.target.value } : x)))} />
-                      <label className={`flex cursor-pointer items-center gap-1 rounded-lg border px-2 py-1.5 text-xs ${t.audioUrl ? "border-teal/50 text-teal" : "border-line text-muted hover:text-brand"}`} title={t.audioUrl ? "Áudio enviado" : "Enviar áudio"}>
-                        <Music size={13} />
-                        <input type="file" accept="audio/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onTrackAudio(t.id, f); }} />
-                      </label>
-                      <label className="flex items-center gap-1 text-[11px] text-muted" title="Toca na home">
-                        <input type="radio" name="hometrack" checked={homeTrackId === t.id} onChange={() => setHomeTrackId(t.id)} className="accent-brand" /> home
-                      </label>
-                      <button type="button" onClick={() => { setTracks((ts) => ts.filter((x) => x.id !== t.id)); if (homeTrackId === t.id) setHomeTrackId(null); }} className="text-faint hover:text-red-400">
-                        <Trash2 size={14} />
-                      </button>
+      <Section title="Faixas — por disco e lado" desc="Viram os sulcos do disco na página: hover mostra o nome, clique toca. Marque qual toca na home. Para álbuns duplos/triplos, escolha quantos discos e cadastre as faixas de cada um.">
+        {/* quantos discos (1 = simples, 2 = duplo, 3 = triplo, 4 = quádruplo) */}
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <span className="text-xs uppercase tracking-wider text-muted">Discos no álbum:</span>
+          {[1, 2, 3, 4].map((n) => (
+            <button key={n} type="button" onClick={() => changeDiscCount(n)}
+              className={cn("h-8 w-8 rounded-lg border text-sm font-medium transition",
+                discCount === n ? "border-brand bg-brand text-black" : "border-line text-muted hover:border-brand/50 hover:text-brand")}>
+              {n}
+            </button>
+          ))}
+          <span className="text-xs text-faint">{discCount === 1 ? "simples" : discCount === 2 ? "duplo" : discCount === 3 ? "triplo" : "quádruplo"}</span>
+        </div>
+
+        <div className="space-y-6">
+          {Array.from({ length: discCount }, (_, i) => i + 1).map((discNo) => (
+            <div key={discNo} className={cn(discCount > 1 && "rounded-2xl border border-line bg-bg-soft/40 p-4")}>
+              {discCount > 1 && <h3 className="mb-3 font-display text-lg text-brand">Disco {discNo}</h3>}
+              <div className="grid gap-6 md:grid-cols-2">
+                {(["A", "B"] as const).map((side) => {
+                  const sideTracks = tracks.filter((t) => (t.disc ?? 1) === discNo && t.side === side);
+                  return (
+                    <div key={side}>
+                      <div className="mb-2 flex items-center justify-between">
+                        <h4 className="font-display text-base text-ink">Lado {side}</h4>
+                        <button type="button" onClick={() => addTrack(side, discNo)} className="flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-xs text-muted hover:border-brand/50 hover:text-brand">
+                          <Plus size={14} /> Faixa
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {sideTracks.length === 0 && <p className="text-xs text-faint">Nenhuma faixa.</p>}
+                        {sideTracks.map((t, idx) => (
+                          <div key={t.id} className="flex items-center gap-2 rounded-lg border border-line bg-bg-soft p-2">
+                            <span className="w-4 text-center text-xs text-faint">{idx + 1}</span>
+                            <input className="ipt flex-1" placeholder="Nome da faixa" value={t.title}
+                              onChange={(e) => setTracks((ts) => ts.map((x) => (x.id === t.id ? { ...x, title: e.target.value } : x)))} />
+                            <label className={`flex cursor-pointer items-center gap-1 rounded-lg border px-2 py-1.5 text-xs ${t.audioUrl ? "border-teal/50 text-teal" : "border-line text-muted hover:text-brand"}`} title={t.audioUrl ? "Áudio enviado" : "Enviar áudio"}>
+                              <Music size={13} />
+                              <input type="file" accept="audio/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onTrackAudio(t.id, f); }} />
+                            </label>
+                            <label className="flex items-center gap-1 text-[11px] text-muted" title="Toca na home">
+                              <input type="radio" name="hometrack" checked={homeTrackId === t.id} onChange={() => setHomeTrackId(t.id)} className="accent-brand" /> home
+                            </label>
+                            <button type="button" onClick={() => { setTracks((ts) => ts.filter((x) => x.id !== t.id)); if (homeTrackId === t.id) setHomeTrackId(null); }} className="text-faint hover:text-red-400">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </Section>
 

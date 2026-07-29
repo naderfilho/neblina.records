@@ -3,20 +3,22 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Disc3, Users, CalendarDays, Store, LogOut, Tag, ArrowUpDown, Music, Headphones, History, Bell } from "lucide-react";
+import { LayoutDashboard, Disc3, Users, CalendarDays, CalendarClock, Store, LogOut, Tag, ArrowUpDown, Music, Headphones, History, Bell, Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
   { href: "/admin", label: "Visão geral", icon: LayoutDashboard, exact: true },
-  { href: "/admin/notificacoes", label: "Notificações", icon: Bell },
+  { href: "/admin/notificacoes", label: "Atividade dos clientes", icon: Bell },
+  { href: "/admin/notificar", label: "Enviar aviso", icon: Send },
   { href: "/admin/discos", label: "Discos", icon: Disc3 },
   { href: "/admin/musica-home", label: "Música da home", icon: Music },
   { href: "/admin/audioteca", label: "Audioteca", icon: Headphones },
   { href: "/admin/ordenar", label: "Ordenar", icon: ArrowUpDown },
   { href: "/admin/tags", label: "Tags", icon: Tag },
   { href: "/admin/usuarios", label: "Usuários", icon: Users },
-  { href: "/admin/eventos", label: "Eventos", icon: CalendarDays },
+  { href: "/admin/eventos", label: "Pedidos de evento", icon: CalendarDays },
+  { href: "/admin/agenda", label: "Agenda / presença", icon: CalendarClock },
   { href: "/admin/historico", label: "Histórico", icon: History },
 ];
 

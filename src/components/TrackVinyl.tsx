@@ -133,8 +133,28 @@ export default function TrackVinyl({
   const [armAngle, setArmAngle] = useState<number | null>(null);
   const [restAngle, setRestAngle] = useState<number | null>(null);
 
-  const sideA = useMemo(() => tracks.filter((t) => t.side === "A"), [tracks]);
-  const sideB = useMemo(() => tracks.filter((t) => t.side === "B"), [tracks]);
+  // discos do álbum (duplo/triplo/quádruplo). Faixa sem `disc` = disco 1.
+  const discs = useMemo(
+    () => [...new Set(tracks.map((t) => t.disc ?? 1))].sort((a, b) => a - b),
+    [tracks],
+  );
+  const [discNum, setDiscNum] = useState(discs[0] ?? 1);
+  const ofDisc = useMemo(() => tracks.filter((t) => (t.disc ?? 1) === discNum), [tracks, discNum]);
+
+  const sideA = useMemo(() => ofDisc.filter((t) => t.side === "A"), [ofDisc]);
+  const sideB = useMemo(() => ofDisc.filter((t) => t.side === "B"), [ofDisc]);
+
+  function changeDisc(n: number) {
+    if (n === discNum) return;
+    const a = audioRef.current;
+    if (a) a.pause();
+    setPlayingId(null);
+    setHoverId(null);
+    // abre no lado que tem faixas (evita cair num Lado A vazio)
+    const hasA = tracks.some((t) => (t.disc ?? 1) === n && t.side === "A");
+    setSide(hasA ? "A" : "B");
+    setDiscNum(n);
+  }
 
   function play(t: Track) {
     const a = audioRef.current;
@@ -348,8 +368,26 @@ export default function TrackVinyl({
         )}
       </div>
 
+      {/* seletor de disco (álbuns duplos/triplos/quádruplos) */}
+      {discs.length > 1 && (
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          {discs.map((n) => (
+            <button
+              key={n}
+              onClick={() => changeDisc(n)}
+              className={cn(
+                "rounded-xl border px-4 py-2 text-sm font-medium transition-colors",
+                discNum === n ? "border-brand bg-brand text-black" : "border-line bg-panel text-muted hover:text-ink",
+              )}
+            >
+              Disco {n}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* botões de lado */}
-      <div className="mt-6 flex justify-center gap-2">
+      <div className={cn("flex justify-center gap-2", discs.length > 1 ? "mt-4" : "mt-6")}>
         {(["A", "B"] as const).map((s) => (
           <button
             key={s}

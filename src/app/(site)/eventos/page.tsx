@@ -1,6 +1,11 @@
-import { Tent, Building2, Music4, Frame, Disc3, Sparkles, ShieldCheck, Truck } from "lucide-react";
+import { Tent, Building2, Music4, Frame, Disc3, Sparkles, ShieldCheck, Truck, CalendarClock } from "lucide-react";
 import EventForm from "@/components/EventForm";
 import EventsVideoBg from "@/components/EventsVideoBg";
+import EventsCalendar from "@/components/EventsCalendar";
+import { createClient } from "@/lib/supabase/server";
+import type { StoreEvent } from "@/lib/types";
+
+export const revalidate = 0;
 
 export const metadata = {
   title: "Eventos & Exposições",
@@ -33,7 +38,15 @@ const TIPOS = [
   { icon: Frame, title: "Exposições", desc: "Mostras de vinil, capas e memorabilia montadas com capricho." },
 ];
 
-export default function EventosPage() {
+export default async function EventosPage() {
+  const supabase = await createClient();
+  const { data: eventsData } = await supabase
+    .from("store_events")
+    .select("*")
+    .eq("is_published", true)
+    .order("starts_at", { ascending: true });
+  const events = (eventsData as StoreEvent[]) ?? [];
+
   return (
     <div className="relative">
       {/* vídeo de fundo fixo — o site se move por cima */}
@@ -63,6 +76,18 @@ export default function EventosPage() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* AGENDA — onde a Neblina vai estar */}
+      <section id="agenda" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-10">
+        <div className="mb-6 flex items-center gap-2.5">
+          <CalendarClock size={20} className="text-brand" />
+          <div>
+            <p className="text-sm uppercase tracking-[0.3em] text-teal">Agenda</p>
+            <h2 className="font-display text-3xl text-ink md:text-4xl">Onde a gente vai estar</h2>
+          </div>
+        </div>
+        <EventsCalendar events={events} />
       </section>
 
       {/* ESTRUTURA */}

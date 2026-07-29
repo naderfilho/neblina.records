@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ShoppingBag, User, LogOut, LayoutDashboard, ChevronDown, Menu, X } from "lucide-react";
 import TranslateButton from "@/components/TranslateButton";
+import NotificationBell from "@/components/NotificationBell";
 import { useCart } from "@/lib/cart";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
@@ -84,6 +85,7 @@ export default function SiteHeader({ profile }: { profile: Profile | null }) {
 
         <div className="flex items-center gap-1.5">
           <TranslateButton />
+          {profile && <NotificationBell userId={profile.id} />}
           <button
             onClick={() => cart.setOpen(true)}
             className="relative rounded-xl p-2.5 text-ink transition-colors hover:bg-panel"

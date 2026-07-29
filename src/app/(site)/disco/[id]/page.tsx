@@ -23,7 +23,11 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: record } = await supabase.from("records").select("*").eq("id", id).single();
+  // colunas seguras (sem dados internos: mercado/comprador). O papel `anon` nem
+  // tem permissão de ler as internas — por isso NÃO usamos "*" aqui.
+  const PUBLIC_COLS =
+    "id,title,artist,genre,nationality,format,weight_grams,disc_quality,cover_quality,price,payment_methods,description,cover_image_url,cover_image_url_b,is_gatefold,gatefold_image_url,gatefold_dir,is_autographed,autograph_photo_url,audioteca_tier,disc_config,audio_url,audio_start,audio_end,tracks,home_track_id,condition,included_content,history,identification,sale_info,tag_ids,sort_order,extra_blocks,year,catalog_number,label_company,views_count,stock_qty,availability,is_published,is_featured,sold,created_at,updated_at";
+  const { data: record } = await supabase.from("records").select(PUBLIC_COLS).eq("id", id).single();
   if (!record) notFound();
   const r = record as RecordItem;
 
