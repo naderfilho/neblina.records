@@ -49,6 +49,7 @@ export const RECORD_FORMATS = [
 export const AVAILABILITY = [
   { id: "available", label: "Disponível", color: "#3aa7b4" },
   { id: "reserved", label: "Reservado", color: "#e0a63a" },
+  { id: "unavailable", label: "Indisponível", color: "#8a8f98" },
   { id: "sold", label: "Vendido", color: "#c65a4c" },
 ] as const;
 export type Availability = (typeof AVAILABILITY)[number]["id"];
@@ -233,6 +234,8 @@ export type DiscConfig = {
   labelColor?: string;
   border: string;
   borderColor?: string;
+  /** estampa/arte custom do CORPO do disco (substitui a cor/estilo presets) */
+  bodyImageUrl?: string | null;
 };
 
 export const DEFAULT_DISC_CONFIG: DiscConfig = {

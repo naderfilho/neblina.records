@@ -44,10 +44,14 @@ function PlatterFace({
   return (
     <div className="absolute inset-0">
       <div
-        className="absolute inset-0 rounded-full"
-        style={{
-          backgroundImage: `repeating-radial-gradient(circle at center, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px), radial-gradient(circle at 30% 26%, rgba(255,255,255,0.12), transparent 42%), radial-gradient(circle at center, ${c.groove} 0%, ${c.ring} 66%, #050505 100%)`,
-        }}
+        className="absolute inset-0 rounded-full bg-cover bg-center"
+        style={
+          cfg.bodyImageUrl
+            ? { backgroundImage: `url(${cfg.bodyImageUrl})` }
+            : {
+                backgroundImage: `repeating-radial-gradient(circle at center, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px), radial-gradient(circle at 30% 26%, rgba(255,255,255,0.12), transparent 42%), radial-gradient(circle at center, ${c.groove} 0%, ${c.ring} 66%, #050505 100%)`,
+              }
+        }
       >
         <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" style={{ pointerEvents: grooveDisabled ? "none" : undefined }}>
           {tracks.map((t, i) => {
@@ -297,6 +301,21 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
       const i = playlist.findIndex((e) => e.di === platterDi && e.side === s);
       if (i >= 0) playAt(i);
     }
+  }
+
+  // tira o disco do prato: para tudo e volta o prato pro estado vazio
+  function clearPlatter() {
+    const a = audioRef.current;
+    if (a) { a.pause(); releaseAudio(a); }
+    if (crackleTimer.current) { clearTimeout(crackleTimer.current); crackleTimer.current = null; }
+    setPlaying(false);
+    setCrackling(false);
+    setPos(-1);
+    setPlatterDi(-1);
+    setPlatterSide("A");
+    setArmDrag(false);
+    setRestAngle(null);
+    setHoverId(null);
   }
 
   /* ---------- agulha arrastável (geometria real do braço) ----------
@@ -678,8 +697,19 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
 
               {disc ? (
                 <>
-                  <p className="font-display text-lg leading-tight text-ink">{entry?.track.title}</p>
-                  <Link href={`/disco/${disc.id}`} className="text-sm text-muted hover:text-brand">{disc.title} — {disc.artist}</Link>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-display text-lg leading-tight text-ink">{entry?.track.title}</p>
+                      <Link href={`/disco/${disc.id}`} className="text-sm text-muted hover:text-brand">{disc.title} — {disc.artist}</Link>
+                    </div>
+                    <button
+                      onClick={clearPlatter}
+                      className="flex shrink-0 items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-xs text-muted transition hover:border-red-400/50 hover:text-red-400"
+                      title="Tirar o disco do prato"
+                    >
+                      <X size={13} /> Tirar do prato
+                    </button>
+                  </div>
 
                   {/* barra de tempo */}
                   <div className="mt-3">

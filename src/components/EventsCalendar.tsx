@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, MapPin, ArrowUpRight, Dot } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, MapPin, Dot } from "lucide-react";
 import type { StoreEvent } from "@/lib/types";
 
 const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -175,11 +175,6 @@ function EventLine({ e }: { e: StoreEvent }) {
     <div className="rounded-2xl bg-bg-soft p-3">
       <div className="flex items-start justify-between gap-2">
         <p className="font-display text-ink">{e.title}</p>
-        {e.url && (
-          <a href={e.url} target="_blank" rel="noopener noreferrer" className="flex shrink-0 items-center gap-1 text-xs text-brand hover:underline">
-            abrir <ArrowUpRight size={12} />
-          </a>
-        )}
       </div>
       <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
         <span className="flex items-center gap-1"><CalendarDays size={12} className="text-teal" /> {fmtRange(e)}</span>

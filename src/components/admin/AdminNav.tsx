@@ -18,7 +18,7 @@ const LINKS = [
   { href: "/admin/tags", label: "Tags", icon: Tag },
   { href: "/admin/usuarios", label: "Usuários", icon: Users },
   { href: "/admin/eventos", label: "Pedidos de evento", icon: CalendarDays },
-  { href: "/admin/agenda", label: "Agenda / presença", icon: CalendarClock },
+  { href: "/admin/agenda", label: "Agenda/Presença", icon: CalendarClock },
   { href: "/admin/historico", label: "Histórico", icon: History },
 ];
 

@@ -170,6 +170,8 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
               <span className="rounded-full border border-red-500/25 px-3 py-1 text-xs font-medium text-red-300" style={{ background: "#2e0f0f" }}>Vendido</span>
             ) : r.availability === "reserved" ? (
               <span className="rounded-full border border-amber-500/25 px-3 py-1 text-xs font-medium text-[#e0a63a]" style={{ background: "#2e2408" }}>Reservado</span>
+            ) : r.availability === "unavailable" ? (
+              <span className="rounded-full border border-line px-3 py-1 text-xs font-medium text-faint" style={{ background: "#1a1a1a" }}>Indisponível</span>
             ) : (
               <span className="rounded-full border border-teal/25 px-3 py-1 text-xs font-medium text-[#3aa7b4]" style={{ background: "#0c2e2b" }}>Disponível</span>
             )}
@@ -193,7 +195,7 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
           </div>
 
           <div className="mt-6 space-y-3">
-            <BuyButtons id={r.id} title={r.title} artist={r.artist} price={r.price} coverUrl={r.cover_image_url} />
+            <BuyButtons id={r.id} title={r.title} artist={r.artist} price={r.price} coverUrl={r.cover_image_url} available={r.availability === "available"} />
             <FavoriteButton recordId={r.id} initialFav={isFav} userId={profile?.id ?? null} />
           </div>
 

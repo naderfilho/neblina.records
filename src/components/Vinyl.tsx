@@ -23,7 +23,11 @@ type VinylProps = {
   noNeedle?: boolean;
 };
 
-function bodyStyle(colorId: string, styleId?: string): CSSProperties {
+function bodyStyle(colorId: string, styleId?: string, bodyImageUrl?: string | null): CSSProperties {
+  // estampa custom: a arte enviada vira o corpo inteiro do disco
+  if (bodyImageUrl) {
+    return { backgroundImage: `url(${bodyImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" };
+  }
   const c = resolveDiscColor(colorId);
   const grooves =
     "repeating-radial-gradient(circle at center, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px)";
@@ -343,7 +347,7 @@ export default function Vinyl({
       <div
         ref={bodyRef}
         className="absolute inset-0 rounded-full"
-        style={bodyStyle(cfg.color, cfg.style)}
+        style={bodyStyle(cfg.color, cfg.style, cfg.bodyImageUrl)}
       >
         <div className="absolute inset-0 rounded-full ring-1 ring-white/10" aria-hidden />
 

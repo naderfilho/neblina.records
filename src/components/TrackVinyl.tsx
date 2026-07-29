@@ -44,10 +44,14 @@ function Face({
     <div className="absolute inset-0">
       {/* corpo do vinil girando */}
       <div
-        className="spin absolute inset-0 rounded-full"
-        style={{
-          backgroundImage: `repeating-radial-gradient(circle at center, rgba(255,255,255,0.045) 0px, rgba(255,255,255,0.045) 1px, transparent 1px, transparent 3px), radial-gradient(circle at 30% 26%, rgba(255,255,255,0.10), transparent 42%), radial-gradient(circle at center, ${c.groove} 0%, ${c.ring} 66%, #050505 100%)`,
-        }}
+        className="spin absolute inset-0 rounded-full bg-cover bg-center"
+        style={
+          cfg.bodyImageUrl
+            ? { backgroundImage: `url(${cfg.bodyImageUrl})` }
+            : {
+                backgroundImage: `repeating-radial-gradient(circle at center, rgba(255,255,255,0.045) 0px, rgba(255,255,255,0.045) 1px, transparent 1px, transparent 3px), radial-gradient(circle at 30% 26%, rgba(255,255,255,0.10), transparent 42%), radial-gradient(circle at center, ${c.groove} 0%, ${c.ring} 66%, #050505 100%)`,
+              }
+        }
       >
         {/* sulcos = faixas (SVG) */}
         <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" style={{ pointerEvents: grooveDisabled ? "none" : undefined }}>
@@ -169,7 +173,13 @@ export default function TrackVinyl({
     a.src = t.audio_url;
     a.currentTime = 0;
     playScratch(); // agulha riscando a cada troca de faixa
-    a.play().then(() => setPlayingId(t.id)).catch(() => {});
+    // Marca como tocando JÁ (otimista): o descanso do braço é calculado a partir
+    // de `playingId`, então setar aqui faz o braço ir DIRETO pro sulco escolhido.
+    // Antes o setPlayingId só rodava quando o áudio começava (assíncrono) e, nesse
+    // meio-tempo, o efeito recalculava o descanso no sulco ANTIGO — o braço "voltava
+    // pro sulco anterior e só depois ia pro novo".
+    setPlayingId(t.id);
+    a.play().catch(() => {});
   }
 
   /* ---------- agulha arrastável (geometria real do braço) ----------

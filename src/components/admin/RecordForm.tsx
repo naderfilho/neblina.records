@@ -103,6 +103,9 @@ export default function RecordForm({
   const [featured, setFeatured] = useState(record?.is_featured ?? false);
   const [payments, setPayments] = useState<string[]>(record?.payment_methods ?? ["Pix (Brasil)"]);
   const [discConfig, setDiscConfig] = useState<DiscConfig>(record?.disc_config ?? DEFAULT_DISC_CONFIG);
+  // estampa/arte custom do corpo do disco
+  const [discArtFile, setDiscArtFile] = useState<File | null>(null);
+  const [discArtPreview, setDiscArtPreview] = useState<string | null>(record?.disc_config?.bodyImageUrl ?? null);
 
   const [condition, setCondition] = useState<ConditionInfo>(record?.condition ?? {});
   const [content, setContent] = useState<IncludedContent>(record?.included_content ?? {});
@@ -293,6 +296,21 @@ export default function RecordForm({
     setAudioEnd(null);
   }
 
+  function onDiscArt(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    setDiscArtFile(f);
+    setDiscArtPreview(url);
+    setDiscConfig((c) => ({ ...c, bodyImageUrl: url })); // prévia ao vivo no VinylDesigner
+    e.target.value = "";
+  }
+  function removeDiscArt() {
+    setDiscArtFile(null);
+    setDiscArtPreview(null);
+    setDiscConfig((c) => ({ ...c, bodyImageUrl: null }));
+  }
+
   function onGatefold(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
@@ -415,6 +433,10 @@ export default function RecordForm({
       let gatefoldUrlFinal = gatefoldPreview;
       if (gatefoldFile) gatefoldUrlFinal = await step("enviar a arte do gatefold", () => uploadFile("covers", gatefoldFile, "gatefold-"));
 
+      // estampa do disco: sobe o arquivo novo, mantém o existente, ou limpa se removida
+      let discArtUrlFinal: string | null = discArtPreview && !discArtPreview.startsWith("blob:") ? discArtPreview : null;
+      if (discArtFile) discArtUrlFinal = await step("enviar a estampa do disco", () => uploadFile("covers", discArtFile, "discart-"));
+
       let audioUrlFinal = audioUrl;
       if (audioFile) audioUrlFinal = await step("enviar o áudio", () => uploadFile("audio", audioFile, "audio-"));
 
@@ -448,7 +470,7 @@ export default function RecordForm({
         sold_to_name: sold ? (soldToName.trim() || null) : null,
         sold_at: sold ? (record?.sold_at ?? new Date().toISOString()) : null,
         sold_note: sold ? (soldNote.trim() || null) : null,
-        payment_methods: payments, disc_config: discConfig,
+        payment_methods: payments, disc_config: { ...discConfig, bodyImageUrl: discArtUrlFinal },
         cover_image_url: coverUrlFinal,
         cover_image_url_b: coverBUrlFinal,
         is_autographed: isAutographed,
@@ -640,6 +662,28 @@ export default function RecordForm({
       {/* 1b. Vinil */}
       <Section title="Vinil" desc="Personalize o vinil que aparece na home e na Audioteca (cor, estilo, centro e borda).">
         <VinylDesigner coverUrl={coverPreview} config={discConfig} onChange={setDiscConfig} />
+
+        {/* estampa/arte custom do corpo do disco (quando as cores/estilos não bastam) */}
+        <div className="mt-4 rounded-xl border border-line bg-bg-soft p-4">
+          <p className="mb-1 text-sm font-medium text-ink">Estampa do disco (arte do vinil)</p>
+          <p className="mb-3 text-[11px] text-faint">
+            Opcional. Envie uma imagem pra virar o <strong className="text-mist">corpo inteiro do disco</strong> — útil quando as
+            cores e estilos acima não chegam perto da arte real do vinil. Ideal: imagem quadrada.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm hover:border-brand/50">
+              <ImageIcon size={16} /> {discArtPreview ? "Trocar estampa" : "Enviar estampa"}
+              <input type="file" accept="image/*" hidden onChange={onDiscArt} />
+            </label>
+            {discArtPreview && (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={discArtPreview} alt="Estampa do disco" className="h-16 w-16 rounded-full border border-line object-cover" />
+                <button type="button" onClick={removeDiscArt} className="text-sm text-faint hover:text-red-400">Remover (volta pra cor/estilo)</button>
+              </>
+            )}
+          </div>
+        </div>
 
         {/* Capa do centro (label) por lado — o disco fica realista ao virar */}
         <div className="mt-5 rounded-xl border border-line bg-bg-soft p-4">

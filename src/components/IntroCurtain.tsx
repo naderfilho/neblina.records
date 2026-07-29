@@ -158,7 +158,10 @@ export default function IntroCurtain() {
               <motion.div
                 ref={discRef}
                 className="relative h-64 w-64 rounded-full vinyl-grooves shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]"
-                style={{ zIndex: 2 }}
+                // will-change/translateZ promovem o disco a uma camada de GPU própria:
+                // a rotação/voo passam a ser compostos (sem repintar os sulcos a cada
+                // quadro), o que tira o "travadinho" da primeira abertura.
+                style={{ zIndex: 2, willChange: "transform", transform: "translateZ(0)" }}
                 // começa exatamente como o shell SSR (cheio, opaco, sem rotação)
                 // -> sem "tick"/grow-in ao iniciar a animação
                 initial={{ scale: 1, opacity: 1, rotate: 0, x: 0, y: 0 }}

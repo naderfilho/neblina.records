@@ -26,6 +26,10 @@ export default function AdminAgendaPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // modal "notificar clientes?" (item 5) — no lugar dos popups nativos do navegador
+  const [notifyFor, setNotifyFor] = useState<{ title: string; location: string | null; starts_at: string } | null>(null);
+  const [notifying, setNotifying] = useState(false);
+  const [notifyDone, setNotifyDone] = useState<{ ok: boolean; msg: string } | null>(null);
 
   async function load() {
     const { data } = await supabase.from("store_events").select("*").order("starts_at", { ascending: false });
@@ -69,27 +73,33 @@ export default function AdminAgendaPage() {
       setSaving(false);
       if (error) return setError(error.message);
       logAction("create", "store_event", data.id, payload.title, {});
-      // item 5: oferecer disparo de notificação para os clientes
-      await maybeNotify(payload);
+      reset();
+      load();
+      // item 5: abre o modal do site perguntando se quer notificar os clientes
+      setNotifyDone(null);
+      setNotifyFor({ title: payload.title, location: payload.location, starts_at: payload.starts_at });
+      return;
     }
     reset();
     load();
   }
 
-  async function maybeNotify(ev: { title: string; location: string | null; starts_at: string }) {
-    if (!window.confirm(`Deseja notificar os clientes do site sobre essa presença confirmada?\n\n“${ev.title}”`)) return;
-    const quando = formatDateTime(ev.starts_at);
-    const body = `Vamos estar presentes${ev.location ? ` em ${ev.location}` : ""} — ${quando}. Passa lá pra garimpar com a gente!`;
+  async function doNotify() {
+    if (!notifyFor) return;
+    setNotifying(true);
+    const quando = formatDateTime(notifyFor.starts_at);
+    const body = `Vamos estar presentes${notifyFor.location ? ` em ${notifyFor.location}` : ""} — ${quando}. Passa lá pra garimpar com a gente!`;
     const { data, error } = await supabase.rpc("broadcast_notification", {
       p_type: "event_presence",
-      p_title: `Presença confirmada: ${ev.title}`,
+      p_title: `Presença confirmada: ${notifyFor.title}`,
       p_body: body,
       p_link: "/eventos",
       p_record_id: null,
     });
-    if (error) { alert("Evento salvo, mas falhou ao notificar: " + error.message); return; }
-    logAction("notify", "notification", null, ev.title, { tipo: "event_presence", enviados: data });
-    alert(`Notificação enviada para ${data ?? 0} cliente(s).`);
+    setNotifying(false);
+    if (error) { setNotifyDone({ ok: false, msg: "Não foi possível notificar agora. Tente de novo." }); return; }
+    logAction("notify", "notification", null, notifyFor.title, { tipo: "event_presence", enviados: data });
+    setNotifyDone({ ok: true, msg: `Aviso enviado para ${data ?? 0} ${data === 1 ? "cliente" : "clientes"}.` });
   }
 
   async function remove(ev: StoreEvent) {
@@ -108,7 +118,7 @@ export default function AdminAgendaPage() {
   return (
     <div className="p-6 md:p-10">
       <div className="mb-6">
-        <h1 className="font-display text-3xl text-ink">Agenda — presença em eventos</h1>
+        <h1 className="font-display text-3xl text-ink">Agenda e presença em eventos</h1>
         <p className="text-muted">Registre onde a Neblina vai estar. Aparece no calendário da página de Eventos.</p>
       </div>
 
@@ -171,11 +181,6 @@ export default function AdminAgendaPage() {
             {editId ? "Salvar alterações" : "Registrar presença"}
           </button>
         </div>
-        {!editId && (
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-faint">
-            <Bell size={12} /> Ao registrar, o site pergunta se você quer notificar os clientes cadastrados.
-          </p>
-        )}
       </form>
 
       {loading ? (
@@ -185,6 +190,48 @@ export default function AdminAgendaPage() {
           <Section title="Próximos eventos" items={upcoming} onEdit={startEdit} onRemove={remove} empty="Nenhuma presença futura registrada." />
           {past.length > 0 && <Section title="Já aconteceram" items={past} onEdit={startEdit} onRemove={remove} muted />}
         </>
+      )}
+
+      {/* modal "notificar clientes?" — no estilo do site (sem popup do navegador) */}
+      {notifyFor && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => !notifying && setNotifyFor(null)}>
+          <div className="w-full max-w-md rounded-2xl border border-line bg-panel p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {!notifyDone ? (
+              <>
+                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-brand/15 text-brand">
+                  <Bell size={20} />
+                </div>
+                <h3 className="font-display text-xl text-ink">Notificar os clientes?</h3>
+                <p className="mt-1.5 text-sm text-muted">
+                  Presença registrada em <strong className="text-ink">“{notifyFor.title}”</strong>.
+                  Quer avisar os clientes cadastrados (sino + caixa de entrada)?
+                </p>
+                <div className="mt-5 flex justify-end gap-2">
+                  <button onClick={() => setNotifyFor(null)} disabled={notifying}
+                    className="rounded-xl border border-line px-4 py-2.5 text-sm text-muted transition hover:text-ink disabled:opacity-50">
+                    Agora não
+                  </button>
+                  <button onClick={doNotify} disabled={notifying}
+                    className="btn-brand inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm disabled:opacity-60">
+                    {notifying ? <Loader2 size={16} className="animate-spin" /> : <Bell size={16} />} Notificar clientes
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center">
+                <div className={`mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full ${notifyDone.ok ? "bg-teal/15 text-teal" : "bg-red-500/15 text-red-400"}`}>
+                  {notifyDone.ok ? <Check size={24} /> : <X size={24} />}
+                </div>
+                <p className="text-ink">{notifyDone.msg}</p>
+                <button onClick={() => { setNotifyFor(null); setNotifyDone(null); }}
+                  className="btn-brand mt-5 w-full rounded-xl py-2.5 text-sm">
+                  Fechar
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

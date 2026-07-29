@@ -134,7 +134,7 @@ export type RecordItem = {
   label_company: string | null;
   views_count: number;
   stock_qty: number;
-  availability: "available" | "reserved" | "sold";
+  availability: "available" | "reserved" | "unavailable" | "sold";
   is_published: boolean;
   is_featured: boolean;
   sold: boolean;

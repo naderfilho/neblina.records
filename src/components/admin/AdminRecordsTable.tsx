@@ -78,6 +78,15 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  async function changeAvailability(r: RecordItem, value: string) {
+    const supabase = createClient();
+    // vendido zera o estoque; qualquer outro estado repõe a peça única
+    const patch = { availability: value, sold: value === "sold", stock_qty: value === "sold" ? 0 : 1 };
+    await supabase.from("records").update(patch).eq("id", r.id);
+    logAction("update", "record", r.id, r.title, { alteracoes: { Disponibilidade: [r.availability, value] } });
+    setItems((prev) => prev.map((x) => (x.id === r.id ? { ...x, ...patch } as RecordItem : x)));
+  }
+
   async function togglePublish(r: RecordItem) {
     setBusy(r.id);
     const supabase = createClient();
@@ -166,7 +175,7 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
 
       <div className="overflow-x-auto rounded-2xl border border-line bg-panel">
         <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="bg-bg-soft text-xs uppercase tracking-wider text-muted">
+          <thead className="whitespace-nowrap bg-bg-soft text-xs uppercase tracking-wider text-muted">
             <tr>
               <th className="px-4 py-3">Disco</th>
               <th className="px-4 py-3">Estilo</th>
@@ -200,10 +209,17 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
                 <td className="px-4 py-3 text-muted">{r.genre ?? "—"}</td>
                 <td className="px-4 py-3 text-brand">{formatBRL(r.price)}</td>
                 <td className="px-4 py-3">
-                  {(() => {
-                    const a = AVAILABILITY.find((x) => x.id === (r.availability ?? "available")) ?? AVAILABILITY[0];
-                    return <span className="inline-flex items-center gap-1.5 text-xs text-muted"><span className="h-2 w-2 rounded-full" style={{ background: a.color }} /> {a.label}</span>;
-                  })()}
+                  <div className="inline-flex items-center gap-1.5">
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: (AVAILABILITY.find((x) => x.id === (r.availability ?? "available")) ?? AVAILABILITY[0]).color }} />
+                    <select
+                      value={r.availability ?? "available"}
+                      onChange={(e) => changeAvailability(r, e.target.value)}
+                      className="rounded-lg border border-line bg-panel px-2 py-1 text-xs text-ink outline-none focus:border-brand/50"
+                      aria-label="Mudar disponibilidade"
+                    >
+                      {AVAILABILITY.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
+                    </select>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-muted">{r.views_count}</td>
                 <td className="px-4 py-3">

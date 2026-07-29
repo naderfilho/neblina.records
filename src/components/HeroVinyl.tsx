@@ -12,6 +12,7 @@ export default function HeroVinyl() {
   const [armDown, setArmDown] = useState(false);
 
   useEffect(() => {
+    let armTimer = 0;
     const reveal = () => document.documentElement.classList.add("disc-ready");
     // intro já vista nesta sessão -> mostra já e agulha já em repouso
     if (typeof window !== "undefined" && sessionStorage.getItem("neblina_intro_seen")) {
@@ -19,16 +20,25 @@ export default function HeroVinyl() {
       setArmDown(true);
       return;
     }
-    window.addEventListener("neblina:disc-arrived", reveal);
-    // baixa a agulha só depois que a cortina termina de sair (disco já no lugar)
-    const onFinished = () => window.setTimeout(() => setArmDown(true), 550);
+    // Quando o disco CHEGA no hero (evento de timer direto, confiável no mobile),
+    // revela e baixa a agulha logo em seguida. Antes a agulha dependia do fim da
+    // saída da cortina (onExitComplete), que no mobile às vezes não dispara — e a
+    // agulha ficava pra sempre no ar.
+    const onArrived = () => {
+      reveal();
+      armTimer = window.setTimeout(() => setArmDown(true), 500);
+    };
+    window.addEventListener("neblina:disc-arrived", onArrived);
+    // reforço: se a cortina terminar antes, garante a agulha embaixo
+    const onFinished = () => setArmDown(true);
     window.addEventListener("neblina:intro-finished", onFinished);
     // rede de segurança: nunca deixa preso invisível / agulha pra sempre no ar
-    const fallback = window.setTimeout(() => { reveal(); setArmDown(true); }, 6500);
+    const fallback = window.setTimeout(() => { reveal(); setArmDown(true); }, 5000);
     return () => {
-      window.removeEventListener("neblina:disc-arrived", reveal);
+      window.removeEventListener("neblina:disc-arrived", onArrived);
       window.removeEventListener("neblina:intro-finished", onFinished);
       clearTimeout(fallback);
+      clearTimeout(armTimer);
     };
   }, []);
 

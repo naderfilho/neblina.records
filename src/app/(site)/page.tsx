@@ -11,7 +11,7 @@ export const revalidate = 0;
 // Colunas que a vitrine (grade + filtros) usa — evita baixar os campos pesados
 // (tracks, history, extra_blocks…) de milhares de discos à toa.
 const GRID_COLS =
-  "id,title,artist,genre,nationality,format,disc_quality,tag_ids,label_company,price,cover_image_url,disc_config,audio_url,audio_start,audio_end";
+  "id,title,artist,genre,nationality,format,disc_quality,tag_ids,label_company,price,availability,cover_image_url,disc_config,audio_url,audio_start,audio_end";
 
 /**
  * Busca TODOS os discos publicados. O Supabase/PostgREST limita cada resposta a
@@ -28,6 +28,7 @@ async function fetchAllPublished(
       .from("records")
       .select(GRID_COLS)
       .eq("is_published", true)
+      .neq("availability", "unavailable") // discos indisponíveis não aparecem na home
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false })
       .order("id", { ascending: true })

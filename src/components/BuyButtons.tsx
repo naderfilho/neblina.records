@@ -13,6 +13,7 @@ type Props = {
   artist: string;
   price: number;
   coverUrl?: string | null;
+  available?: boolean;
 };
 
 function WhatsAppGlyph({ size = 22 }: { size?: number }) {
@@ -23,10 +24,18 @@ function WhatsAppGlyph({ size = 22 }: { size?: number }) {
   );
 }
 
-export default function BuyButtons({ id, title, artist, price, coverUrl }: Props) {
+export default function BuyButtons({ id, title, artist, price, coverUrl, available = true }: Props) {
   const cart = useCart();
   const router = useRouter();
   const inCart = cart.has(id);
+
+  if (!available) {
+    return (
+      <div className="rounded-xl border border-line bg-bg-soft px-4 py-3 text-sm text-muted">
+        Este disco está <strong className="text-mist">indisponível</strong> no momento.
+      </div>
+    );
+  }
 
   async function getName(): Promise<string | null> {
     const supabase = createClient();
