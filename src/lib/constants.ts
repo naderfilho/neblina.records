@@ -30,6 +30,9 @@ export const RECORD_FORMATS = [
   "LP",
   "LP Duplo",
   "LP Triplo",
+  "CD",
+  "CD Duplo",
+  "CD Triplo",
   "Álbum Duplo",
   "Álbum Triplo",
   "EP",
@@ -38,12 +41,23 @@ export const RECORD_FORMATS = [
   "Compacto",
   "Promo de Rádio",
   "78 RPM",
-  "CD",
-  "CD Duplo",
   "Box Set",
   "Picture Disc",
   "Coletânea",
 ] as const;
+
+/** Rotação do disco (rotações por minuto). Só vinil: 33⅓, 45 e 78. */
+export const RPM_OPTIONS = [
+  { value: "33", label: "33 ⅓ RPM" },
+  { value: "45", label: "45 RPM" },
+  { value: "78", label: "78 RPM" },
+] as const;
+
+/** Rótulo de exibição do RPM (ex.: "33" -> "33 ⅓ RPM"). */
+export function rpmLabel(v?: string | null): string | null {
+  if (!v) return null;
+  return RPM_OPTIONS.find((o) => o.value === v)?.label ?? `${v} RPM`;
+}
 
 /** Disponibilidade do disco (cada disco é uma peça única) */
 export const AVAILABILITY = [

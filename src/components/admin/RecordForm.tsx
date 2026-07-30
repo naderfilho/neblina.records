@@ -11,7 +11,8 @@ import { createClient } from "@/lib/supabase/client";
 import { uploadFile } from "@/lib/upload";
 import {
   QUALITY_GRADES, QUALITY_META, RECORD_FORMATS, PAYMENT_METHODS, DEFAULT_DISC_CONFIG,
-  PHOTO_CATEGORIES, NEBLINA_AI, SOUND_MODES, DISC_COUNTS, AVAILABILITY, type Availability, type DiscConfig,
+  PHOTO_CATEGORIES, NEBLINA_AI, SOUND_MODES, DISC_COUNTS, RPM_OPTIONS, POPULAR_NATIONALITIES,
+  AVAILABILITY, type Availability, type DiscConfig,
 } from "@/lib/constants";
 import type {
   RecordItem, RecordPhoto, ExtraBlock, Tag,
@@ -198,6 +199,12 @@ export default function RecordForm({
   const audioPreviewSrc = useMemo(
     () => (audioFile ? URL.createObjectURL(audioFile) : audioUrl),
     [audioFile, audioUrl],
+  );
+
+  // sugestões de nacionalidade: as já cadastradas no acervo + a lista popular
+  const nationalityOptions = useMemo(
+    () => Array.from(new Set([...suggestions.nationalities, ...POPULAR_NATIONALITIES])),
+    [suggestions.nationalities],
   );
 
   const homeTrackObj = tracks.find((t) => t.id === homeTrackId);
@@ -573,7 +580,7 @@ export default function RecordForm({
               <input className="ipt" placeholder="Artista *" value={artist} onChange={(e) => setArtist(e.target.value)} />
               <input className="ipt" placeholder="Nº de catálogo / Selo *" value={catalog} onChange={(e) => setCatalog(e.target.value)} />
               <input className="ipt" type="number" placeholder="Ano" value={year} onChange={(e) => setYear(e.target.value)} />
-              <input className="ipt" placeholder="Nacionalidade da prensa (ex.: Brasil)" value={nationality} onChange={(e) => setNationality(e.target.value)} />
+              <input className="ipt" placeholder="Nacionalidade do artista (ex.: Brasil)" value={nationality} onChange={(e) => setNationality(e.target.value)} />
               <select className="ipt" value={format} onChange={(e) => setFormat(e.target.value)}>
                 <option value="">Tipo de disco</option>
                 {RECORD_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
@@ -753,9 +760,19 @@ export default function RecordForm({
             <input className="ipt" list="s-genres" value={genre} onChange={(e) => setGenre(e.target.value)} />
             <datalist id="s-genres">{suggestions.genres.map((g) => <option key={g} value={g} />)}</datalist>
           </Field>
+          <Field label="Nacionalidade do Artista/Banda">
+            <input className="ipt" list="s-nats" value={nationality} onChange={(e) => setNationality(e.target.value)} placeholder="Ex: Brasil, Reino Unido…" />
+            <datalist id="s-nats">{nationalityOptions.map((n) => <option key={n} value={n} />)}</datalist>
+          </Field>
           <Field label="Tipo de disco">
             <select className="ipt" value={format} onChange={(e) => setFormat(e.target.value)}>
               {RECORD_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </Field>
+          <Field label="Rotação (RPM)">
+            <select className="ipt" value={ident.rpm ?? ""} onChange={(e) => setIdent((i) => ({ ...i, rpm: e.target.value }))}>
+              <option value="">—</option>
+              {RPM_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Field>
           <Field label="Canais (Mono/Estéreo)">

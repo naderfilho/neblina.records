@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, Disc3, Music2, Check, PenLine } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
-import { QUALITY_META } from "@/lib/constants";
+import { QUALITY_META, rpmLabel } from "@/lib/constants";
 import { formatBRL } from "@/lib/utils";
 import Vinyl from "@/components/Vinyl";
 import TrackVinyl from "@/components/TrackVinyl";
@@ -51,8 +51,10 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
 
   const specs: { label: string; value: string | null }[] = [
     { label: "Artista", value: r.artist },
+    { label: "Nacionalidade", value: r.nationality },
     { label: "Estilo", value: r.genre },
     { label: "Formato", value: r.format },
+    { label: "Rotação", value: rpmLabel(r.identification?.rpm) },
     { label: "Canais", value: r.identification?.sound_mode || null },
     { label: "Discos", value: r.identification?.disc_count || null },
     { label: "Ano", value: r.year ? String(r.year) : null },

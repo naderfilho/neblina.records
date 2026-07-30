@@ -70,6 +70,7 @@ export type IdentificationInfo = {
   series?: string;
   sound_mode?: string; // "Mono" | "Estéreo"
   disc_count?: string; // "Simples" | "Duplo" | "Triplo"
+  rpm?: string;        // rotação: "33" | "45" | "78"
   recorded_at?: string;  // Gravado em (estúdio/cidade/país)
   mixed_at?: string;     // Mixado em
   mastered_at?: string;  // Masterizado em

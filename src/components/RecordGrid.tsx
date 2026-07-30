@@ -290,11 +290,19 @@ export default function RecordGrid({
               <button
                 key={t.id}
                 onClick={() => setF((s) => ({ ...s, tag: s.tag === t.id ? "" : t.id }))}
-                // inline-flex faz o botão abraçar o badge (sem o vão do line-height,
-                // que deixava a caixa em 30px e o anel laranja "fora" do chip de 16px)
-                className="inline-flex rounded-full outline-none transition"
+                // inline-flex faz o botão abraçar o badge. O anel de seleção é um
+                // BORDER real (colado ao pill) + padding de respiro, não box-shadow:
+                // no Safari o box-shadow saía como uma "borda" retangular
+                // desproporcional em volta do chip. O border transparente + padding
+                // ficam sempre reservados pra não deslocar o badge ao selecionar.
+                className="inline-flex appearance-none rounded-full border-2 p-[2px] outline-none transition"
+                // borderColor vai sempre inline: o app tem uma regra global de
+                // borda em <button> que sobrepõe a classe `border-transparent`,
+                // deixando um anel escuro em toda tag. Inline vence a regra global.
                 // selecionado = anel fino da marca com um respiro na cor do fundo
-                style={on ? { boxShadow: "0 0 0 2px var(--color-bg), 0 0 0 3px var(--color-brand)" } : { opacity: 0.75 }}
+                style={on
+                  ? { borderColor: "var(--color-brand)", backgroundColor: "var(--color-bg)" }
+                  : { borderColor: "transparent", opacity: 0.75 }}
               >
                 <TagBadge tag={t} size="md" />
               </button>
