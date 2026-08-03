@@ -7,12 +7,24 @@ import {
   Volume2, Waves, X, ListMusic, BookOpen, Plus, Lock, Eye,
 } from "lucide-react";
 import Vinyl from "@/components/Vinyl";
-import { resolveDiscColor, resolveBorderColor, DEFAULT_DISC_CONFIG, type DiscConfig } from "@/lib/constants";
+import BoxArt from "@/components/BoxArt";
+import { resolveDiscColor, resolveBorderColor, DEFAULT_DISC_CONFIG, type DiscConfig, type BoxConfig } from "@/lib/constants";
 import { claimAudio, releaseAudio } from "@/lib/audio-bus";
 import { useCoarsePointer } from "@/lib/use-coarse-pointer";
 import { playScratch } from "@/lib/scratch";
 import { cn } from "@/lib/utils";
 import type { RecordItem, Track } from "@/lib/types";
+
+/** Um box na Audioteca: os discos (já filtrados para os que têm áudio, na ordem). */
+export type BoxAudio = {
+  id: string;
+  title: string;
+  cover_image_url: string | null;
+  spine_image_url: string | null;
+  box_config: BoxConfig;
+  audioteca_tier: string;
+  records: RecordItem[];
+};
 
 type Entry = { di: number; side: "A" | "B"; track: Track };
 
@@ -102,7 +114,7 @@ function PlatterFace({
   );
 }
 
-export default function Audioteca({ records, isLoggedIn }: { records: RecordItem[]; isLoggedIn: boolean }) {
+export default function Audioteca({ records, boxes = [], isLoggedIn }: { records: RecordItem[]; boxes?: BoxAudio[]; isLoggedIn: boolean }) {
   const coarse = useCoarsePointer();
 
   // acesso por nível: público (todos), membros (logado), signature (em breve)
@@ -448,6 +460,20 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
         lastDiscRef.current = null;
       }
       return [...q, rec];
+    });
+  }
+  // enfileira TODOS os discos de um box de uma vez (na ordem), respeitando o acesso
+  function placeBox(recs: RecordItem[]) {
+    const accessible = recs.filter(canAccess);
+    if (!accessible.length) return;
+    setQueue((q) => {
+      const startIdx = q.length;
+      if (pos < 0) {
+        setPlatterDi(startIdx);
+        setPlatterSide("A");
+        lastDiscRef.current = null;
+      }
+      return [...q, ...accessible];
     });
   }
   function removeFromQueue(di: number) {
@@ -805,6 +831,43 @@ export default function Audioteca({ records, isLoggedIn }: { records: RecordItem
                 <button onClick={() => removeFromQueue(di)} className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/80 text-faint opacity-0 transition group-hover:opacity-100 hover:text-red-400" aria-label="Remover da fila"><X size={11} /></button>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ================= BOXES ================= */}
+      {boxes.length > 0 && (
+        <div className="mt-12">
+          <div className="mb-4 flex items-center gap-2 text-sm text-muted">
+            <ListMusic size={16} className="text-brand" /> Ouça um box inteiro — todos os discos entram na fila de uma vez.
+          </div>
+          <div className="flex gap-5 overflow-x-auto px-2 pb-4 pt-1" style={{ scrollbarWidth: "thin" }}>
+            {boxes.map((b) => {
+              const locked = b.audioteca_tier === "signature" || (b.audioteca_tier === "members" && !isLoggedIn);
+              return (
+                <div key={b.id} className="relative w-40 shrink-0">
+                  <div className={cn("w-40", locked && "opacity-70 grayscale")}>
+                    <BoxArt config={b.box_config} coverUrl={b.cover_image_url} spineUrl={b.spine_image_url} title={b.title} count={b.records.length} interactive={!locked} />
+                  </div>
+                  <p className="mt-1 line-clamp-1 text-[12px] font-medium text-ink">{b.title}</p>
+                  <p className="text-[11px] text-faint">{b.records.length} {b.records.length === 1 ? "disco" : "discos"}</p>
+                  {locked ? (
+                    <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[10px] font-semibold text-white">
+                      <Lock size={11} /> {b.audioteca_tier === "signature" ? "Neblina Signature" : "Entre para ouvir"}
+                    </span>
+                  ) : (
+                    <div className="mt-1.5 flex items-center gap-1.5">
+                      <button onClick={() => placeBox(b.records)} className="flex items-center gap-1 rounded-full bg-brand px-2.5 py-1 text-[11px] font-bold text-black transition hover:brightness-95">
+                        <Plus size={12} /> Ouvir o box
+                      </button>
+                      <Link href={`/box/${b.id}`} className="flex items-center gap-1 rounded-full border border-line px-2 py-1 text-[11px] text-muted hover:text-brand">
+                        <Eye size={11} /> Ver
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

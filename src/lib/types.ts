@@ -1,4 +1,4 @@
-import type { QualityGrade, DiscConfig } from "./constants";
+import type { QualityGrade, DiscConfig, BoxConfig } from "./constants";
 
 export type UserRole = "customer" | "admin";
 
@@ -147,6 +147,41 @@ export type RecordItem = {
   created_at: string;
   updated_at: string;
 };
+
+export type BoxItem = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  box_type: string | null;
+  description: string | null;
+  cover_image_url: string | null;
+  spine_image_url: string | null;
+  back_image_url: string | null;
+  box_config: BoxConfig;
+  year: number | null;
+  catalog_number: string | null;
+  label_company: string | null;
+  price: number;
+  payment_methods: string[];
+  availability: "available" | "reserved" | "unavailable" | "sold";
+  audioteca_tier: "public" | "members" | "signature";
+  is_published: boolean;
+  is_featured: boolean;
+  is_autographed: boolean;
+  autograph_photo_url: string | null;
+  sort_order: number;
+  views_count: number;
+  tag_ids: string[];
+  extra_blocks: ExtraBlock[];
+  created_at: string;
+  updated_at: string;
+};
+
+/** Box com os discos vinculados (na ordem de `position`). */
+export type BoxWithRecords = BoxItem & { records: RecordItem[] };
+
+/** Resumo do box para a vitrine (card na home) — sem os discos completos. */
+export type BoxSummary = BoxItem & { disc_count: number };
 
 export type RecordPhoto = {
   id: string;

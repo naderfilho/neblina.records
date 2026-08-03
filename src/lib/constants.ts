@@ -288,6 +288,71 @@ export const AUDIOTECA_TIERS = [
 ] as const;
 export type AudiotecaTier = (typeof AUDIOTECA_TIERS)[number]["id"];
 
+// ============================================================================
+//  BOXES (box sets)
+// ============================================================================
+
+/** Tipos de box (caixa com vários discos). Ponto de partida — ajustável. */
+export const BOX_TYPES = [
+  "Box de Álbum",
+  "Box de Coletânea",
+  "Box Comemorativo",
+  "Box de Singles",
+  "Box Deluxe",
+  "Box de Artista",
+  "Box Temático",
+] as const;
+
+/** Acabamento do material do box (visual 3D). */
+export const BOX_FINISHES = [
+  { id: "matte", label: "Fosco" },
+  { id: "gloss", label: "Brilhante" },
+  { id: "kraft", label: "Kraft (papelão)" },
+  { id: "foil", label: "Foil (metálico)" },
+] as const;
+
+/** Cores do material do box (base + detalhe/aro). */
+export const BOX_COLORS = [
+  { id: "charcoal", label: "Grafite", base: "#1a1a1e", accent: "#e8ecef" },
+  { id: "midnight", label: "Azul Meia-Noite", base: "#0f2436", accent: "#2f83b4" },
+  { id: "wine", label: "Vinho", base: "#360f18", accent: "#c14a62" },
+  { id: "forest", label: "Verde Floresta", base: "#123a1c", accent: "#3bb36a" },
+  { id: "sunset", label: "Laranja Neblina", base: "#5f2f06", accent: "#ff9d2e" },
+  { id: "kraft", label: "Kraft", base: "#6f5230", accent: "#caa46a" },
+  { id: "cream", label: "Marfim", base: "#c6bba1", accent: "#8a7a52" },
+  { id: "gold", label: "Ouro", base: "#5a4310", accent: "#e8c56d" },
+] as const;
+
+export type BoxConfig = {
+  finish: string;   // id de BOX_FINISHES
+  color: string;    // id de BOX_COLORS ou hex custom
+  accent?: string;  // cor de detalhe/aro (hex) — opcional
+};
+
+export const DEFAULT_BOX_CONFIG: BoxConfig = {
+  finish: "matte",
+  color: "charcoal",
+  accent: "#ff9d2e",
+};
+
+/** Resolve as cores do material do box a partir de um id de preset OU hex custom. */
+export function resolveBoxColor(
+  color?: string,
+  accent?: string,
+): { base: string; accent: string; light: string; dark: string } {
+  let base: string;
+  let acc: string;
+  if (color && HEX_RE.test(color)) {
+    base = color;
+    acc = accent && HEX_RE.test(accent) ? accent : shadeHex(color, 0.4);
+  } else {
+    const c = BOX_COLORS.find((x) => x.id === color) ?? BOX_COLORS[0];
+    base = c.base;
+    acc = accent && HEX_RE.test(accent) ? accent : c.accent;
+  }
+  return { base, accent: acc, light: shadeHex(base, 0.2), dark: shadeHex(base, -0.45) };
+}
+
 /** Estilos de etiqueta/tag exibidas em cima do disco na home */
 export const TAG_PRESETS = [
   { id: "bestseller", label: "Mais Vendido", bg: "#ff9d2e", fg: "#241304" },

@@ -488,3 +488,89 @@ alter table public.records  add column if not exists is_autographed boolean not 
 alter table public.records  add column if not exists autograph_photo_url text;
 alter table public.comments add column if not exists parent_id uuid references public.comments(id) on delete cascade;
 create index if not exists comments_parent_idx on public.comments (parent_id);
+
+-- ============================================================================
+--  BOXES (box sets) — caixas com vários discos dentro (discos vinculados)
+-- ============================================================================
+create table if not exists public.boxes (
+  id              uuid primary key default gen_random_uuid(),
+  title           text not null,
+  subtitle        text,
+  box_type        text,
+  description     text,
+  cover_image_url text,
+  spine_image_url text,
+  back_image_url  text,
+  box_config      jsonb not null default '{}'::jsonb,      -- visual 3D (acabamento/cor)
+  year            int,
+  catalog_number  text,
+  label_company   text,
+  price           numeric(10,2) not null default 0,
+  payment_methods text[] not null default '{}',
+  availability    text not null default 'available',
+  audioteca_tier  text not null default 'public',
+  is_published    boolean not null default true,
+  is_featured     boolean not null default false,
+  is_autographed  boolean not null default false,
+  autograph_photo_url text,
+  sort_order      int not null default 0,
+  views_count     int not null default 0,
+  tag_ids         text[] not null default '{}',
+  extra_blocks    jsonb not null default '[]'::jsonb,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+create index if not exists boxes_published_idx on public.boxes (is_published);
+create index if not exists boxes_sort_idx on public.boxes (sort_order asc, created_at desc);
+create index if not exists boxes_type_idx on public.boxes (box_type);
+
+-- join ordenado box -> discos (um disco pode estar num box e ainda aparecer solto)
+create table if not exists public.box_records (
+  box_id     uuid not null references public.boxes(id) on delete cascade,
+  record_id  uuid not null references public.records(id) on delete cascade,
+  position   int not null default 0,
+  created_at timestamptz not null default now(),
+  primary key (box_id, record_id)
+);
+create index if not exists box_records_box_idx on public.box_records (box_id, position);
+create index if not exists box_records_record_idx on public.box_records (record_id);
+
+drop trigger if exists boxes_set_updated_at on public.boxes;
+create trigger boxes_set_updated_at
+  before update on public.boxes
+  for each row execute function public.set_updated_at();
+
+create or replace function public.increment_box_views(p_box_id uuid)
+returns void language sql security definer set search_path = public as $$
+  update public.boxes set views_count = views_count + 1 where id = p_box_id;
+$$;
+
+alter table public.boxes       enable row level security;
+alter table public.box_records enable row level security;
+
+drop policy if exists boxes_public_read on public.boxes;
+create policy boxes_public_read on public.boxes
+  for select using (is_published or public.is_admin());
+drop policy if exists boxes_admin_write on public.boxes;
+create policy boxes_admin_write on public.boxes
+  for all using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists box_records_public_read on public.box_records;
+create policy box_records_public_read on public.box_records
+  for select using (true);
+drop policy if exists box_records_admin_write on public.box_records;
+create policy box_records_admin_write on public.box_records
+  for all using (public.is_admin()) with check (public.is_admin());
+
+-- disco também é legível publicamente se pertence a um box publicado (discos "só no box")
+drop policy if exists records_public_read on public.records;
+create policy records_public_read on public.records
+  for select using (
+    is_published
+    or public.is_admin()
+    or exists (
+      select 1 from public.box_records br
+      join public.boxes bx on bx.id = br.box_id
+      where br.record_id = records.id and bx.is_published
+    )
+  );

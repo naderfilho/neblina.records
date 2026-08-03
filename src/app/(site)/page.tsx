@@ -1,10 +1,10 @@
 import { ArrowRight, Disc3 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import IntroCurtain from "@/components/IntroCurtain";
-import RecordGrid from "@/components/RecordGrid";
+import AcervoTabs from "@/components/AcervoTabs";
 import HeroVinyl from "@/components/HeroVinyl";
 import HomeMiniPlayer, { type HomeSong } from "@/components/HomeMiniPlayer";
-import type { RecordItem, Tag, Track } from "@/lib/types";
+import type { RecordItem, Tag, Track, BoxSummary } from "@/lib/types";
 
 export const revalidate = 0;
 
@@ -42,13 +42,26 @@ async function fetchAllPublished(
 
 export default async function HomePage() {
   const supabase = await createClient();
-  const [records, { data: tagData }, { data: settings }] = await Promise.all([
+  const [records, { data: tagData }, { data: settings }, { data: boxData }] = await Promise.all([
     fetchAllPublished(supabase),
     supabase.from("tags").select("*"),
     supabase.from("site_settings").select("*").eq("id", "main").maybeSingle(),
+    supabase
+      .from("boxes")
+      .select("*, box_records(count)")
+      .eq("is_published", true)
+      .neq("availability", "unavailable")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
   ]);
 
   const tags = (tagData ?? []) as Tag[];
+
+  // boxes da vitrine (com contagem de discos)
+  const boxes: BoxSummary[] = ((boxData ?? []) as unknown as (BoxSummary & { box_records?: { count: number }[] })[]).map((b) => ({
+    ...b,
+    disc_count: b.box_records?.[0]?.count ?? 0,
+  }));
 
   // música da home (mini-player sobre o disco Neblina)
   let homeSong: HomeSong | null = null;
@@ -126,7 +139,7 @@ export default async function HomePage() {
           <h2 className="mt-1 font-display text-4xl font-bold text-ink md:text-5xl">Nossos discos</h2>
         </div>
 
-        {records.length === 0 ? (
+        {records.length === 0 && boxes.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-line py-24 text-center">
             <Disc3 size={40} className="mx-auto mb-3 text-faint" />
             <p className="text-lg text-muted">O acervo está sendo preparado.</p>
@@ -135,7 +148,7 @@ export default async function HomePage() {
             </p>
           </div>
         ) : (
-          <RecordGrid records={records} tags={tags} columns={settings?.home_columns} />
+          <AcervoTabs records={records} tags={tags} columns={settings?.home_columns} boxes={boxes} />
         )}
       </section>
     </>
