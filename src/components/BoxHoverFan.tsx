@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import BoxArt from "@/components/BoxArt";
 import Vinyl from "@/components/Vinyl";
 import { fanPositions } from "@/lib/boxFan";
+import { useCoarsePointer } from "@/lib/use-coarse-pointer";
 import type { BoxConfig } from "@/lib/constants";
 import type { DiscMini } from "@/lib/types";
 
@@ -28,6 +29,7 @@ export default function BoxHoverFan({
   discs: DiscMini[];
 }) {
   const reduce = useReducedMotion();
+  const coarse = useCoarsePointer();
   const ref = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(0);
   const [open, setOpen] = useState(false);
@@ -51,8 +53,17 @@ export default function BoxHoverFan({
       ref={ref}
       className="relative aspect-square w-full"
       style={{ zIndex: active ? 30 : undefined }}
-      onPointerEnter={() => setOpen(true)}
-      onPointerLeave={() => setOpen(false)}
+      // desktop: abre no hover. Touch: o toque só ABRE/FECHA o leque (nunca
+      // navega — a navegação fica no link do título, abaixo do card). Assim o
+      // usuário vê os discos no mobile igual ao hover do desktop.
+      onPointerEnter={() => { if (!coarse) setOpen(true); }}
+      onPointerLeave={() => { if (!coarse) setOpen(false); }}
+      onClick={(e) => {
+        if (!coarse || reduce || n === 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setOpen((o) => !o);
+      }}
     >
       {/* discos (só visuais) */}
       {w > 0 && !reduce &&

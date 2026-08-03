@@ -130,8 +130,13 @@ export default function Audioteca({ records, boxes = [], isLoggedIn }: { records
   const [curTime, setCurTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  const [drag, setDrag] = useState<{ rec: RecordItem; x: number; y: number } | null>(null);
+  const [drag, setDrag] = useState<{ rec: RecordItem } | null>(null);
   const [overDrop, setOverDrop] = useState(false);
+  // posição do fantasma via ref (DOM direto). NÃO usar state por movimento: cada
+  // pointermove re-renderizaria a Audioteca inteira (28 discos + boxes) e o
+  // arraste travava. Agora o movimento só mexe no style do fantasma.
+  const ghostRef = useRef<HTMLDivElement | null>(null);
+  const dragPosRef = useRef({ x: 0, y: 0 });
   const [openId, setOpenId] = useState<string | null>(null);
 
   // disco no prato (independe da reproducao — mostra mesmo sem faixas com audio)
@@ -556,16 +561,22 @@ export default function Audioteca({ records, boxes = [], isLoggedIn }: { records
     e.preventDefault();
     e.stopPropagation();
     dragRecRef.current = rec;
-    setDrag({ rec, x: e.clientX, y: e.clientY });
+    dragPosRef.current = { x: e.clientX, y: e.clientY };
+    setDrag({ rec });
 
     const inDrop = (ev: PointerEvent) => {
       const dz = dropRef.current?.getBoundingClientRect();
       return !!dz && ev.clientX >= dz.left && ev.clientX <= dz.right && ev.clientY >= dz.top && ev.clientY <= dz.bottom;
     };
+    let over = false;
     const move = (ev: PointerEvent) => {
       ev.preventDefault();
-      setDrag((d) => (d ? { ...d, x: ev.clientX, y: ev.clientY } : d));
-      setOverDrop(inDrop(ev));
+      dragPosRef.current = { x: ev.clientX, y: ev.clientY };
+      const g = ghostRef.current;
+      if (g) { g.style.left = `${ev.clientX}px`; g.style.top = `${ev.clientY}px`; }
+      // só re-renderiza ao CRUZAR a borda do prato (não a cada pixel)
+      const now = inDrop(ev);
+      if (now !== over) { over = now; setOverDrop(now); }
     };
     const cleanup = () => {
       window.removeEventListener("pointermove", move);
@@ -898,7 +909,10 @@ export default function Audioteca({ records, boxes = [], isLoggedIn }: { records
 
       {/* disco fantasma sendo arrastado */}
       {drag && (
-        <div className="pointer-events-none fixed z-[200] h-32 w-32 -translate-x-1/2 -translate-y-1/2" style={{ left: drag.x, top: drag.y }}>
+        <div
+          ref={(el) => { ghostRef.current = el; if (el) { el.style.left = `${dragPosRef.current.x}px`; el.style.top = `${dragPosRef.current.y}px`; } }}
+          className="pointer-events-none fixed z-[200] h-32 w-32 -translate-x-1/2 -translate-y-1/2"
+        >
           <div className="drop-shadow-2xl"><Vinyl config={drag.rec.disc_config} coverUrl={drag.rec.cover_image_url} interactive={false} noNeedle title="" /></div>
         </div>
       )}
