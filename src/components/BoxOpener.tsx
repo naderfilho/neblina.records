@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { Sparkles, RotateCcw, Eye } from "lucide-react";
 import BoxArt from "@/components/BoxArt";
 import Vinyl from "@/components/Vinyl";
-import { cn } from "@/lib/utils";
+import { fanPositions } from "@/lib/boxFan";
 import type { BoxItem, RecordItem } from "@/lib/types";
 
 /**
@@ -16,6 +16,7 @@ import type { BoxItem, RecordItem } from "@/lib/types";
  * sua página. Com prefers-reduced-motion, mostra a grade dos discos direto.
  */
 export default function BoxOpener({ box, records }: { box: BoxItem; records: RecordItem[] }) {
+  const router = useRouter();
   const reduce = useReducedMotion();
   const stageRef = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(0);
@@ -32,25 +33,15 @@ export default function BoxOpener({ box, records }: { box: BoxItem; records: Rec
 
   const n = records.length;
   const disc = Math.max(110, Math.min(210, w * (n > 4 ? 0.2 : 0.26)));
-
-  // posição de cada disco no leque aberto
-  function fan(i: number) {
-    const c = (n - 1) / 2;
-    const off = i - c;
-    const step = Math.min(15, 84 / Math.max(1, n));
-    return {
-      x: off * Math.min(w * 0.17, disc * 0.82),
-      y: -w * 0.11 + off * off * (w * 0.006),
-      rotate: off * step,
-    };
-  }
+  const fans = fanPositions(n, w, disc);
+  const goToDisc = (id: string) => router.push(`/disco/${id}`);
 
   // fallback estático (reduced motion): grade simples
   if (reduce) {
     return (
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 md:grid-cols-4">
         {records.map((r) => (
-          <DiscInFan key={r.id} record={r} />
+          <DiscInFan key={r.id} record={r} onOpen={() => goToDisc(r.id)} interactive />
         ))}
       </div>
     );
@@ -73,7 +64,7 @@ export default function BoxOpener({ box, records }: { box: BoxItem; records: Rec
       {/* DISCOS — saem de dentro da caixa e se abrem em leque */}
       {w > 0 &&
         records.map((r, i) => {
-          const f = fan(i);
+          const f = fans[i];
           return (
             <motion.div
               key={r.id}
@@ -92,7 +83,7 @@ export default function BoxOpener({ box, records }: { box: BoxItem; records: Rec
                 delay: open ? 0.18 + i * 0.09 : (n - 1 - i) * 0.03,
               }}
             >
-              <DiscInFan record={r} />
+              <DiscInFan record={r} onOpen={() => goToDisc(r.id)} interactive={open} />
             </motion.div>
           );
         })}
@@ -134,7 +125,7 @@ export default function BoxOpener({ box, records }: { box: BoxItem; records: Rec
             animate={{ y: [0, -4, 0] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           >
-            <Sparkles size={16} /> Clique na caixa para abrir
+            <Sparkles size={16} /> Abrir box
           </motion.button>
         ) : (
           <button
@@ -150,14 +141,30 @@ export default function BoxOpener({ box, records }: { box: BoxItem; records: Rec
   );
 }
 
-/** Um disco no leque: o vinil (reusa Vinyl) + nome no hover, linkando à página. */
-function DiscInFan({ record }: { record: RecordItem }) {
+/**
+ * Um disco no leque. Quando o box está aberto o vinil fica interativo: passar o
+ * mouse dá uma leve expandida, gira e toca a música (reusa o Vinyl); clicar leva
+ * à página do disco. O nome aparece no hover.
+ */
+function DiscInFan({ record, onOpen, interactive = false }: { record: RecordItem; onOpen: () => void; interactive?: boolean }) {
   return (
-    <Link href={`/disco/${record.id}`} className="group/disc relative block h-full w-full" title={`${record.title} — ${record.artist}`}>
-      <Vinyl config={record.disc_config} coverUrl={record.cover_image_url} interactive={false} noNeedle title="" />
+    <div className="group/disc relative h-full w-full" title={`${record.title} — ${record.artist}`}>
+      <div className="h-full w-full transition-transform duration-200 ease-out group-hover/disc:scale-[1.12]">
+        <Vinyl
+          config={record.disc_config}
+          coverUrl={record.cover_image_url}
+          audioUrl={record.audio_url}
+          audioStart={record.audio_start}
+          audioEnd={record.audio_end}
+          interactive={interactive}
+          noNeedle
+          title=""
+          onOpen={onOpen}
+        />
+      </div>
       <span className="pointer-events-none absolute -bottom-1 left-1/2 z-20 flex -translate-x-1/2 translate-y-full items-center gap-1 whitespace-nowrap rounded-full bg-black/80 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg backdrop-blur transition-opacity duration-200 group-hover/disc:opacity-100">
         <Eye size={11} className="text-brand" /> {record.title}
       </span>
-    </Link>
+    </div>
   );
 }

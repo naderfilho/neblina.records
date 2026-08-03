@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Layers, Calendar, Building2, Hash, PenLine, Disc3 } from "lucide-react";
+import { Layers, Calendar, Building2, Hash, PenLine, Disc3 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import BoxOpener from "@/components/BoxOpener";
 import BoxBuyButtons from "@/components/BoxBuyButtons";
+import BackButton from "@/components/BackButton";
 import { formatBRL } from "@/lib/utils";
 import type { BoxItem, RecordItem, ExtraBlock } from "@/lib/types";
 
@@ -22,7 +23,7 @@ export default async function BoxPage({ params }: { params: Promise<{ id: string
 
   const { data: rows } = await supabase
     .from("box_records")
-    .select("position, records(id,title,artist,cover_image_url,disc_config,genre,year,disc_quality,price)")
+    .select("position, records(id,title,artist,cover_image_url,disc_config,genre,year,disc_quality,price,audio_url,audio_start,audio_end)")
     .eq("box_id", id)
     .order("position");
   const records = ((rows ?? []) as unknown as { records: RecordItem | null }[])
@@ -43,9 +44,7 @@ export default async function BoxPage({ params }: { params: Promise<{ id: string
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm text-muted hover:text-brand">
-        <ArrowLeft size={16} /> Voltar ao acervo
-      </Link>
+      <BackButton />
 
       {/* cabeçalho */}
       <div className="mb-2 flex flex-wrap items-center gap-2">

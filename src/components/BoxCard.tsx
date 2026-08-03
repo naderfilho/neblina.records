@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Layers, ArrowRight } from "lucide-react";
-import BoxArt from "@/components/BoxArt";
+import BoxHoverFan from "@/components/BoxHoverFan";
 import { formatBRL } from "@/lib/utils";
 import { AVAILABILITY } from "@/lib/constants";
 import type { BoxSummary } from "@/lib/types";
@@ -16,24 +16,24 @@ export default function BoxCard({ box }: { box: BoxSummary }) {
         className="relative block w-full transition-transform duration-300 group-hover:-translate-y-1"
         aria-label={`Abrir box ${box.title}`}
       >
-        <BoxArt
+        <BoxHoverFan
           config={box.box_config}
           coverUrl={box.cover_image_url}
           spineUrl={box.spine_image_url}
           title={box.title}
-          count={box.disc_count}
+          discs={box.discs ?? []}
         />
         {/* nº de discos */}
-        <span className="absolute right-1 top-1 z-10 flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 text-[11px] font-bold text-brand backdrop-blur">
+        <span className="absolute right-1 top-1 z-40 flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 text-[11px] font-bold text-brand backdrop-blur">
           <Layers size={12} /> {box.disc_count} {box.disc_count === 1 ? "disco" : "discos"}
         </span>
         {box.box_type && (
-          <span className="absolute left-1 top-1 z-10 rounded-full bg-brand/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-black">
+          <span className="absolute left-1 top-1 z-40 rounded-full bg-brand/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-black">
             {box.box_type}
           </span>
         )}
         {/* dica de abrir */}
-        <span className="pointer-events-none absolute inset-x-0 bottom-1 z-10 flex justify-center opacity-0 transition-opacity group-hover:opacity-100">
+        <span className="pointer-events-none absolute inset-x-0 -bottom-1 z-40 flex justify-center opacity-0 transition-opacity group-hover:opacity-100">
           <span className="flex items-center gap-1 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
             Abrir o box <ArrowRight size={12} />
           </span>

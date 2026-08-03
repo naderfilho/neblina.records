@@ -180,8 +180,11 @@ export type BoxItem = {
 /** Box com os discos vinculados (na ordem de `position`). */
 export type BoxWithRecords = BoxItem & { records: RecordItem[] };
 
+/** Disco "leve" para o leque de hover dos cards (só o que o Vinyl precisa). */
+export type DiscMini = { id: string; cover_image_url: string | null; disc_config: DiscConfig };
+
 /** Resumo do box para a vitrine (card na home) — sem os discos completos. */
-export type BoxSummary = BoxItem & { disc_count: number };
+export type BoxSummary = BoxItem & { disc_count: number; discs?: DiscMini[] };
 
 export type RecordPhoto = {
   id: string;

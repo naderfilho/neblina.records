@@ -4,7 +4,7 @@ import IntroCurtain from "@/components/IntroCurtain";
 import AcervoTabs from "@/components/AcervoTabs";
 import HeroVinyl from "@/components/HeroVinyl";
 import HomeMiniPlayer, { type HomeSong } from "@/components/HomeMiniPlayer";
-import type { RecordItem, Tag, Track, BoxSummary } from "@/lib/types";
+import type { RecordItem, Tag, Track, BoxSummary, DiscMini } from "@/lib/types";
 
 export const revalidate = 0;
 
@@ -48,7 +48,7 @@ export default async function HomePage() {
     supabase.from("site_settings").select("*").eq("id", "main").maybeSingle(),
     supabase
       .from("boxes")
-      .select("*, box_records(count)")
+      .select("*, box_records(position, records(id,cover_image_url,disc_config))")
       .eq("is_published", true)
       .neq("availability", "unavailable")
       .order("sort_order", { ascending: true })
@@ -57,11 +57,16 @@ export default async function HomePage() {
 
   const tags = (tagData ?? []) as Tag[];
 
-  // boxes da vitrine (com contagem de discos)
-  const boxes: BoxSummary[] = ((boxData ?? []) as unknown as (BoxSummary & { box_records?: { count: number }[] })[]).map((b) => ({
-    ...b,
-    disc_count: b.box_records?.[0]?.count ?? 0,
-  }));
+  // boxes da vitrine: contagem + discos (capa/config) na ordem, p/ o leque do hover
+  const boxes: BoxSummary[] = ((boxData ?? []) as unknown as (BoxSummary & {
+    box_records?: { position: number; records: DiscMini | null }[];
+  })[]).map((b) => {
+    const discs = [...(b.box_records ?? [])]
+      .sort((x, y) => x.position - y.position)
+      .map((br) => br.records)
+      .filter((r): r is DiscMini => !!r);
+    return { ...b, disc_count: discs.length, discs };
+  });
 
   // música da home (mini-player sobre o disco Neblina)
   let homeSong: HomeSong | null = null;

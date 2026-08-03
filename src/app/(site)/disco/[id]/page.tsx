@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Disc3, Music2, Check, PenLine } from "lucide-react";
+import { Disc3, Music2, Check, PenLine } from "lucide-react";
+import BackButton from "@/components/BackButton";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { QUALITY_META, rpmLabel } from "@/lib/constants";
@@ -107,9 +108,7 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm text-muted hover:text-brand">
-        <ArrowLeft size={16} /> Voltar ao acervo
-      </Link>
+      <BackButton />
 
       <div className="grid gap-10 md:grid-cols-2">
         {/* Vinil */}

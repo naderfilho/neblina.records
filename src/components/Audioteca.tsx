@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Vinyl from "@/components/Vinyl";
 import BoxArt from "@/components/BoxArt";
+import BoxHoverFan from "@/components/BoxHoverFan";
 import { resolveDiscColor, resolveBorderColor, DEFAULT_DISC_CONFIG, type DiscConfig, type BoxConfig } from "@/lib/constants";
 import { claimAudio, releaseAudio } from "@/lib/audio-bus";
 import { useCoarsePointer } from "@/lib/use-coarse-pointer";
@@ -538,61 +539,65 @@ export default function Audioteca({ records, boxes = [], isLoggedIn }: { records
     } catch { /* nem todo navegador suporta todas as ações */ }
   }, [disc, entry, side, playing]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ---------- arrastar da estante ---------- */
-  // O disco sendo arrastado fica num ref: assim o efeito abaixo registra os
-  // listeners UMA vez por arraste (dep = id do disco) em vez de remover e
-  // re-registrar a cada pointermove, o que no mobile fazia perder eventos.
+  /* ---------- arrastar da estante ----------
+     Os listeners são anexados na JANELA de forma SÍNCRONA no pointerdown (sem o
+     gap de um useEffect, que perdia os primeiros movimentos). E NÃO usamos
+     setPointerCapture: no desktop ele disparava um `pointerleave` na estante ->
+     setOpenId(null) -> o disco voltava pra dentro da capa assim que era pego
+     ("travava e não saía do lugar"). O disco tem `touch-none` quando aberto, o
+     que já mantém os eventos chegando no toque. */
   const dragRecRef = useRef<RecordItem | null>(null);
-  const dragId = drag?.rec.id ?? null;
+  const dragCleanupRef = useRef<(() => void) | null>(null);
 
-  useEffect(() => {
-    if (!dragId) return;
-    const inDrop = (ev: PointerEvent) => {
-      const dz = dropRef.current?.getBoundingClientRect();
-      return !!dz && ev.clientX >= dz.left && ev.clientX <= dz.right && ev.clientY >= dz.top && ev.clientY <= dz.bottom;
-    };
-    const move = (ev: PointerEvent) => {
-      setDrag((d) => (d ? { ...d, x: ev.clientX, y: ev.clientY } : d));
-      setOverDrop(inDrop(ev));
-    };
-    const end = (ev: PointerEvent, cancelled: boolean) => {
-      const rec = dragRecRef.current;
-      if (!cancelled && rec && inDrop(ev)) place(rec);
-      dragRecRef.current = null;
-      setDrag(null); setOverDrop(false); setOpenId(null);
-    };
-    const up = (ev: PointerEvent) => end(ev, false);
-    // pointercancel é obrigatório: se o navegador assume o gesto (scroll da
-    // estante, gesto do sistema), ele para de mandar pointermove e SÓ manda
-    // cancel. Sem tratar, o `drag` nunca era limpo e o disco fantasma ficava
-    // preso na tela travando a página.
-    const cancel = (ev: PointerEvent) => end(ev, true);
-    window.addEventListener("pointermove", move, { passive: false });
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", cancel);
-    document.body.style.userSelect = "none";
-    return () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", cancel);
-      document.body.style.userSelect = "";
-    };
-  }, [dragId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // se o componente desmontar no meio de um arraste, remove os listeners
+  useEffect(() => () => { dragCleanupRef.current?.(); }, []);
 
   function startDrag(rec: RecordItem, e: React.PointerEvent) {
     e.preventDefault();
     e.stopPropagation();
     dragRecRef.current = rec;
-    // captura o ponteiro: no toque, garante que os eventos continuem chegando
-    // mesmo se o dedo sair de cima do disco
-    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
     setDrag({ rec, x: e.clientX, y: e.clientY });
+
+    const inDrop = (ev: PointerEvent) => {
+      const dz = dropRef.current?.getBoundingClientRect();
+      return !!dz && ev.clientX >= dz.left && ev.clientX <= dz.right && ev.clientY >= dz.top && ev.clientY <= dz.bottom;
+    };
+    const move = (ev: PointerEvent) => {
+      ev.preventDefault();
+      setDrag((d) => (d ? { ...d, x: ev.clientX, y: ev.clientY } : d));
+      setOverDrop(inDrop(ev));
+    };
+    const cleanup = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
+      document.body.style.userSelect = "";
+      dragCleanupRef.current = null;
+    };
+    const end = (ev: PointerEvent, cancelled: boolean) => {
+      cleanup();
+      const r = dragRecRef.current;
+      if (!cancelled && r && inDrop(ev)) place(r);
+      dragRecRef.current = null;
+      setDrag(null); setOverDrop(false); setOpenId(null);
+    };
+    const up = (ev: PointerEvent) => end(ev, false);
+    // pointercancel: se o navegador assume o gesto (scroll/sistema), só vem cancel
+    const cancel = (ev: PointerEvent) => end(ev, true);
+
+    window.addEventListener("pointermove", move, { passive: false });
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", cancel);
+    document.body.style.userSelect = "none";
+    dragCleanupRef.current = cleanup;
   }
 
   return (
     <div>
       {/* ================= DECK ================= */}
-      <div className="mx-auto max-w-3xl">
+      {/* sticky no desktop: o prato fica sempre visível enquanto se arrasta um
+          disco da estante (que fica mais abaixo) até ele. */}
+      <div className="mx-auto max-w-3xl md:sticky md:top-3 md:z-30">
         <div
           className="jb-cabinet relative overflow-hidden border border-black/70 px-6 pb-6 pt-6 md:px-10 md:pb-8"
           style={{
@@ -637,7 +642,7 @@ export default function Audioteca({ records, boxes = [], isLoggedIn }: { records
 
           <div className="relative z-10 flex flex-col items-center gap-6 sm:flex-row sm:items-start">
             {/* prato */}
-            <div className="relative w-full max-w-[300px]">
+            <div className="relative w-full max-w-[250px]">
               <div
                 ref={dropRef}
                 className={cn("relative aspect-square w-full rounded-full transition-all", overDrop && "ring-4 ring-brand/70")}
@@ -847,7 +852,17 @@ export default function Audioteca({ records, boxes = [], isLoggedIn }: { records
               return (
                 <div key={b.id} className="relative w-40 shrink-0">
                   <div className={cn("w-40", locked && "opacity-70 grayscale")}>
-                    <BoxArt config={b.box_config} coverUrl={b.cover_image_url} spineUrl={b.spine_image_url} title={b.title} count={b.records.length} interactive={!locked} />
+                    {locked ? (
+                      <BoxArt config={b.box_config} coverUrl={b.cover_image_url} spineUrl={b.spine_image_url} title={b.title} count={b.records.length} interactive={false} />
+                    ) : (
+                      <BoxHoverFan
+                        config={b.box_config}
+                        coverUrl={b.cover_image_url}
+                        spineUrl={b.spine_image_url}
+                        title={b.title}
+                        discs={b.records.map((r) => ({ id: r.id, cover_image_url: r.cover_image_url, disc_config: r.disc_config }))}
+                      />
+                    )}
                   </div>
                   <p className="mt-1 line-clamp-1 text-[12px] font-medium text-ink">{b.title}</p>
                   <p className="text-[11px] text-faint">{b.records.length} {b.records.length === 1 ? "disco" : "discos"}</p>
