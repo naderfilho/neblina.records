@@ -49,7 +49,7 @@ function Face({
           cfg.bodyImageUrl
             ? { backgroundImage: `url(${cfg.bodyImageUrl})` }
             : {
-                backgroundImage: `repeating-radial-gradient(circle at center, rgba(255,255,255,0.045) 0px, rgba(255,255,255,0.045) 1px, transparent 1px, transparent 3px), radial-gradient(circle at 30% 26%, rgba(255,255,255,0.10), transparent 42%), radial-gradient(circle at center, ${c.groove} 0%, ${c.ring} 66%, #050505 100%)`,
+                backgroundImage: `repeating-radial-gradient(circle at center, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 0.8px, rgba(0,0,0,0.16) 0.8px, rgba(0,0,0,0.16) 1.6px, transparent 1.6px, transparent 3px), radial-gradient(circle at 30% 26%, rgba(255,255,255,0.10), transparent 42%), radial-gradient(circle at center, ${c.groove} 0%, ${c.ring} 66%, #050505 100%)`,
               }
         }
       >

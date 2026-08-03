@@ -29,8 +29,10 @@ function bodyStyle(colorId: string, styleId?: string, bodyImageUrl?: string | nu
     return { backgroundImage: `url(${bodyImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" };
   }
   const c = resolveDiscColor(colorId);
+  // sulcos: linha clara + escura por período -> aparecem em QUALQUER cor de disco
+  // (o branco puro sumia nos discos coloridos/claros). Idêntico em todos os lugares.
   const grooves =
-    "repeating-radial-gradient(circle at center, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px)";
+    "repeating-radial-gradient(circle at center, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 0.8px, rgba(0,0,0,0.16) 0.8px, rgba(0,0,0,0.16) 1.6px, transparent 1.6px, transparent 3px)";
   const sheen = "radial-gradient(circle at 30% 26%, rgba(255,255,255,0.12), transparent 42%)";
   const base = `radial-gradient(circle at center, ${c.groove} 0%, ${c.ring} 66%, #050505 100%)`;
 
@@ -172,12 +174,26 @@ export default function Vinyl({
     const a = audioRef.current;
     if (a) { a.pause(); releaseAudio(a); }
     releaseDisc(stopFn);
-  }, []);
+    // volta o disco pra posição "em pé" (múltiplo de 360 mais próximo), animando —
+    // senão ele congela num ângulo qualquer (a capa fica torta/de ponta-cabeça).
+    const body = bodyRef.current;
+    if (body && !autoSpin) {
+      const target = Math.round(rotationRef.current / 360) * 360;
+      if (target !== rotationRef.current) {
+        body.style.transition = "transform 0.7s cubic-bezier(0.22,1,0.36,1)";
+        rotationRef.current = target;
+        body.style.transform = `rotate(${target}deg)`;
+        window.setTimeout(() => { if (bodyRef.current) bodyRef.current.style.transition = ""; }, 720);
+      }
+    }
+  }, [autoSpin]);
 
   const start = useCallback(() => {
     // assume o posto de disco ativo: para o anterior por completo (giro + som),
     // mesmo que este disco aqui não tenha áudio nenhum.
     if (!autoSpin) claimDisc(stop);
+    // tira qualquer transição da "volta pra posição" pra o giro recomeçar na hora
+    if (bodyRef.current) bodyRef.current.style.transition = "";
     activeRef.current = true;
     setActive(true);
     ensureRaf();
