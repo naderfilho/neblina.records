@@ -605,10 +605,15 @@ export default function Audioteca({ records, boxes = [], isLoggedIn }: { records
 
   return (
     <div>
+      {/* Layout: no desktop são 3 colunas — DISCOS (esq) · TOCA-DISCOS (centro) ·
+          BOXES (dir); a estante fica coladinha no prato pra facilitar o arraste.
+          No mobile empilha: toca-discos, depois discos, depois boxes. */}
+      <div className="mx-auto max-w-6xl lg:grid lg:grid-cols-[248px_minmax(0,1fr)_248px] lg:items-start lg:gap-5">
+
+      {/* ============ CENTRO: TOCA-DISCOS + FILA ============ */}
+      <div className="lg:col-start-2 lg:row-start-1">
       {/* ================= DECK ================= */}
-      {/* sticky no desktop: o prato fica sempre visível enquanto se arrasta um
-          disco da estante (que fica mais abaixo) até ele. */}
-      <div className="mx-auto max-w-3xl md:sticky md:top-3 md:z-30">
+      <div className="mx-auto max-w-2xl lg:max-w-none">
         <div
           className="jb-cabinet relative overflow-hidden border border-black/70 px-6 pb-6 pt-6 md:px-10 md:pb-8"
           style={{
@@ -831,7 +836,7 @@ export default function Audioteca({ records, boxes = [], isLoggedIn }: { records
 
       {/* ================= FILA ================= */}
       {queue.length > 0 && (
-        <div className="mx-auto mt-6 max-w-3xl">
+        <div className="mt-6">
           <div className="mb-2 flex items-center gap-2 text-sm text-muted"><ListMusic size={16} className="text-brand" /> Fila de reprodução</div>
           <div className="flex gap-3 overflow-x-auto pb-2">
             {queue.map((r, di) => (
@@ -851,18 +856,30 @@ export default function Audioteca({ records, boxes = [], isLoggedIn }: { records
         </div>
       )}
 
-      {/* ================= BOXES ================= */}
+      </div>{/* fim CENTRO */}
+
+      {/* ============ ESQUERDA: DISCOS ============ */}
+      <section className="mt-10 lg:col-start-1 lg:row-start-1 lg:mt-0">
+        <div className="mb-3 flex items-center gap-2 text-sm text-muted">
+          <Hand size={16} className="text-brand" />
+          <span className="lg:hidden">{coarse ? "Toque no disco pra ele sair da capa e leve até o prato." : "Passe o mouse e leve o disco até o prato."}</span>
+          <span className="hidden lg:inline">Discos — leve até o prato</span>
+        </div>
+        <Shelf records={records} coarse={coarse} openId={openId} setOpenId={setOpenId} onGrab={startDrag} onQueue={place} canAccess={canAccess} queuedIds={queue.map((q) => q.id)} />
+      </section>
+
+      {/* ============ DIREITA: BOXES ============ */}
       {boxes.length > 0 && (
-        <div className="mt-12">
-          <div className="mb-4 flex items-center gap-2 text-sm text-muted">
-            <ListMusic size={16} className="text-brand" /> Ouça um box inteiro — todos os discos entram na fila de uma vez.
+        <section className="mt-10 lg:col-start-3 lg:row-start-1 lg:mt-0">
+          <div className="mb-3 flex items-center gap-2 text-sm text-muted">
+            <ListMusic size={16} className="text-brand" /> Boxes — ouça um inteiro
           </div>
-          <div className="flex gap-5 overflow-x-auto px-2 pb-4 pt-1" style={{ scrollbarWidth: "thin" }}>
+          <div className="flex gap-5 overflow-x-auto px-1 pb-4 pt-1 lg:max-h-[74vh] lg:flex-col lg:gap-7 lg:overflow-x-hidden lg:overflow-y-auto lg:pr-1" style={{ scrollbarWidth: "thin" }}>
             {boxes.map((b) => {
               const locked = b.audioteca_tier === "signature" || (b.audioteca_tier === "members" && !isLoggedIn);
               return (
-                <div key={b.id} className="relative w-40 shrink-0">
-                  <div className={cn("w-40", locked && "opacity-70 grayscale")}>
+                <div key={b.id} className="relative w-40 shrink-0 lg:w-full">
+                  <div className={cn("mx-auto w-40", locked && "opacity-70 grayscale")}>
                     {locked ? (
                       <BoxArt config={b.box_config} coverUrl={b.cover_image_url} spineUrl={b.spine_image_url} title={b.title} count={b.records.length} interactive={false} />
                     ) : (
@@ -875,14 +892,14 @@ export default function Audioteca({ records, boxes = [], isLoggedIn }: { records
                       />
                     )}
                   </div>
-                  <p className="mt-1 line-clamp-1 text-[12px] font-medium text-ink">{b.title}</p>
-                  <p className="text-[11px] text-faint">{b.records.length} {b.records.length === 1 ? "disco" : "discos"}</p>
+                  <p className="mt-1 line-clamp-1 text-center text-[12px] font-medium text-ink lg:text-left">{b.title}</p>
+                  <p className="text-center text-[11px] text-faint lg:text-left">{b.records.length} {b.records.length === 1 ? "disco" : "discos"}</p>
                   {locked ? (
                     <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[10px] font-semibold text-white">
                       <Lock size={11} /> {b.audioteca_tier === "signature" ? "Neblina Signature" : "Entre para ouvir"}
                     </span>
                   ) : (
-                    <div className="mt-1.5 flex items-center gap-1.5">
+                    <div className="mt-1.5 flex items-center justify-center gap-1.5 lg:justify-start">
                       <button onClick={() => placeBox(b.records)} className="flex items-center gap-1 rounded-full bg-brand px-2.5 py-1 text-[11px] font-bold text-black transition hover:brightness-95">
                         <Plus size={12} /> Ouvir o box
                       </button>
@@ -895,17 +912,10 @@ export default function Audioteca({ records, boxes = [], isLoggedIn }: { records
               );
             })}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* ================= ESTANTE ================= */}
-      <div className="mt-12">
-        <div className="mb-4 flex items-center gap-2 text-sm text-muted">
-          <Hand size={16} className="text-brand" />
-          {coarse ? "Clique para o disco sair da capa. Arraste o disco até o prato." : "Passe o mouse para o disco sair da capa. Segure e leve até o prato."}
-        </div>
-        <Shelf records={records} coarse={coarse} openId={openId} setOpenId={setOpenId} onGrab={startDrag} onQueue={place} canAccess={canAccess} queuedIds={queue.map((q) => q.id)} />
-      </div>
+      </div>{/* fim do grid da Audioteca */}
 
       {/* disco fantasma sendo arrastado */}
       {drag && (
@@ -1007,7 +1017,8 @@ function Shelf({
 
   return (
     <div className="relative">
-      <div className="flex items-end gap-4 overflow-x-auto px-2 pb-6 pt-4" style={{ scrollbarWidth: "thin" }}>
+      {/* horizontal no mobile; vira coluna vertical (com scroll próprio) no desktop */}
+      <div className="flex items-end gap-4 overflow-x-auto px-2 pb-6 pt-4 lg:flex-col lg:items-start lg:overflow-x-hidden lg:overflow-y-auto lg:max-h-[74vh] lg:pb-2 lg:pr-1" style={{ scrollbarWidth: "thin" }}>
         {ordered.map((r) => {
           const locked = !canAccess(r);
           const open = openId === r.id && !locked;
@@ -1087,7 +1098,7 @@ function Shelf({
           );
         })}
       </div>
-      <div className="h-3 rounded-b-xl" style={{ background: "linear-gradient(180deg, #3a2a1c, #1c140d)", boxShadow: "0 10px 22px -8px rgba(0,0,0,0.85)" }} />
+      <div className="h-3 rounded-b-xl lg:hidden" style={{ background: "linear-gradient(180deg, #3a2a1c, #1c140d)", boxShadow: "0 10px 22px -8px rgba(0,0,0,0.85)" }} />
     </div>
   );
 }
