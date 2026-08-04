@@ -7,7 +7,7 @@ import type { RecordItem, Tag } from "@/lib/types";
 export const revalidate = 0;
 
 // Colunas usadas pela tabela do admin (sem os campos pesados: tracks, history…).
-const TABLE_COLS = "id,title,artist,genre,price,availability,views_count,is_published,cover_image_url,tag_ids";
+const TABLE_COLS = "id,title,artist,genre,year,price,availability,views_count,is_published,cover_image_url,tag_ids";
 
 /** Busca TODOS os discos paginando por `range` (o PostgREST corta em 1000). */
 async function fetchAllRecords(

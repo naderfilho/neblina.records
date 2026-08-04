@@ -179,6 +179,7 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
             <tr>
               <th className="px-4 py-3">Disco</th>
               <th className="px-4 py-3">Estilo</th>
+              <th className="px-4 py-3">Ano</th>
               <th className="px-4 py-3">Preço</th>
               <th className="px-4 py-3">Disponibilidade</th>
               <th className="px-4 py-3">Visitas</th>
@@ -207,6 +208,7 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
                   </div>
                 </td>
                 <td className="px-4 py-3 text-muted">{r.genre ?? "—"}</td>
+                <td className="px-4 py-3 text-muted">{r.year ?? "—"}</td>
                 <td className="px-4 py-3 text-brand">{formatBRL(r.price)}</td>
                 <td className="px-4 py-3">
                   <div className="inline-flex items-center gap-1.5">
@@ -256,7 +258,7 @@ export default function AdminRecordsTable({ records, tags = [] }: { records: Rec
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-16 text-center text-muted">Nenhum disco encontrado.</td>
+                <td colSpan={8} className="px-4 py-16 text-center text-muted">Nenhum disco encontrado.</td>
               </tr>
             )}
           </tbody>
