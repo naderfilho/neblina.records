@@ -6,7 +6,7 @@ import {
   Play, Pause, SkipBack, SkipForward, Hand, Disc3, ArrowDownToLine,
   Volume2, Waves, X, ListMusic, BookOpen, Plus, Lock, Eye,
 } from "lucide-react";
-import Vinyl from "@/components/Vinyl";
+import Vinyl, { GROOVE_LAYER } from "@/components/Vinyl";
 import BoxArt from "@/components/BoxArt";
 import BoxHoverFan from "@/components/BoxHoverFan";
 import { resolveDiscColor, resolveBorderColor, DEFAULT_DISC_CONFIG, type DiscConfig, type BoxConfig } from "@/lib/constants";
@@ -60,9 +60,9 @@ function PlatterFace({
         className="absolute inset-0 rounded-full bg-cover bg-center"
         style={
           cfg.bodyImageUrl
-            ? { backgroundImage: `url(${cfg.bodyImageUrl})` }
+            ? { backgroundImage: `${GROOVE_LAYER}, url(${cfg.bodyImageUrl})`, backgroundSize: "auto, cover", backgroundPosition: "center, center", backgroundRepeat: "repeat, no-repeat" }
             : {
-                backgroundImage: `repeating-radial-gradient(circle at center, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 0.8px, rgba(0,0,0,0.16) 0.8px, rgba(0,0,0,0.16) 1.6px, transparent 1.6px, transparent 3px), radial-gradient(circle at 30% 26%, rgba(255,255,255,0.12), transparent 42%), radial-gradient(circle at center, ${c.groove} 0%, ${c.ring} 66%, #050505 100%)`,
+                backgroundImage: `${GROOVE_LAYER}, radial-gradient(circle at 30% 26%, rgba(255,255,255,0.12), transparent 42%), radial-gradient(circle at center, ${c.groove} 0%, ${c.ring} 66%, #050505 100%)`,
               }
         }
       >

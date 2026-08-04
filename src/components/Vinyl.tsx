@@ -23,16 +23,23 @@ type VinylProps = {
   noNeedle?: boolean;
 };
 
+// Sulcos do disco: linha CLARA + ESCURA por período -> aparecem em QUALQUER cor
+// (só branco sumia nos discos coloridos/claros). Idêntico em todos os lugares.
+export const GROOVE_LAYER =
+  "repeating-radial-gradient(circle at center, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 1px, rgba(0,0,0,0.28) 1px, rgba(0,0,0,0.28) 2px, transparent 2px, transparent 3px)";
+
 function bodyStyle(colorId: string, styleId?: string, bodyImageUrl?: string | null): CSSProperties {
-  // estampa custom: a arte enviada vira o corpo inteiro do disco
+  // estampa custom: a arte vira o corpo do disco — mas os sulcos ficam POR CIMA
   if (bodyImageUrl) {
-    return { backgroundImage: `url(${bodyImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" };
+    return {
+      backgroundImage: `${GROOVE_LAYER}, url(${bodyImageUrl})`,
+      backgroundSize: "auto, cover",
+      backgroundPosition: "center, center",
+      backgroundRepeat: "repeat, no-repeat",
+    };
   }
   const c = resolveDiscColor(colorId);
-  // sulcos: linha clara + escura por período -> aparecem em QUALQUER cor de disco
-  // (o branco puro sumia nos discos coloridos/claros). Idêntico em todos os lugares.
-  const grooves =
-    "repeating-radial-gradient(circle at center, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 0.8px, rgba(0,0,0,0.16) 0.8px, rgba(0,0,0,0.16) 1.6px, transparent 1.6px, transparent 3px)";
+  const grooves = GROOVE_LAYER;
   const sheen = "radial-gradient(circle at 30% 26%, rgba(255,255,255,0.12), transparent 42%)";
   const base = `radial-gradient(circle at center, ${c.groove} 0%, ${c.ring} 66%, #050505 100%)`;
 
@@ -180,10 +187,11 @@ export default function Vinyl({
     if (body && !autoSpin) {
       const target = Math.round(rotationRef.current / 360) * 360;
       if (target !== rotationRef.current) {
-        body.style.transition = "transform 0.7s cubic-bezier(0.22,1,0.36,1)";
+        // bem devagar: o disco desacelera suavemente até ficar em pé
+        body.style.transition = "transform 2.6s cubic-bezier(0.15,0.85,0.25,1)";
         rotationRef.current = target;
         body.style.transform = `rotate(${target}deg)`;
-        window.setTimeout(() => { if (bodyRef.current) bodyRef.current.style.transition = ""; }, 720);
+        window.setTimeout(() => { if (bodyRef.current) bodyRef.current.style.transition = ""; }, 2650);
       }
     }
   }, [autoSpin]);
