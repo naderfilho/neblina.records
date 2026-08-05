@@ -535,6 +535,10 @@ create table if not exists public.box_records (
 create index if not exists box_records_box_idx on public.box_records (box_id, position);
 create index if not exists box_records_record_idx on public.box_records (record_id);
 
+-- discos exclusivos de um box (cadastrados junto do box, fora do catálogo)
+alter table public.records add column if not exists box_only boolean not null default false;
+create index if not exists records_box_only_idx on public.records (box_only);
+
 drop trigger if exists boxes_set_updated_at on public.boxes;
 create trigger boxes_set_updated_at
   before update on public.boxes

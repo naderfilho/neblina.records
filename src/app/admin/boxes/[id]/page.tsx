@@ -2,8 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { fetchAllRange } from "@/lib/fetchAllRange";
-import BoxForm, { type RecordOption } from "@/components/admin/BoxForm";
+import BoxForm, { type BoxDiscInit } from "@/components/admin/BoxForm";
 import type { BoxItem } from "@/lib/types";
 
 export const revalidate = 0;
@@ -12,16 +11,20 @@ export default async function EditBoxPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: box }, { data: rows }, allRecords] = await Promise.all([
+  const [{ data: box }, { data: rows }] = await Promise.all([
     supabase.from("boxes").select("*").eq("id", id).maybeSingle(),
-    supabase.from("box_records").select("record_id, position").eq("box_id", id).order("position"),
-    fetchAllRange<RecordOption>((from, to) =>
-      supabase.from("records").select("id,title,artist,cover_image_url").order("created_at", { ascending: false }).order("id").range(from, to),
-    ),
+    supabase
+      .from("box_records")
+      .select("position, records(id,title,artist,cover_image_url,audio_url)")
+      .eq("box_id", id)
+      .order("position"),
   ]);
 
   if (!box) notFound();
-  const initialRecordIds = ((rows ?? []) as { record_id: string }[]).map((r) => r.record_id);
+
+  const initialDiscs = ((rows ?? []) as unknown as { records: BoxDiscInit | null }[])
+    .map((r) => r.records)
+    .filter((r): r is BoxDiscInit => !!r);
 
   return (
     <div className="p-6 md:p-10">
@@ -29,7 +32,7 @@ export default async function EditBoxPage({ params }: { params: Promise<{ id: st
         <ArrowLeft size={16} /> Voltar
       </Link>
       <h1 className="mb-6 font-display text-3xl text-ink">Editar box</h1>
-      <BoxForm box={box as BoxItem} initialRecordIds={initialRecordIds} allRecords={allRecords} />
+      <BoxForm box={box as BoxItem} initialDiscs={initialDiscs} />
     </div>
   );
 }

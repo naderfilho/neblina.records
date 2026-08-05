@@ -18,6 +18,7 @@ async function fetchAllRecords(
     const { data, error } = await supabase
       .from("records")
       .select(TABLE_COLS)
+      .eq("box_only", false) // discos exclusivos de box não entram no catálogo
       .order("created_at", { ascending: false })
       .order("id", { ascending: true })
       .range(from, from + 999);

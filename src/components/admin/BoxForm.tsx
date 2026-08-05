@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Image as ImageIcon, Loader2, Save, Plus, Trash2, Search, ArrowUp, ArrowDown, GripVertical,
-  Type, Heading, Quote, ListTree, Disc3,
+  Image as ImageIcon, Loader2, Save, Plus, Trash2, ArrowUp, ArrowDown, Music, Disc3,
+  Type, Heading, Quote, ListTree,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFile } from "@/lib/upload";
@@ -12,22 +12,33 @@ import { logAction } from "@/lib/audit";
 import ImageCropper from "@/components/admin/ImageCropper";
 import BoxArt from "@/components/BoxArt";
 import {
-  BOX_TYPES, BOX_FINISHES, BOX_COLORS, DEFAULT_BOX_CONFIG, PAYMENT_METHODS, AVAILABILITY,
-  AUDIOTECA_TIERS, type BoxConfig, type Availability,
+  BOX_TYPES, BOX_FINISHES, BOX_COLORS, DEFAULT_BOX_CONFIG, DEFAULT_DISC_CONFIG, PAYMENT_METHODS,
+  AVAILABILITY, AUDIOTECA_TIERS, type BoxConfig, type Availability,
 } from "@/lib/constants";
 import type { BoxItem, ExtraBlock } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export type RecordOption = { id: string; title: string; artist: string; cover_image_url: string | null };
+/** Disco de um box já existente (ao editar) — o que carregamos do banco. */
+export type BoxDiscInit = { id: string; title: string; artist: string; cover_image_url: string | null; audio_url: string | null };
+
+/** Disco no editor. `recordId` presente = disco já salvo (edição). */
+type BoxDisc = {
+  key: string;
+  recordId?: string;
+  title: string;
+  artist: string;
+  coverFile?: File | null;
+  coverPreview: string | null;
+  audioFile?: File | null;
+  audioUrl: string | null;
+};
 
 export default function BoxForm({
   box,
-  initialRecordIds = [],
-  allRecords,
+  initialDiscs = [],
 }: {
   box?: BoxItem;
-  initialRecordIds?: string[];
-  allRecords: RecordOption[];
+  initialDiscs?: BoxDiscInit[];
 }) {
   const router = useRouter();
   const isEdit = !!box;
@@ -53,38 +64,23 @@ export default function BoxForm({
   const [spineFile, setSpineFile] = useState<File | null>(null);
   const [spinePreview, setSpinePreview] = useState<string | null>(box?.spine_image_url ?? null);
 
-  const [selectedIds, setSelectedIds] = useState<string[]>(initialRecordIds);
-  const [discSearch, setDiscSearch] = useState("");
+  const [discs, setDiscs] = useState<BoxDisc[]>(
+    initialDiscs.map((d) => ({ key: d.id, recordId: d.id, title: d.title, artist: d.artist, coverPreview: d.cover_image_url, audioUrl: d.audio_url })),
+  );
+  // ids dos discos que existiam ao abrir — para apagar os que forem removidos
+  const initialIds = useRef(initialDiscs.map((d) => d.id));
 
-  const [cropper, setCropper] = useState<{ file: File; onApply: (b: Blob) => void } | null>(null);
+  const [cropper, setCropper] = useState<{ file: File; onApply: (b: Blob) => void; round?: boolean } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const coverInput = useRef<HTMLInputElement>(null);
   const spineInput = useRef<HTMLInputElement>(null);
 
-  const recById = useMemo(() => new Map(allRecords.map((r) => [r.id, r])), [allRecords]);
-  const selected = selectedIds.map((id) => recById.get(id)).filter((r): r is RecordOption => !!r);
-
-  const searchResults = useMemo(() => {
-    const q = discSearch.trim().toLowerCase();
-    if (!q) return [];
-    return allRecords
-      .filter((r) => !selectedIds.includes(r.id))
-      .filter((r) => `${r.title} ${r.artist}`.toLowerCase().includes(q))
-      .slice(0, 12);
-  }, [discSearch, allRecords, selectedIds]);
-
   function onCover(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
-    setCropper({
-      file: f,
-      onApply: (blob) => {
-        setCoverFile(new File([blob], "box-cover.jpg", { type: "image/jpeg" }));
-        setCoverPreview(URL.createObjectURL(blob));
-      },
-    });
+    setCropper({ file: f, onApply: (blob) => { setCoverFile(new File([blob], "box-cover.jpg", { type: "image/jpeg" })); setCoverPreview(URL.createObjectURL(blob)); } });
     e.target.value = "";
   }
   function onSpine(e: React.ChangeEvent<HTMLInputElement>) {
@@ -95,15 +91,35 @@ export default function BoxForm({
     e.target.value = "";
   }
 
-  function move(idx: number, dir: -1 | 1) {
-    setSelectedIds((ids) => {
+  // ---- discos do box ----
+  function addDisc() {
+    setDiscs((d) => [...d, { key: crypto.randomUUID(), title: "", artist: "", coverPreview: null, audioUrl: null }]);
+  }
+  function patchDisc(key: string, patch: Partial<BoxDisc>) {
+    setDiscs((ds) => ds.map((d) => (d.key === key ? { ...d, ...patch } : d)));
+  }
+  function moveDisc(idx: number, dir: -1 | 1) {
+    setDiscs((ds) => {
       const j = idx + dir;
-      if (j < 0 || j >= ids.length) return ids;
-      const copy = [...ids];
+      if (j < 0 || j >= ds.length) return ds;
+      const copy = [...ds];
       [copy[idx], copy[j]] = [copy[j], copy[idx]];
       return copy;
     });
   }
+  function onDiscCover(key: string, e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setCropper({ file: f, round: true, onApply: (blob) => patchDisc(key, { coverFile: new File([blob], "disc.jpg", { type: "image/jpeg" }), coverPreview: URL.createObjectURL(blob) }) });
+    e.target.value = "";
+  }
+  function onDiscAudio(key: string, e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    patchDisc(key, { audioFile: f, audioUrl: URL.createObjectURL(f) });
+    e.target.value = "";
+  }
+
   function addBlock(type: ExtraBlock["type"]) {
     setBlocks((b) => [...b, { id: crypto.randomUUID(), type, content: "", title: "", key: "", value: "" }]);
   }
@@ -112,6 +128,7 @@ export default function BoxForm({
     e.preventDefault();
     setError(null);
     if (!title.trim()) { setError("O título do box é obrigatório."); return; }
+    if (discs.some((d) => !d.title.trim() || !d.artist.trim())) { setError("Cada disco do box precisa de título e artista."); return; }
     setSaving(true);
     const supabase = createClient();
     try {
@@ -123,48 +140,67 @@ export default function BoxForm({
       let spineUrl = spinePreview;
       if (spineFile) spineUrl = await uploadFile("covers", spineFile, "box-spine-");
 
-      const payload = {
-        title: title.trim(),
-        subtitle: subtitle.trim() || null,
-        box_type: boxType || null,
-        description: description.trim() || null,
-        cover_image_url: coverUrl,
-        spine_image_url: spineUrl,
-        box_config: cfg,
-        year: year ? parseInt(year) : null,
-        catalog_number: catalog.trim() || null,
-        label_company: label.trim() || null,
-        price: price ? parseFloat(price) : 0,
-        payment_methods: payments,
-        availability,
-        audioteca_tier: tier,
-        is_published: published,
-        is_featured: featured,
-        sort_order: box?.sort_order ?? 0,
-        extra_blocks: blocks,
+      const boxPayload = {
+        title: title.trim(), subtitle: subtitle.trim() || null, box_type: boxType || null,
+        description: description.trim() || null, cover_image_url: coverUrl, spine_image_url: spineUrl,
+        box_config: cfg, year: year ? parseInt(year) : null, catalog_number: catalog.trim() || null,
+        label_company: label.trim() || null, price: price ? parseFloat(price) : 0, payment_methods: payments,
+        availability, audioteca_tier: tier, is_published: published, is_featured: featured,
+        sort_order: box?.sort_order ?? 0, extra_blocks: blocks,
       };
 
       let boxId = box?.id;
       if (isEdit) {
-        const { error: e1 } = await supabase.from("boxes").update(payload).eq("id", box!.id);
+        const { error: e1 } = await supabase.from("boxes").update(boxPayload).eq("id", box!.id);
         if (e1) throw e1;
       } else {
-        const { data, error: e1 } = await supabase.from("boxes").insert(payload).select("id").single();
+        const { data, error: e1 } = await supabase.from("boxes").insert(boxPayload).select("id").single();
         if (e1) throw e1;
         boxId = data.id as string;
       }
+      if (!boxId) throw new Error("Falha ao criar o box.");
 
-      // sincroniza os discos vinculados (apaga e reinsere com a ordem atual)
-      if (boxId) {
-        await supabase.from("box_records").delete().eq("box_id", boxId);
-        if (selectedIds.length) {
-          const { error: e2 } = await supabase
-            .from("box_records")
-            .insert(selectedIds.map((rid, i) => ({ box_id: boxId, record_id: rid, position: i })));
-          if (e2) throw e2;
+      // discos removidos (existiam ao abrir e saíram) -> apaga os registros box_only
+      const keptIds = discs.map((d) => d.recordId).filter(Boolean) as string[];
+      const removed = initialIds.current.filter((id) => !keptIds.includes(id));
+      if (removed.length) await supabase.from("records").delete().in("id", removed);
+
+      // cria/atualiza cada disco do box (registros box_only, fora do catálogo) e monta a ordem
+      const orderedIds: string[] = [];
+      for (const d of discs) {
+        let cover = d.coverPreview && !d.coverPreview.startsWith("blob:") ? d.coverPreview : null;
+        if (d.coverFile) cover = await uploadFile("covers", d.coverFile, "disc-");
+        let audio = d.audioUrl && !d.audioUrl.startsWith("blob:") ? d.audioUrl : null;
+        if (d.audioFile) audio = await uploadFile("audio", d.audioFile, "track-");
+
+        const trackId = crypto.randomUUID();
+        const tracks = audio ? [{ id: trackId, side: "A", title: d.title.trim(), audio_url: audio, disc: 1 }] : [];
+        const recPayload = {
+          title: d.title.trim(), artist: d.artist.trim(),
+          box_only: true, is_published: false, availability: "unavailable", stock_qty: 0, price: 0,
+          disc_config: DEFAULT_DISC_CONFIG, cover_image_url: cover,
+          tracks, home_track_id: audio ? trackId : null,
+          audio_url: audio, audio_start: 0, audio_end: null,
+          payment_methods: [],
+        };
+        if (d.recordId) {
+          const { error: eu } = await supabase.from("records").update(recPayload).eq("id", d.recordId);
+          if (eu) throw eu;
+          orderedIds.push(d.recordId);
+        } else {
+          const { data, error: ei } = await supabase.from("records").insert(recPayload).select("id").single();
+          if (ei) throw ei;
+          orderedIds.push(data.id as string);
         }
-        logAction(isEdit ? "update" : "create", "box", boxId, payload.title, { discos: selectedIds.length });
       }
+
+      // sincroniza a ordem no join
+      await supabase.from("box_records").delete().eq("box_id", boxId);
+      if (orderedIds.length) {
+        const { error: e2 } = await supabase.from("box_records").insert(orderedIds.map((rid, i) => ({ box_id: boxId, record_id: rid, position: i })));
+        if (e2) throw e2;
+      }
+      logAction(isEdit ? "update" : "create", "box", boxId, boxPayload.title, { discos: orderedIds.length });
 
       router.push("/admin/boxes");
       router.refresh();
@@ -197,15 +233,12 @@ export default function BoxForm({
               <input ref={spineInput} type="file" accept="image/*" hidden onChange={onSpine} />
             </div>
 
-            {/* Designer: acabamento + cor */}
             <div>
               <p className="mb-1.5 text-xs uppercase tracking-wider text-muted">Acabamento</p>
               <div className="flex flex-wrap gap-2">
                 {BOX_FINISHES.map((f) => (
                   <button key={f.id} type="button" onClick={() => setCfg((c) => ({ ...c, finish: f.id }))}
-                    className={cn("rounded-lg border px-3 py-1.5 text-xs", cfg.finish === f.id ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:text-ink")}>
-                    {f.label}
-                  </button>
+                    className={cn("rounded-lg border px-3 py-1.5 text-xs", cfg.finish === f.id ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:text-ink")}>{f.label}</button>
                 ))}
               </div>
             </div>
@@ -213,8 +246,7 @@ export default function BoxForm({
               <p className="mb-1.5 text-xs uppercase tracking-wider text-muted">Cor do material</p>
               <div className="flex flex-wrap gap-2">
                 {BOX_COLORS.map((c) => (
-                  <button key={c.id} type="button" onClick={() => setCfg((cc) => ({ ...cc, color: c.id, accent: c.accent }))}
-                    title={c.label}
+                  <button key={c.id} type="button" onClick={() => setCfg((cc) => ({ ...cc, color: c.id, accent: c.accent }))} title={c.label}
                     className={cn("h-8 w-8 rounded-full border-2 transition", cfg.color === c.id ? "border-brand" : "border-transparent")}
                     style={{ background: `linear-gradient(135deg, ${c.base}, ${c.accent})` }} />
                 ))}
@@ -222,10 +254,9 @@ export default function BoxForm({
             </div>
           </div>
 
-          {/* prévia 3D */}
           <div className="flex items-center justify-center rounded-2xl border border-line bg-bg-soft p-6">
             <div className="w-full max-w-[220px]">
-              <BoxArt config={cfg} coverUrl={coverPreview} spineUrl={spinePreview} title={title || "Box"} count={selectedIds.length || 3} />
+              <BoxArt config={cfg} coverUrl={coverPreview} spineUrl={spinePreview} title={title || "Box"} count={discs.length || 3} />
             </div>
           </div>
         </div>
@@ -259,9 +290,7 @@ export default function BoxForm({
           <div className="flex flex-wrap gap-2">
             {PAYMENT_METHODS.map((m) => (
               <button key={m} type="button" onClick={() => setPayments((p) => (p.includes(m) ? p.filter((x) => x !== m) : [...p, m]))}
-                className={cn("rounded-lg border px-3 py-1.5 text-xs", payments.includes(m) ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:text-ink")}>
-                {m}
-              </button>
+                className={cn("rounded-lg border px-3 py-1.5 text-xs", payments.includes(m) ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:text-ink")}>{m}</button>
             ))}
           </div>
         </div>
@@ -284,46 +313,50 @@ export default function BoxForm({
         </div>
       </Section>
 
-      {/* Discos do box */}
-      <Section title="Discos do box" desc="Vincule discos já cadastrados. A ordem define a sequência na abertura cinematográfica e na Audioteca.">
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
-          <input className="ipt !pl-10" value={discSearch} onChange={(e) => setDiscSearch(e.target.value)} placeholder="Buscar disco por título ou artista…" />
-          {searchResults.length > 0 && (
-            <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-line bg-panel shadow-xl">
-              {searchResults.map((r) => (
-                <button key={r.id} type="button"
-                  onClick={() => { setSelectedIds((ids) => [...ids, r.id]); setDiscSearch(""); }}
-                  className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-bg-soft">
-                  {r.cover_image_url ? (
+      {/* Discos do box (cadastrados aqui, exclusivos do box) */}
+      <Section title="Discos do box" desc="Cadastre os discos que vêm dentro do box. Eles são exclusivos do box — não aparecem no catálogo nem são vendidos separados. A ordem define a sequência na abertura e na Audioteca.">
+        <div className="space-y-3">
+          {discs.length === 0 && <p className="text-sm text-faint">Nenhum disco ainda. Adicione o primeiro disco do box abaixo.</p>}
+          {discs.map((d, i) => (
+            <div key={d.key} className="rounded-2xl border border-line bg-bg-soft p-3">
+              <div className="flex items-start gap-3">
+                {/* capa do disco */}
+                <label className="group relative h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-full border border-line bg-panel">
+                  {d.coverPreview ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={r.cover_image_url} alt="" className="h-9 w-9 rounded object-cover" />
-                  ) : <span className="flex h-9 w-9 items-center justify-center rounded bg-bg-soft text-faint"><Disc3 size={15} /></span>}
-                  <span className="min-w-0"><span className="block truncate text-ink">{r.title}</span><span className="block truncate text-xs text-muted">{r.artist}</span></span>
-                  <Plus size={15} className="ml-auto text-brand" />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+                    <img src={d.coverPreview} alt="" className="h-full w-full object-cover" />
+                  ) : <span className="flex h-full w-full items-center justify-center text-faint"><Disc3 size={20} /></span>}
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-[10px] font-semibold text-white opacity-0 transition group-hover:opacity-100">{d.coverPreview ? "trocar" : "capa"}</span>
+                  <input type="file" accept="image/*" hidden onChange={(e) => onDiscCover(d.key, e)} />
+                </label>
 
-        <div className="mt-4 space-y-2">
-          {selected.length === 0 && <p className="text-sm text-faint">Nenhum disco vinculado ainda. Busque acima para adicionar.</p>}
-          {selected.map((r, i) => (
-            <div key={r.id} className="flex items-center gap-3 rounded-xl border border-line bg-bg-soft p-2">
-              <GripVertical size={15} className="text-faint" />
-              <span className="w-5 text-center text-xs text-faint">{i + 1}</span>
-              {r.cover_image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={r.cover_image_url} alt="" className="h-10 w-10 rounded object-cover" />
-              ) : <span className="flex h-10 w-10 items-center justify-center rounded bg-panel text-faint"><Disc3 size={16} /></span>}
-              <span className="min-w-0 flex-1"><span className="block truncate text-sm text-ink">{r.title}</span><span className="block truncate text-xs text-muted">{r.artist}</span></span>
-              <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="rounded p-1.5 text-faint hover:text-brand disabled:opacity-30"><ArrowUp size={15} /></button>
-              <button type="button" onClick={() => move(i, 1)} disabled={i === selected.length - 1} className="rounded p-1.5 text-faint hover:text-brand disabled:opacity-30"><ArrowDown size={15} /></button>
-              <button type="button" onClick={() => setSelectedIds((ids) => ids.filter((x) => x !== r.id))} className="rounded p-1.5 text-faint hover:text-red-400"><Trash2 size={15} /></button>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <input className="ipt" placeholder="Título do disco *" value={d.title} onChange={(e) => patchDisc(d.key, { title: e.target.value })} />
+                    <input className="ipt" placeholder="Artista *" value={d.artist} onChange={(e) => patchDisc(d.key, { artist: e.target.value })} />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className={cn("flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs", d.audioUrl ? "border-teal/50 text-teal" : "border-line text-muted hover:text-brand")}>
+                      <Music size={13} /> {d.audioUrl ? "Áudio enviado (trocar)" : "Áudio (opcional)"}
+                      <input type="file" accept="audio/*" hidden onChange={(e) => onDiscAudio(d.key, e)} />
+                    </label>
+                    {d.audioUrl && <button type="button" onClick={() => patchDisc(d.key, { audioFile: null, audioUrl: null })} className="text-xs text-faint hover:text-red-400">remover áudio</button>}
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 flex-col items-center gap-1">
+                  <span className="text-xs text-faint">{i + 1}</span>
+                  <button type="button" onClick={() => moveDisc(i, -1)} disabled={i === 0} className="rounded p-1 text-faint hover:text-brand disabled:opacity-30"><ArrowUp size={14} /></button>
+                  <button type="button" onClick={() => moveDisc(i, 1)} disabled={i === discs.length - 1} className="rounded p-1 text-faint hover:text-brand disabled:opacity-30"><ArrowDown size={14} /></button>
+                  <button type="button" onClick={() => setDiscs((ds) => ds.filter((x) => x.key !== d.key))} className="rounded p-1 text-faint hover:text-red-400"><Trash2 size={14} /></button>
+                </div>
+              </div>
             </div>
           ))}
         </div>
+        <button type="button" onClick={addDisc} className="mt-3 flex items-center gap-1.5 rounded-xl border border-dashed border-line px-4 py-2.5 text-sm text-muted hover:border-brand/50 hover:text-brand">
+          <Plus size={16} /> Adicionar disco
+        </button>
       </Section>
 
       {/* Blocos extras */}
@@ -366,7 +399,7 @@ export default function BoxForm({
       </div>
 
       {cropper && (
-        <ImageCropper file={cropper.file} onCancel={() => setCropper(null)} onDone={(blob) => { cropper.onApply(blob); setCropper(null); }} />
+        <ImageCropper file={cropper.file} round={cropper.round} onCancel={() => setCropper(null)} onDone={(blob) => { cropper.onApply(blob); setCropper(null); }} />
       )}
 
       <style jsx global>{`

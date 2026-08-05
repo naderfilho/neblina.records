@@ -12,6 +12,7 @@ import BuyButtons from "@/components/BuyButtons";
 import DiscCoverReveal from "@/components/DiscCoverReveal";
 import GatefoldViewer from "@/components/GatefoldViewer";
 import FavoriteButton from "@/components/FavoriteButton";
+import ShareButton from "@/components/ShareButton";
 import GradingHelp from "@/components/GradingHelp";
 import ShippingCalculator from "@/components/ShippingCalculator";
 import PhotoGallery from "@/components/PhotoGallery";
@@ -107,7 +108,7 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
   ].filter((x) => x.value);
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="mx-auto max-w-6xl overflow-x-clip px-6 py-10">
       <BackButton />
 
       <div className="grid gap-10 md:grid-cols-2">
@@ -197,7 +198,10 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
 
           <div className="mt-6 space-y-3">
             <BuyButtons id={r.id} title={r.title} artist={r.artist} price={r.price} coverUrl={r.cover_image_url} available={r.availability === "available"} />
-            <FavoriteButton recordId={r.id} initialFav={isFav} userId={profile?.id ?? null} />
+            <div className="flex flex-wrap items-center gap-2">
+              <FavoriteButton recordId={r.id} initialFav={isFav} userId={profile?.id ?? null} />
+              <ShareButton id={r.id} title={r.title} artist={r.artist} />
+            </div>
           </div>
 
           {r.payment_methods.length > 0 && (

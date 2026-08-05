@@ -26,9 +26,13 @@ export default function AdminBoxesTable({ boxes }: { boxes: BoxSummary[] }) {
   }
 
   async function remove(b: BoxSummary) {
-    if (!confirm(`Excluir o box "${b.title}"? Os discos vinculados NÃO são apagados.`)) return;
+    if (!confirm(`Excluir o box "${b.title}" e os discos que estão dentro dele? Esta ação não pode ser desfeita.`)) return;
     setBusy(b.id);
     const supabase = createClient();
+    // os discos são exclusivos do box -> apaga junto
+    const { data: rows } = await supabase.from("box_records").select("record_id").eq("box_id", b.id);
+    const recIds = (rows ?? []).map((r) => r.record_id as string);
+    if (recIds.length) await supabase.from("records").delete().in("id", recIds);
     await supabase.from("boxes").delete().eq("id", b.id);
     logAction("delete", "box", b.id, b.title, {});
     setBusy(null);

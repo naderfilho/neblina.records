@@ -43,7 +43,7 @@ export default async function BoxPage({ params }: { params: Promise<{ id: string
   ].filter((s) => s.value);
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="mx-auto max-w-6xl overflow-x-clip px-6 py-10">
       <BackButton />
 
       {/* cabeçalho */}

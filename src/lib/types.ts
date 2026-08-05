@@ -138,6 +138,7 @@ export type RecordItem = {
   availability: "available" | "reserved" | "unavailable" | "sold";
   is_published: boolean;
   is_featured: boolean;
+  box_only: boolean;
   sold: boolean;
   sold_channel: string | null;
   sold_to_user_id: string | null;
