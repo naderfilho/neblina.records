@@ -31,8 +31,11 @@ export const metadata: Metadata = {
   icons: { icon: "/logo.png" },
 };
 
-// Roda antes da pintura: se a abertura já foi vista nesta sessão, esconde o shell.
-const introScript = `try{if(sessionStorage.getItem('neblina_intro_seen')){document.documentElement.classList.add('intro-seen')}}catch(e){}`;
+// Roda antes da pintura: o shell da abertura SÓ deve aparecer na home ('/').
+// Em qualquer outra rota (ex.: link direto de /disco/... encaminhado a um amigo),
+// ou se a abertura já foi vista nesta sessão, escondemos o shell na hora — senão
+// ele fica preso cobrindo a página (a IntroCurtain que o esconde só existe na home).
+const introScript = `try{var s=false;try{s=!!sessionStorage.getItem('neblina_intro_seen')}catch(e){}if(location.pathname!=='/'||s){document.documentElement.classList.add('intro-seen')}}catch(e){document.documentElement.classList.add('intro-seen')}`;
 
 export default function RootLayout({
   children,
