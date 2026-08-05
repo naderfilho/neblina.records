@@ -184,7 +184,7 @@ $$;
 
 -- helper: mantém admin se já for admin
 create or replace function public.greatest_role(a public.user_role, b public.user_role)
-returns public.user_role language sql immutable as $$
+returns public.user_role language sql immutable set search_path = public as $$
   select case when a = 'admin' or b = 'admin' then 'admin'::public.user_role else 'customer'::public.user_role end;
 $$;
 
@@ -215,7 +215,7 @@ $$;
 
 -- updated_at automático
 create or replace function public.set_updated_at()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = public as $$
 begin new.updated_at = now(); return new; end; $$;
 
 drop trigger if exists records_set_updated_at on public.records;
@@ -538,6 +538,22 @@ create index if not exists box_records_record_idx on public.box_records (record_
 -- discos exclusivos de um box (cadastrados junto do box, fora do catálogo)
 alter table public.records add column if not exists box_only boolean not null default false;
 create index if not exists records_box_only_idx on public.records (box_only);
+
+-- ============================================================================
+--  Endurecimento (defesa em profundidade) — reduz a superfície das funções
+--  expostas via API. A segurança principal continua no RLS.
+-- ============================================================================
+-- funções que só o admin usa não ficam ao alcance do anon (já eram travadas por is_admin)
+revoke execute on function public.broadcast_notification(text, text, text, text, uuid) from anon;
+revoke execute on function public.set_records_order(uuid[]) from anon;
+revoke execute on function public.records_with_audio() from anon;
+revoke execute on function public.log_action(text, text, uuid, text, jsonb) from anon;
+revoke execute on function public.touch_last_login() from anon;
+-- funções de gatilho/evento não devem ser chamáveis via API por ninguém
+revoke execute on function public.handle_new_user() from anon, authenticated;
+revoke execute on function public.rls_auto_enable() from anon, authenticated;
+-- OBS: is_admin(), increment_record_views() e increment_box_views() continuam
+-- executáveis por anon — o RLS e as páginas públicas dependem delas.
 
 drop trigger if exists boxes_set_updated_at on public.boxes;
 create trigger boxes_set_updated_at

@@ -1,3 +1,6 @@
+// Módulo SÓ de servidor: importa @/lib/supabase/server (next/headers), então nunca
+// é incluído no bundle do cliente — a chave da Anthropic (process.env.ANTHROPIC_API_KEY)
+// nunca sai do servidor.
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 
