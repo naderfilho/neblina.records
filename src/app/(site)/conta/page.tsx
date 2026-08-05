@@ -1,12 +1,14 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { User, Mail, Phone, Calendar, LayoutDashboard, ShieldCheck, Heart, Disc3 } from "lucide-react";
+import { User, Mail, Phone, Calendar, LayoutDashboard, ShieldCheck, Heart, Disc3, Ticket } from "lucide-react";
 import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatBRL } from "@/lib/utils";
 import SignOutButton from "@/components/SignOutButton";
 import AvatarUpload from "@/components/AvatarUpload";
 import BirthDateEditor from "@/components/BirthDateEditor";
+import CouponList from "@/components/CouponList";
+import type { Coupon } from "@/lib/types";
 
 export const metadata = { title: "Minha conta" };
 export const revalidate = 0;
@@ -24,6 +26,11 @@ export default async function ContaPage() {
     .eq("user_id", profile.id)
     .order("created_at", { ascending: false });
   const favorites = ((favData ?? []) as unknown as FavRow[]).map((f) => f.records).filter((r): r is NonNullable<FavRow["records"]> => !!r);
+
+  // cupons do cliente (o RLS já devolve os dele + os gerais ativos); filtra ativos e não expirados
+  const { data: couponData } = await supabase.from("coupons").select("*").order("created_at", { ascending: false });
+  const now = Date.now();
+  const coupons = ((couponData ?? []) as Coupon[]).filter((c) => c.is_active && !c.redeemed_at && (!c.expires_at || new Date(c.expires_at).getTime() > now));
 
   const fields = [
     { icon: User, label: "Nome", value: `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || "—" },
@@ -68,6 +75,15 @@ export default async function ContaPage() {
           ))}
           <BirthDateEditor userId={profile.id} initial={profile.birth_date} />
         </dl>
+      </div>
+
+      {/* meus cupons */}
+      <div className="mt-6">
+        <h2 className="mb-4 flex items-center gap-2 font-display text-xl text-ink">
+          <Ticket size={18} className="text-brand" /> Meus cupons
+          <span className="text-sm font-normal text-faint">({coupons.length})</span>
+        </h2>
+        <CouponList coupons={coupons} />
       </div>
 
       {/* favoritos */}

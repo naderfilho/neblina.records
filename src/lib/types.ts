@@ -2,6 +2,18 @@ import type { QualityGrade, DiscConfig, BoxConfig } from "./constants";
 
 export type UserRole = "customer" | "admin";
 
+export type Coupon = {
+  id: string;
+  code: string;
+  discount_percent: number;
+  user_id: string | null;
+  description: string | null;
+  expires_at: string | null;
+  is_active: boolean;
+  redeemed_at: string | null;
+  created_at: string;
+};
+
 export type Profile = {
   id: string;
   first_name: string | null;
@@ -13,6 +25,7 @@ export type Profile = {
   birth_date: string | null;
   created_at: string;
   last_login_at: string | null;
+  welcomed_at: string | null;
 };
 
 export type ExtraBlock = {

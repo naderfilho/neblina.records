@@ -555,6 +555,38 @@ revoke execute on function public.rls_auto_enable() from anon, authenticated;
 -- OBS: is_admin(), increment_record_views() e increment_box_views() continuam
 -- executáveis por anon — o RLS e as páginas públicas dependem delas.
 
+-- ============================================================================
+--  CUPONS de desconto + boas-vindas
+-- ============================================================================
+create table if not exists public.coupons (
+  id               uuid primary key default gen_random_uuid(),
+  code             text not null unique,
+  discount_percent int not null check (discount_percent between 1 and 100),
+  user_id          uuid references public.profiles(id) on delete cascade, -- null = geral
+  description      text,
+  expires_at       timestamptz,
+  is_active        boolean not null default true,
+  redeemed_at      timestamptz,
+  created_at       timestamptz not null default now()
+);
+create index if not exists coupons_user_idx on public.coupons (user_id);
+create index if not exists coupons_active_idx on public.coupons (is_active);
+alter table public.coupons enable row level security;
+drop policy if exists coupons_read on public.coupons;
+create policy coupons_read on public.coupons
+  for select using (user_id = auth.uid() or (user_id is null and is_active) or public.is_admin());
+drop policy if exists coupons_admin_write on public.coupons;
+create policy coupons_admin_write on public.coupons
+  for all using (public.is_admin()) with check (public.is_admin());
+
+-- boas-vindas: marca quando o admin já tratou o cadastro novo
+alter table public.profiles add column if not exists welcomed_at timestamptz;
+
+-- admin pode inserir uma notificação avulsa (ex.: aviso de cupom para 1 cliente)
+drop policy if exists notifications_admin_insert on public.notifications;
+create policy notifications_admin_insert on public.notifications
+  for insert with check (public.is_admin());
+
 drop trigger if exists boxes_set_updated_at on public.boxes;
 create trigger boxes_set_updated_at
   before update on public.boxes

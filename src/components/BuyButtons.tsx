@@ -46,17 +46,31 @@ export default function BuyButtons({ id, title, artist, price, coverUrl, availab
     return [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
   }
 
-  function message(name: string) {
+  // melhor cupom válido do cliente (o RLS já devolve só os dele + gerais ativos)
+  async function bestCoupon(): Promise<{ code: string; pct: number } | null> {
+    const supabase = createClient();
+    const { data } = await supabase.from("coupons").select("code,discount_percent,expires_at,is_active,redeemed_at");
+    if (!data?.length) return null;
+    const now = Date.now();
+    const valid = data
+      .filter((c) => c.is_active && !c.redeemed_at && (!c.expires_at || new Date(c.expires_at as string).getTime() > now))
+      .sort((a, b) => (b.discount_percent as number) - (a.discount_percent as number));
+    return valid.length ? { code: valid[0].code as string, pct: valid[0].discount_percent as number } : null;
+  }
+
+  function message(name: string, coupon: { code: string; pct: number } | null) {
     const hello = name ? `Me chamo ${name} e tenho` : "Tenho";
     // link SEMPRE no domínio próprio (nunca a URL da Vercel)
     const link = `${STORE.siteUrl}/disco/${id}`;
-    return `Olá, Neblina Records! ${hello} interesse no seguinte disco:\n\n${title} — ${artist} — ${formatBRL(price)}\n${link}`;
+    const base = `Olá, Neblina Records! ${hello} interesse no seguinte disco:\n\n${title} — ${artist} — ${formatBRL(price)}\n${link}`;
+    return coupon ? `${base}\n\nTenho o cupom ${coupon.code} (${coupon.pct}% de desconto).` : base;
   }
 
   async function buyWhatsApp() {
     const name = await getName();
     if (name === null) return; // não logado → redirecionado
-    window.open(whatsappLink(STORE.whatsappPrimary, message(name)), "_blank");
+    const coupon = await bestCoupon();
+    window.open(whatsappLink(STORE.whatsappPrimary, message(name, coupon)), "_blank");
     cart.finalize(id); // comprou este disco pelo WhatsApp → não é abandono
   }
 

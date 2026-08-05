@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Disc3, Package, Users, CalendarDays, CalendarClock, Store, LogOut, Tag, ArrowUpDown, Music, Headphones, History, Bell, Send } from "lucide-react";
+import { LayoutDashboard, Disc3, Package, Users, CalendarDays, CalendarClock, Store, LogOut, Tag, ArrowUpDown, Music, Headphones, History, Bell, Send, Ticket } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/admin", label: "Visão geral", icon: LayoutDashboard, exact: true },
   { href: "/admin/notificacoes", label: "Atividade dos clientes", icon: Bell },
   { href: "/admin/notificar", label: "Enviar aviso", icon: Send },
+  { href: "/admin/cupons", label: "Cupons", icon: Ticket },
   { href: "/admin/discos", label: "Discos", icon: Disc3 },
   { href: "/admin/boxes", label: "Boxes", icon: Package },
   { href: "/admin/musica-home", label: "Música da home", icon: Music },
