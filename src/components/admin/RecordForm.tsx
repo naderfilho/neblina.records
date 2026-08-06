@@ -76,6 +76,7 @@ export default function RecordForm({
   existingPhotos = [],
   suggestions,
   clone = false,
+  boxId,
 }: {
   record?: RecordItem;
   existingPhotos?: RecordPhoto[];
@@ -83,9 +84,14 @@ export default function RecordForm({
   /** Clonar: usa o `record` só para PREENCHER o formulário, mas cria um disco
    *  novo (não edita o original). */
   clone?: boolean;
+  /** Modo box: o disco é EXCLUSIVO deste box (box_only). Ao salvar, força
+   *  box_only/is_published=false/availability=unavailable e vincula ao box.
+   *  A navegação volta para a página do box. */
+  boxId?: string;
 }) {
   const router = useRouter();
   const isEdit = !!record && !clone;
+  const inBox = !!boxId;
 
   const [title, setTitle] = useState(record?.title ?? "");
   const [artist, setArtist] = useState(record?.artist ?? "");
@@ -496,6 +502,18 @@ export default function RecordForm({
         extra_blocks: blocks,
       };
 
+      // Modo box: disco exclusivo do box (fora do catálogo/home, não vendido solto).
+      // Forçamos aqui, independente do que o form mostra.
+      if (inBox) {
+        Object.assign(payload, {
+          box_only: true,
+          is_published: false,
+          availability: "unavailable" as const,
+          sold: false,
+          stock_qty: 0,
+        });
+      }
+
       // No clone, `record` é só a fonte dos dados — nunca o alvo. Sem isso, o
       // id do original vazaria para o bloco de fotos abaixo (que apaga as fotos
       // do record_id) antes do insert devolver o id novo.
@@ -542,7 +560,17 @@ export default function RecordForm({
         }
       }
 
-      router.push("/admin/discos");
+      // Modo box: ao CRIAR um disco novo, vincula ao box no fim da ordem. Ao editar,
+      // o vínculo já existe (a página do box gerencia ordem/remoção).
+      if (inBox && !isEdit && recordId) {
+        const { data: last } = await supabase
+          .from("box_records").select("position").eq("box_id", boxId)
+          .order("position", { ascending: false }).limit(1).maybeSingle();
+        const nextPos = last ? (Number(last.position) || 0) + 1 : 0;
+        await supabase.from("box_records").insert({ box_id: boxId, record_id: recordId, position: nextPos });
+      }
+
+      router.push(inBox ? `/admin/boxes/${boxId}` : "/admin/discos");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao salvar.");
@@ -828,10 +856,16 @@ export default function RecordForm({
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-6">
-          <Toggle label="Publicado na loja" checked={published} onChange={setPublished} />
-          <Toggle label="Destaque" checked={featured} onChange={setFeatured} />
-        </div>
+        {inBox ? (
+          <p className="rounded-xl border border-line bg-bg-soft px-4 py-3 text-xs text-faint">
+            Este disco é <strong className="text-mist">exclusivo do box</strong> — não vai para o catálogo, nem para a home, e não é vendido separado. O box é vendido completo.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-6">
+            <Toggle label="Publicado na loja" checked={published} onChange={setPublished} />
+            <Toggle label="Destaque" checked={featured} onChange={setFeatured} />
+          </div>
+        )}
       </Section>
 
       {/* 3. Histórico */}
@@ -1067,7 +1101,8 @@ export default function RecordForm({
         </div>
       </Section>
 
-      {/* Disponibilidade / venda */}
+      {/* Disponibilidade / venda — não se aplica a disco de box (o box é a unidade de venda) */}
+      {!inBox && (
       <Section title="Disponibilidade" desc="Cada disco é uma peça única. Defina o status; ao marcar como Vendido, registre para onde/para quem.">
         <div className="mb-4 flex flex-wrap gap-2">
           {AVAILABILITY.map((a) => (
@@ -1106,6 +1141,7 @@ export default function RecordForm({
           </div>
         )}
       </Section>
+      )}
 
       {/* Blocos livres */}
       <Section title="Blocos extras da página" desc="Monte a página do disco com informações livres.">
@@ -1148,7 +1184,7 @@ export default function RecordForm({
           <button type="button" onClick={() => router.back()} className="text-sm text-muted hover:text-ink">Cancelar</button>
           <button type="submit" disabled={saving} className="btn-brand flex items-center gap-2 rounded-xl px-6 py-3 text-sm disabled:opacity-60">
             {saving ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />}
-            {isEdit ? "Salvar alterações" : "Publicar disco"}
+            {inBox ? (isEdit ? "Salvar disco do box" : "Adicionar disco ao box") : (isEdit ? "Salvar alterações" : "Publicar disco")}
           </button>
         </div>
       </div>

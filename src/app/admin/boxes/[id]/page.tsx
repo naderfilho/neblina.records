@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import BoxForm, { type BoxDiscInit } from "@/components/admin/BoxForm";
+import BoxForm from "@/components/admin/BoxForm";
+import BoxDiscsManager, { type BoxDiscInit } from "@/components/admin/BoxDiscsManager";
 import type { BoxItem } from "@/lib/types";
 
 export const revalidate = 0;
@@ -32,7 +33,10 @@ export default async function EditBoxPage({ params }: { params: Promise<{ id: st
         <ArrowLeft size={16} /> Voltar
       </Link>
       <h1 className="mb-6 font-display text-3xl text-ink">Editar box</h1>
-      <BoxForm box={box as BoxItem} initialDiscs={initialDiscs} />
+      <BoxForm box={box as BoxItem} />
+      <div className="mt-8">
+        <BoxDiscsManager boxId={id} discs={initialDiscs} />
+      </div>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Image as ImageIcon, Loader2, Save, Plus, Trash2, ArrowUp, ArrowDown, Music, Disc3,
+  Image as ImageIcon, Loader2, Save, Trash2,
   Type, Heading, Quote, ListTree,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -12,33 +12,16 @@ import { logAction } from "@/lib/audit";
 import ImageCropper from "@/components/admin/ImageCropper";
 import BoxArt from "@/components/BoxArt";
 import {
-  BOX_TYPES, BOX_FINISHES, BOX_COLORS, DEFAULT_BOX_CONFIG, DEFAULT_DISC_CONFIG, PAYMENT_METHODS,
+  BOX_TYPES, BOX_FINISHES, BOX_COLORS, DEFAULT_BOX_CONFIG, PAYMENT_METHODS,
   AVAILABILITY, AUDIOTECA_TIERS, type BoxConfig, type Availability,
 } from "@/lib/constants";
 import type { BoxItem, ExtraBlock } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-/** Disco de um box já existente (ao editar) — o que carregamos do banco. */
-export type BoxDiscInit = { id: string; title: string; artist: string; cover_image_url: string | null; audio_url: string | null };
-
-/** Disco no editor. `recordId` presente = disco já salvo (edição). */
-type BoxDisc = {
-  key: string;
-  recordId?: string;
-  title: string;
-  artist: string;
-  coverFile?: File | null;
-  coverPreview: string | null;
-  audioFile?: File | null;
-  audioUrl: string | null;
-};
-
 export default function BoxForm({
   box,
-  initialDiscs = [],
 }: {
   box?: BoxItem;
-  initialDiscs?: BoxDiscInit[];
 }) {
   const router = useRouter();
   const isEdit = !!box;
@@ -65,12 +48,6 @@ export default function BoxForm({
   const [spineFile, setSpineFile] = useState<File | null>(null);
   const [spinePreview, setSpinePreview] = useState<string | null>(box?.spine_image_url ?? null);
 
-  const [discs, setDiscs] = useState<BoxDisc[]>(
-    initialDiscs.map((d) => ({ key: d.id, recordId: d.id, title: d.title, artist: d.artist, coverPreview: d.cover_image_url, audioUrl: d.audio_url })),
-  );
-  // ids dos discos que existiam ao abrir — para apagar os que forem removidos
-  const initialIds = useRef(initialDiscs.map((d) => d.id));
-
   const [cropper, setCropper] = useState<{ file: File; onApply: (b: Blob) => void; round?: boolean } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,35 +69,6 @@ export default function BoxForm({
     e.target.value = "";
   }
 
-  // ---- discos do box ----
-  function addDisc() {
-    setDiscs((d) => [...d, { key: crypto.randomUUID(), title: "", artist: "", coverPreview: null, audioUrl: null }]);
-  }
-  function patchDisc(key: string, patch: Partial<BoxDisc>) {
-    setDiscs((ds) => ds.map((d) => (d.key === key ? { ...d, ...patch } : d)));
-  }
-  function moveDisc(idx: number, dir: -1 | 1) {
-    setDiscs((ds) => {
-      const j = idx + dir;
-      if (j < 0 || j >= ds.length) return ds;
-      const copy = [...ds];
-      [copy[idx], copy[j]] = [copy[j], copy[idx]];
-      return copy;
-    });
-  }
-  function onDiscCover(key: string, e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setCropper({ file: f, round: true, onApply: (blob) => patchDisc(key, { coverFile: new File([blob], "disc.jpg", { type: "image/jpeg" }), coverPreview: URL.createObjectURL(blob) }) });
-    e.target.value = "";
-  }
-  function onDiscAudio(key: string, e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    patchDisc(key, { audioFile: f, audioUrl: URL.createObjectURL(f) });
-    e.target.value = "";
-  }
-
   function addBlock(type: ExtraBlock["type"]) {
     setBlocks((b) => [...b, { id: crypto.randomUUID(), type, content: "", title: "", key: "", value: "" }]);
   }
@@ -129,7 +77,6 @@ export default function BoxForm({
     e.preventDefault();
     setError(null);
     if (!title.trim()) { setError("O título do box é obrigatório."); return; }
-    if (discs.some((d) => !d.title.trim() || !d.artist.trim())) { setError("Cada disco do box precisa de título e artista."); return; }
     setSaving(true);
     const supabase = createClient();
     try {
@@ -161,49 +108,11 @@ export default function BoxForm({
       }
       if (!boxId) throw new Error("Falha ao criar o box.");
 
-      // discos removidos (existiam ao abrir e saíram) -> apaga os registros box_only
-      const keptIds = discs.map((d) => d.recordId).filter(Boolean) as string[];
-      const removed = initialIds.current.filter((id) => !keptIds.includes(id));
-      if (removed.length) await supabase.from("records").delete().in("id", removed);
+      logAction(isEdit ? "update" : "create", "box", boxId, boxPayload.title, {});
 
-      // cria/atualiza cada disco do box (registros box_only, fora do catálogo) e monta a ordem
-      const orderedIds: string[] = [];
-      for (const d of discs) {
-        let cover = d.coverPreview && !d.coverPreview.startsWith("blob:") ? d.coverPreview : null;
-        if (d.coverFile) cover = await uploadFile("covers", d.coverFile, "disc-");
-        let audio = d.audioUrl && !d.audioUrl.startsWith("blob:") ? d.audioUrl : null;
-        if (d.audioFile) audio = await uploadFile("audio", d.audioFile, "track-");
-
-        const trackId = crypto.randomUUID();
-        const tracks = audio ? [{ id: trackId, side: "A", title: d.title.trim(), audio_url: audio, disc: 1 }] : [];
-        const recPayload = {
-          title: d.title.trim(), artist: d.artist.trim(),
-          box_only: true, is_published: false, availability: "unavailable", stock_qty: 0, price: 0,
-          disc_config: DEFAULT_DISC_CONFIG, cover_image_url: cover,
-          tracks, home_track_id: audio ? trackId : null,
-          audio_url: audio, audio_start: 0, audio_end: null,
-          payment_methods: [],
-        };
-        if (d.recordId) {
-          const { error: eu } = await supabase.from("records").update(recPayload).eq("id", d.recordId);
-          if (eu) throw eu;
-          orderedIds.push(d.recordId);
-        } else {
-          const { data, error: ei } = await supabase.from("records").insert(recPayload).select("id").single();
-          if (ei) throw ei;
-          orderedIds.push(data.id as string);
-        }
-      }
-
-      // sincroniza a ordem no join
-      await supabase.from("box_records").delete().eq("box_id", boxId);
-      if (orderedIds.length) {
-        const { error: e2 } = await supabase.from("box_records").insert(orderedIds.map((rid, i) => ({ box_id: boxId, record_id: rid, position: i })));
-        if (e2) throw e2;
-      }
-      logAction(isEdit ? "update" : "create", "box", boxId, boxPayload.title, { discos: orderedIds.length });
-
-      router.push("/admin/boxes");
+      // Os discos do box são gerenciados na página do box (cadastro completo, um a um).
+      // Ao CRIAR um box novo, vai direto pra edição pra já adicionar os discos.
+      router.push(isEdit ? "/admin/boxes" : `/admin/boxes/${boxId}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao salvar o box.");
@@ -257,7 +166,7 @@ export default function BoxForm({
 
           <div className="flex items-center justify-center rounded-2xl border border-line bg-bg-soft p-6">
             <div className="w-full max-w-[220px]">
-              <BoxArt config={cfg} coverUrl={coverPreview} spineUrl={spinePreview} title={title || "Box"} count={discs.length || 3} />
+              <BoxArt config={cfg} coverUrl={coverPreview} spineUrl={spinePreview} title={title || "Box"} count={3} />
             </div>
           </div>
         </div>
@@ -317,50 +226,15 @@ export default function BoxForm({
         </div>
       </Section>
 
-      {/* Discos do box (cadastrados aqui, exclusivos do box) */}
-      <Section title="Discos do box" desc="Cadastre os discos que vêm dentro do box. Eles são exclusivos do box — não aparecem no catálogo nem são vendidos separados. A ordem define a sequência na abertura e na Audioteca.">
-        <div className="space-y-3">
-          {discs.length === 0 && <p className="text-sm text-faint">Nenhum disco ainda. Adicione o primeiro disco do box abaixo.</p>}
-          {discs.map((d, i) => (
-            <div key={d.key} className="rounded-2xl border border-line bg-bg-soft p-3">
-              <div className="flex items-start gap-3">
-                {/* capa do disco */}
-                <label className="group relative h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-full border border-line bg-panel">
-                  {d.coverPreview ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={d.coverPreview} alt="" className="h-full w-full object-cover" />
-                  ) : <span className="flex h-full w-full items-center justify-center text-faint"><Disc3 size={20} /></span>}
-                  <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-[10px] font-semibold text-white opacity-0 transition group-hover:opacity-100">{d.coverPreview ? "trocar" : "capa"}</span>
-                  <input type="file" accept="image/*" hidden onChange={(e) => onDiscCover(d.key, e)} />
-                </label>
-
-                <div className="min-w-0 flex-1 space-y-2">
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <input className="ipt" placeholder="Título do disco *" value={d.title} onChange={(e) => patchDisc(d.key, { title: e.target.value })} />
-                    <input className="ipt" placeholder="Artista *" value={d.artist} onChange={(e) => patchDisc(d.key, { artist: e.target.value })} />
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <label className={cn("flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs", d.audioUrl ? "border-teal/50 text-teal" : "border-line text-muted hover:text-brand")}>
-                      <Music size={13} /> {d.audioUrl ? "Áudio enviado (trocar)" : "Áudio (opcional)"}
-                      <input type="file" accept="audio/*" hidden onChange={(e) => onDiscAudio(d.key, e)} />
-                    </label>
-                    {d.audioUrl && <button type="button" onClick={() => patchDisc(d.key, { audioFile: null, audioUrl: null })} className="text-xs text-faint hover:text-red-400">remover áudio</button>}
-                  </div>
-                </div>
-
-                <div className="flex shrink-0 flex-col items-center gap-1">
-                  <span className="text-xs text-faint">{i + 1}</span>
-                  <button type="button" onClick={() => moveDisc(i, -1)} disabled={i === 0} className="rounded p-1 text-faint hover:text-brand disabled:opacity-30"><ArrowUp size={14} /></button>
-                  <button type="button" onClick={() => moveDisc(i, 1)} disabled={i === discs.length - 1} className="rounded p-1 text-faint hover:text-brand disabled:opacity-30"><ArrowDown size={14} /></button>
-                  <button type="button" onClick={() => setDiscs((ds) => ds.filter((x) => x.key !== d.key))} className="rounded p-1 text-faint hover:text-red-400"><Trash2 size={14} /></button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <button type="button" onClick={addDisc} className="mt-3 flex items-center gap-1.5 rounded-xl border border-dashed border-line px-4 py-2.5 text-sm text-muted hover:border-brand/50 hover:text-brand">
-          <Plus size={16} /> Adicionar disco
-        </button>
+      {/* Discos do box: gerenciados na página do box (cadastro completo, um a um) */}
+      <Section title="Discos do box" desc="Os discos do box usam o cadastro completo (mesmos campos de um disco normal) e são exclusivos do box.">
+        {isEdit ? (
+          <p className="text-sm text-muted">Os discos aparecem logo abaixo do formulário, na seção “Discos do box”. Use “Adicionar disco” para cadastrar um novo.</p>
+        ) : (
+          <p className="rounded-xl border border-dashed border-line px-4 py-3 text-sm text-faint">
+            Salve o box primeiro. Depois de salvo, você adiciona os discos (com o cadastro completo) aqui mesmo.
+          </p>
+        )}
       </Section>
 
       {/* Blocos extras */}
