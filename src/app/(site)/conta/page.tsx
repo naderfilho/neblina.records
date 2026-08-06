@@ -27,10 +27,17 @@ export default async function ContaPage() {
     .order("created_at", { ascending: false });
   const favorites = ((favData ?? []) as unknown as FavRow[]).map((f) => f.records).filter((r): r is NonNullable<FavRow["records"]> => !!r);
 
-  // cupons do cliente (o RLS já devolve os dele + os gerais ativos); filtra ativos e não expirados
-  const { data: couponData } = await supabase.from("coupons").select("*").order("created_at", { ascending: false });
+  // Cupons visíveis ao cliente: os gerais (user_id null) + os direcionados a ele.
+  // O filtro é EXPLÍCITO de propósito — sem ele, como admin o RLS (is_admin) devolve
+  // TODOS os cupons de todos os clientes e eles vazavam aqui no perfil.
+  const { data: couponData } = await supabase
+    .from("coupons")
+    .select("*")
+    .or(`user_id.is.null,user_id.eq.${profile.id}`)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
   const now = Date.now();
-  const coupons = ((couponData ?? []) as Coupon[]).filter((c) => c.is_active && !c.redeemed_at && (!c.expires_at || new Date(c.expires_at).getTime() > now));
+  const coupons = ((couponData ?? []) as Coupon[]).filter((c) => !c.redeemed_at && (!c.expires_at || new Date(c.expires_at).getTime() > now));
 
   const fields = [
     { icon: User, label: "Nome", value: `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || "—" },

@@ -46,10 +46,17 @@ export default function BuyButtons({ id, title, artist, price, coverUrl, availab
     return [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
   }
 
-  // melhor cupom válido do cliente (o RLS já devolve só os dele + gerais ativos)
+  // melhor cupom válido: os gerais (user_id null) + os do próprio usuário. Filtro
+  // explícito para não pegar cupons de outros clientes quando um admin navega a loja.
   async function bestCoupon(): Promise<{ code: string; pct: number } | null> {
     const supabase = createClient();
-    const { data } = await supabase.from("coupons").select("code,discount_percent,expires_at,is_active,redeemed_at");
+    const { data: { user } } = await supabase.auth.getUser();
+    const scope = user ? `user_id.is.null,user_id.eq.${user.id}` : "user_id.is.null";
+    const { data } = await supabase
+      .from("coupons")
+      .select("code,discount_percent,expires_at,is_active,redeemed_at")
+      .or(scope)
+      .eq("is_active", true);
     if (!data?.length) return null;
     const now = Date.now();
     const valid = data
