@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Disc3, Package, Users, CalendarDays, CalendarClock, Store, LogOut, Tag, ArrowUpDown, Music, Headphones, History, Bell, Send, Ticket, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Disc3, Package, Users, CalendarDays, CalendarClock, Store, LogOut, Tag, ArrowUpDown, Music, Headphones, History, Bell, Send, Ticket, BarChart3, HandCoins } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,7 @@ const LINKS = [
   { href: "/admin/tags", label: "Tags", icon: Tag },
   { href: "/admin/usuarios", label: "Usuários", icon: Users },
   { href: "/admin/eventos", label: "Pedidos de evento", icon: CalendarDays },
+  { href: "/admin/propostas", label: "Propostas de venda", icon: HandCoins },
   { href: "/admin/agenda", label: "Agenda/Presença", icon: CalendarClock },
   { href: "/admin/historico", label: "Histórico", icon: History },
 ];

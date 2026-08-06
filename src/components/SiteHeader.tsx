@@ -16,6 +16,7 @@ const NAV = [
   { href: "/#acervo", label: "Discos" },
   { href: "/audioteca", label: "Audioteca" },
   { href: "/eventos", label: "Eventos" },
+  { href: "/vender", label: "Venda seu disco" },
   { href: "/sobre", label: "Sobre" },
 ];
 

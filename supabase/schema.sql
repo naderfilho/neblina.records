@@ -699,3 +699,49 @@ grant execute on function public.visit_stats_weekday(int) to authenticated;
 revoke execute on function public.visit_stats_daily(int)   from anon;
 revoke execute on function public.visit_stats_hourly(int)  from anon;
 revoke execute on function public.visit_stats_weekday(int) from anon;
+
+-- ============================================================================
+--  PROPOSTAS DE VENDA (cliente quer vender um disco para a loja)
+-- ============================================================================
+create table if not exists public.sale_proposals (
+  id            uuid primary key default gen_random_uuid(),
+  name          text not null,
+  email         text,
+  phone         text,
+  city          text,
+  disc_title    text not null,
+  artist        text,
+  year          int,
+  format        text,
+  disc_quality  text,
+  cover_quality text,
+  price_wanted  numeric(10,2),
+  description   text,
+  photo_url     text,
+  status        text not null default 'new', -- new | contacted | done | rejected
+  created_at    timestamptz not null default now()
+);
+create index if not exists sale_proposals_created_idx on public.sale_proposals (created_at desc);
+create index if not exists sale_proposals_status_idx on public.sale_proposals (status);
+
+alter table public.sale_proposals enable row level security;
+drop policy if exists sale_proposals_insert_any on public.sale_proposals;
+create policy sale_proposals_insert_any on public.sale_proposals for insert with check (true);
+drop policy if exists sale_proposals_admin_read on public.sale_proposals;
+create policy sale_proposals_admin_read on public.sale_proposals for select using (public.is_admin());
+drop policy if exists sale_proposals_admin_update on public.sale_proposals;
+create policy sale_proposals_admin_update on public.sale_proposals for update using (public.is_admin()) with check (public.is_admin());
+drop policy if exists sale_proposals_admin_delete on public.sale_proposals;
+create policy sale_proposals_admin_delete on public.sale_proposals for delete using (public.is_admin());
+grant insert on public.sale_proposals to anon, authenticated;
+grant select, update, delete on public.sale_proposals to authenticated;
+
+-- Bucket público para fotos das propostas (limite 5MB, só imagens).
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('proposals', 'proposals', true, 5242880, array['image/jpeg','image/png','image/webp','image/gif'])
+on conflict (id) do update
+  set public = excluded.public, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+drop policy if exists "proposals_insert" on storage.objects;
+create policy "proposals_insert" on storage.objects for insert to anon, authenticated with check (bucket_id = 'proposals');
+drop policy if exists "proposals_read" on storage.objects;
+create policy "proposals_read" on storage.objects for select to anon, authenticated using (bucket_id = 'proposals');

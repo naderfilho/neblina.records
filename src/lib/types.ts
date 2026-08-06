@@ -253,6 +253,25 @@ export type UserNotification = {
   created_at: string;
 };
 
+export type SaleProposal = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  city: string | null;
+  disc_title: string;
+  artist: string | null;
+  year: number | null;
+  format: string | null;
+  disc_quality: string | null;
+  cover_quality: string | null;
+  price_wanted: number | null;
+  description: string | null;
+  photo_url: string | null;
+  status: string; // new | contacted | done | rejected
+  created_at: string;
+};
+
 export type EventRequest = {
   id: string;
   name: string;

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Disc3, DollarSign, Users, Eye, CalendarDays, Plus, TrendingUp, Package, Wallet, PiggyBank } from "lucide-react";
+import { Disc3, DollarSign, Users, Eye, CalendarDays, Plus, TrendingUp, Package, Wallet, PiggyBank, HandCoins } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PrivateStat from "@/components/admin/PrivateStat";
 import { formatBRL } from "@/lib/utils";
@@ -34,7 +34,7 @@ async function fetchAllForStats(
 export default async function AdminDashboard() {
   const supabase = await createClient();
 
-  const [statRows, { data: boxRows }, { data: mostVisitedData }, { count: userCount }, { count: eventCount }] = await Promise.all([
+  const [statRows, { data: boxRows }, { data: mostVisitedData }, { count: userCount }, { count: eventCount }, { count: proposalCount }] = await Promise.all([
     fetchAllForStats(supabase),
     supabase.from("boxes").select("price,cost,availability"),
     supabase
@@ -44,6 +44,7 @@ export default async function AdminDashboard() {
       .limit(6),
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("event_requests").select("*", { count: "exact", head: true }).eq("status", "new"),
+    supabase.from("sale_proposals").select("*", { count: "exact", head: true }).eq("status", "new"),
   ]);
 
   const num = (v: number | null | undefined) => Number(v) || 0;
@@ -72,6 +73,7 @@ export default async function AdminDashboard() {
     { icon: Disc3, label: "Discos cadastrados", value: String(recsCount), sub: `${published} publicados` },
     { icon: Users, label: "Usuários", value: String(userCount ?? 0), sub: "cadastrados" },
     { icon: CalendarDays, label: "Pedidos de evento", value: String(eventCount ?? 0), sub: "novos" },
+    { icon: HandCoins, label: "Propostas de venda", value: String(proposalCount ?? 0), sub: "novas", href: "/admin/propostas" },
   ];
 
   // Financeiro (sensível → atrás do "olhinho"). Inclui discos do catálogo + boxes.
@@ -94,17 +96,24 @@ export default async function AdminDashboard() {
         </Link>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        {stats.map((s) => (
-          <div key={s.label} className="card relative p-5">
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-brand/15 text-brand">
-              <s.icon size={20} />
-            </div>
-            <p className="font-display text-2xl text-ink">{s.value}</p>
-            <p className="text-sm text-muted">{s.label}</p>
-            <p className="mt-0.5 text-xs text-faint">{s.sub}</p>
-          </div>
-        ))}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((s) => {
+          const inner = (
+            <>
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-brand/15 text-brand">
+                <s.icon size={20} />
+              </div>
+              <p className="font-display text-2xl text-ink">{s.value}</p>
+              <p className="text-sm text-muted">{s.label}</p>
+              <p className="mt-0.5 text-xs text-faint">{s.sub}</p>
+            </>
+          );
+          return "href" in s && s.href ? (
+            <Link key={s.label} href={s.href} className="card relative p-5 transition-colors hover:border-brand/50">{inner}</Link>
+          ) : (
+            <div key={s.label} className="card relative p-5">{inner}</div>
+          );
+        })}
       </div>
 
       {/* Financeiro — números sensíveis, cada card abre oculto (olhinho) */}
