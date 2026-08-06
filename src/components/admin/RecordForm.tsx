@@ -96,6 +96,7 @@ export default function RecordForm({
   const [discQuality, setDiscQuality] = useState(record?.disc_quality ?? "");
   const [coverQuality, setCoverQuality] = useState(record?.cover_quality ?? "");
   const [price, setPrice] = useState(record?.price?.toString() ?? "");
+  const [cost, setCost] = useState(record?.cost?.toString() ?? "");
   const [year, setYear] = useState(record?.year?.toString() ?? "");
   const [labelCompany, setLabelCompany] = useState(record?.label_company ?? "");
   const [catalog, setCatalog] = useState(record?.catalog_number ?? "");
@@ -466,7 +467,8 @@ export default function RecordForm({
         genre: genre.trim() || null, nationality: nationality.trim() || null,
         format: format || null, weight_grams: weight ? parseFloat(weight) : null,
         disc_quality: discQuality || null, cover_quality: coverQuality || null,
-        price: price ? parseFloat(price) : 0, year: year ? parseInt(year) : null,
+        price: price ? parseFloat(price) : 0, cost: cost ? parseFloat(cost) : null,
+        year: year ? parseInt(year) : null,
         label_company: labelCompany.trim() || null, catalog_number: catalog.trim() || null,
         stock_qty: sold ? 0 : 1, description: description.trim() || null,
         is_published: published, is_featured: featured,
@@ -804,6 +806,9 @@ export default function RecordForm({
             </select>
           </Field>
           <Field label="Preço (R$)"><input className="ipt" type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} /></Field>
+          <Field label="Custo / valor pago (R$) — privado" hint="Só o admin vê. Usado para calcular o lucro. Não aparece na loja.">
+            <input className="ipt" type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="Quanto você pagou" />
+          </Field>
         </div>
 
         <Field label="Descrição">
@@ -1179,11 +1184,12 @@ function Section({ title, desc, children }: { title: string; desc?: string; chil
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">{label}</span>
       {children}
+      {hint && <span className="mt-1 block text-[11px] text-faint">{hint}</span>}
     </label>
   );
 }

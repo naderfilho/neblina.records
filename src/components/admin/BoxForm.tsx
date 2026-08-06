@@ -50,6 +50,7 @@ export default function BoxForm({
   const [catalog, setCatalog] = useState(box?.catalog_number ?? "");
   const [label, setLabel] = useState(box?.label_company ?? "");
   const [price, setPrice] = useState(box?.price?.toString() ?? "");
+  const [cost, setCost] = useState(box?.cost?.toString() ?? "");
   const [description, setDescription] = useState(box?.description ?? "");
   const [payments, setPayments] = useState<string[]>(box?.payment_methods ?? ["Pix (Brasil)"]);
   const [availability, setAvailability] = useState<Availability>(box?.availability ?? "available");
@@ -144,7 +145,7 @@ export default function BoxForm({
         title: title.trim(), subtitle: subtitle.trim() || null, box_type: boxType || null,
         description: description.trim() || null, cover_image_url: coverUrl, spine_image_url: spineUrl,
         box_config: cfg, year: year ? parseInt(year) : null, catalog_number: catalog.trim() || null,
-        label_company: label.trim() || null, price: price ? parseFloat(price) : 0, payment_methods: payments,
+        label_company: label.trim() || null, price: price ? parseFloat(price) : 0, cost: cost ? parseFloat(cost) : null, payment_methods: payments,
         availability, audioteca_tier: tier, is_published: published, is_featured: featured,
         sort_order: box?.sort_order ?? 0, extra_blocks: blocks,
       };
@@ -276,6 +277,9 @@ export default function BoxForm({
           <Field label="Gravadora"><input className="ipt" value={label} onChange={(e) => setLabel(e.target.value)} /></Field>
           <Field label="Nº de catálogo"><input className="ipt" value={catalog} onChange={(e) => setCatalog(e.target.value)} /></Field>
           <Field label="Preço (R$)"><input className="ipt" type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} /></Field>
+          <Field label="Custo / valor pago (R$) — privado" hint="Só o admin vê. Base do cálculo de lucro.">
+            <input className="ipt" type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="Quanto você pagou no box" />
+          </Field>
           <Field label="Nível na Audioteca">
             <select className="ipt" value={tier} onChange={(e) => setTier(e.target.value as typeof tier)}>
               {AUDIOTECA_TIERS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
@@ -419,11 +423,12 @@ function Section({ title, desc, children }: { title: string; desc?: string; chil
     </section>
   );
 }
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">{label}</span>
       {children}
+      {hint && <span className="mt-1 block text-[11px] text-faint">{hint}</span>}
     </label>
   );
 }

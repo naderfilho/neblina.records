@@ -539,6 +539,14 @@ create index if not exists box_records_record_idx on public.box_records (record_
 alter table public.records add column if not exists box_only boolean not null default false;
 create index if not exists records_box_only_idx on public.records (box_only);
 
+-- CUSTO / valor pago na aquisição (privado, só admin) — para calcular lucro.
+-- Fica no disco (inclui os do box) e no box. Nunca é exposto na área pública.
+alter table public.records add column if not exists cost numeric(10,2);
+alter table public.boxes   add column if not exists cost numeric(10,2);
+-- records.cost já nasce protegido (anon não tem SELECT de colunas internas).
+-- boxes tem grant de tabela para anon, então revogamos explicitamente a coluna cost.
+revoke select (cost) on public.boxes from anon;
+
 -- ============================================================================
 --  Endurecimento (defesa em profundidade) — reduz a superfície das funções
 --  expostas via API. A segurança principal continua no RLS.

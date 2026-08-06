@@ -118,6 +118,8 @@ export type RecordItem = {
   disc_quality: QualityGrade | null;
   cover_quality: QualityGrade | null;
   price: number;
+  /** Custo de aquisição (privado, só admin) — base do cálculo de lucro. */
+  cost: number | null;
   payment_methods: string[];
   description: string | null;
   cover_image_url: string | null;
@@ -176,6 +178,8 @@ export type BoxItem = {
   catalog_number: string | null;
   label_company: string | null;
   price: number;
+  /** Custo de aquisição do box (privado, só admin) — base do cálculo de lucro. */
+  cost: number | null;
   payment_methods: string[];
   availability: "available" | "reserved" | "unavailable" | "sold";
   audioteca_tier: "public" | "members" | "signature";

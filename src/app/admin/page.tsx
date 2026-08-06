@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Disc3, DollarSign, Users, Eye, CalendarDays, Plus, TrendingUp, Package } from "lucide-react";
+import { Disc3, DollarSign, Users, Eye, CalendarDays, Plus, TrendingUp, Package, Wallet, PiggyBank } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PrivateStat from "@/components/admin/PrivateStat";
 import { formatBRL } from "@/lib/utils";
@@ -12,18 +12,20 @@ export const revalidate = 0;
  * 1000 linhas, então paginamos por `range` para somar/contar TODOS os discos
  * (senão o painel mostra no máximo 1000).
  */
+type StatRow = { price: number | null; cost: number | null; availability: string | null; is_published: boolean; box_only: boolean };
+
 async function fetchAllForStats(
   supabase: Awaited<ReturnType<typeof createClient>>,
-): Promise<{ price: number | null; availability: string | null; is_published: boolean }[]> {
-  const all: { price: number | null; availability: string | null; is_published: boolean }[] = [];
+): Promise<StatRow[]> {
+  const all: StatRow[] = [];
   for (let from = 0; ; from += 1000) {
     const { data, error } = await supabase
       .from("records")
-      .select("price,availability,is_published")
+      .select("price,cost,availability,is_published,box_only")
       .order("id")
       .range(from, from + 999);
     if (error || !data?.length) break;
-    all.push(...(data as typeof all));
+    all.push(...(data as StatRow[]));
     if (data.length < 1000) break;
   }
   return all;
@@ -32,8 +34,9 @@ async function fetchAllForStats(
 export default async function AdminDashboard() {
   const supabase = await createClient();
 
-  const [statRows, { data: mostVisitedData }, { count: userCount }, { count: eventCount }] = await Promise.all([
+  const [statRows, { data: boxRows }, { data: mostVisitedData }, { count: userCount }, { count: eventCount }] = await Promise.all([
     fetchAllForStats(supabase),
+    supabase.from("boxes").select("price,cost,availability"),
     supabase
       .from("records")
       .select("id,title,artist,price,availability,views_count,is_published,cover_image_url,disc_config")
@@ -43,19 +46,40 @@ export default async function AdminDashboard() {
     supabase.from("event_requests").select("*", { count: "exact", head: true }).eq("status", "new"),
   ]);
 
-  const available = statRows.filter((r) => r.availability !== "sold");
-  const inventoryValue = available.reduce((s, r) => s + (Number(r.price) || 0), 0);
-  const totalUnits = available.length;
-  const published = statRows.filter((r) => r.is_published).length;
-  const recsCount = statRows.length;
+  const num = (v: number | null | undefined) => Number(v) || 0;
+
+  // Catálogo = discos que se vendem sozinhos (exclui os box_only, que fazem parte
+  // de um box — o box é a unidade com preço/custo próprios; contá-los aqui
+  // duplicaria o investimento).
+  const catalog = statRows.filter((r) => !r.box_only);
+  const boxes = (boxRows ?? []) as { price: number | null; cost: number | null; availability: string | null }[];
+
+  const inStock = [...catalog, ...boxes].filter((x) => x.availability !== "sold");
+  const soldItems = [...catalog, ...boxes].filter((x) => x.availability === "sold");
+
+  const investedStock = inStock.reduce((s, x) => s + num(x.cost), 0); // custo do que está parado
+  const stockValue = inStock.reduce((s, x) => s + num(x.price), 0);   // preço de venda do estoque
+  const potentialProfit = stockValue - investedStock;                 // lucro se vender tudo
+  const realizedProfit = soldItems.reduce((s, x) => s + (num(x.price) - num(x.cost)), 0); // lucro já realizado
+
+  const totalUnits = inStock.length;
+  const soldCount = soldItems.length;
+  const published = catalog.filter((r) => r.is_published).length;
+  const recsCount = catalog.length;
   const mostVisited = (mostVisitedData ?? []) as RecordItem[];
 
   const stats = [
     { icon: Disc3, label: "Discos cadastrados", value: String(recsCount), sub: `${published} publicados` },
-    // `secret`: valor + quantidade do inventário ficam atrás do "olhinho"
-    { icon: DollarSign, label: "Valor do inventário", value: formatBRL(inventoryValue), sub: `${totalUnits} disponíveis`, secret: true },
     { icon: Users, label: "Usuários", value: String(userCount ?? 0), sub: "cadastrados" },
     { icon: CalendarDays, label: "Pedidos de evento", value: String(eventCount ?? 0), sub: "novos" },
+  ];
+
+  // Financeiro (sensível → atrás do "olhinho"). Inclui discos do catálogo + boxes.
+  const finance = [
+    { icon: Wallet, label: "Valor investido", value: formatBRL(investedStock), sub: `${totalUnits} itens em estoque` },
+    { icon: DollarSign, label: "Valor em estoque", value: formatBRL(stockValue), sub: "a preço de venda" },
+    { icon: TrendingUp, label: "Lucro potencial", value: formatBRL(potentialProfit), sub: "se vender o estoque" },
+    { icon: PiggyBank, label: "Lucro realizado", value: formatBRL(realizedProfit), sub: `${soldCount} já vendidos` },
   ];
 
   return (
@@ -70,23 +94,34 @@ export default async function AdminDashboard() {
         </Link>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         {stats.map((s) => (
           <div key={s.label} className="card relative p-5">
             <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-brand/15 text-brand">
               <s.icon size={20} />
             </div>
-            {s.secret ? (
-              <PrivateStat value={s.value} label={s.label} sub={s.sub} />
-            ) : (
-              <>
-                <p className="font-display text-2xl text-ink">{s.value}</p>
-                <p className="text-sm text-muted">{s.label}</p>
-                <p className="mt-0.5 text-xs text-faint">{s.sub}</p>
-              </>
-            )}
+            <p className="font-display text-2xl text-ink">{s.value}</p>
+            <p className="text-sm text-muted">{s.label}</p>
+            <p className="mt-0.5 text-xs text-faint">{s.sub}</p>
           </div>
         ))}
+      </div>
+
+      {/* Financeiro — números sensíveis, cada card abre oculto (olhinho) */}
+      <div className="mt-6">
+        <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted">
+          <Wallet size={14} className="text-brand" /> Financeiro
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {finance.map((s) => (
+            <div key={s.label} className="card relative p-5">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-brand/15 text-brand">
+                <s.icon size={20} />
+              </div>
+              <PrivateStat value={s.value} label={s.label} sub={s.sub} />
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
