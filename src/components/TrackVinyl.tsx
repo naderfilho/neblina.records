@@ -352,10 +352,13 @@ export default function TrackVinyl({
 
       {/* disco: estrutura 3D SEMPRE montada; repouso sempre em rotateY(0) — ver flipTo.
           Front = lado atual, Back = outro lado. No fim do giro a troca é invisível.
-          SEM will-change/contain/isolation/overflow: esses "hints" faziam o iOS cachear
-          a camada 3D no tamanho AMPLIADO da animação e não voltar (o disco ficava ~15%
-          maior no Lado B). Estrutura limpa = iOS re-rasteriza em 1:1 no repouso. */}
-      <div ref={discRef} className="relative aspect-square w-full" style={{ perspective: "1400px" }}>
+          SEM perspective e SEM will-change/contain/isolation/overflow. A perspective
+          fazia o disco "vir pra frente" e ficar ~15% maior no meio do giro; o iOS
+          rasterizava a camada nesse tamanho MÁXIMO e, ao ficar ocioso, redesenhava o
+          disco ampliado (o zoom que voltava ~1,5s depois de parar). Sem perspective, o
+          rotateY é ortográfico: o disco nunca passa do próprio tamanho → nada pra o iOS
+          cachear ampliado. O flip continua (a face vira e troca via backface). */}
+      <div ref={discRef} className="relative aspect-square w-full">
         <div
           className="absolute inset-0"
           style={{
