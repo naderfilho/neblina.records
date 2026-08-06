@@ -358,7 +358,7 @@ export default function TrackVinyl({
           disco ampliado (o zoom que voltava ~1,5s depois de parar). Sem perspective, o
           rotateY é ortográfico: o disco nunca passa do próprio tamanho → nada pra o iOS
           cachear ampliado. O flip continua (a face vira e troca via backface). */}
-      <div ref={discRef} className="relative aspect-square w-full">
+      <div ref={discRef} id="tv-disc" className="relative aspect-square w-full">
         <div
           className="absolute inset-0"
           style={{
