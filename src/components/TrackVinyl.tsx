@@ -351,42 +351,42 @@ export default function TrackVinyl({
       </div>
 
       {/* disco: estrutura 3D SEMPRE montada; repouso sempre em rotateY(0) — ver flipTo.
-          Front = lado atual, Back = outro lado. No fim do giro a troca é invisível. */}
-      <div ref={discRef} className="relative aspect-square w-full">
-        <div className="absolute inset-0 overflow-hidden" style={{ perspective: "1400px", isolation: "isolate", contain: "paint" }}>
-          <div
-            className="absolute inset-0"
-            style={{
-              transformStyle: "preserve-3d",
-              transform: `rotateY(${angle}deg)`,
-              transition: instant ? "none" : "transform 2100ms cubic-bezier(0.45,0,0.15,1)",
-              willChange: "transform",
-            }}
-          >
-            {/* sombra */}
-            <div className="absolute inset-[5%] rounded-full bg-black/60 blur-xl" style={{ backfaceVisibility: "hidden" }} aria-hidden />
+          Front = lado atual, Back = outro lado. No fim do giro a troca é invisível.
+          SEM will-change/contain/isolation/overflow: esses "hints" faziam o iOS cachear
+          a camada 3D no tamanho AMPLIADO da animação e não voltar (o disco ficava ~15%
+          maior no Lado B). Estrutura limpa = iOS re-rasteriza em 1:1 no repouso. */}
+      <div ref={discRef} className="relative aspect-square w-full" style={{ perspective: "1400px" }}>
+        <div
+          className="absolute inset-0"
+          style={{
+            transformStyle: "preserve-3d",
+            transform: `rotateY(${angle}deg)`,
+            transition: instant ? "none" : "transform 2100ms cubic-bezier(0.45,0,0.15,1)",
+          }}
+        >
+          {/* sombra */}
+          <div className="absolute inset-[5%] rounded-full bg-black/60 blur-xl" style={{ backfaceVisibility: "hidden" }} aria-hidden />
 
-            {/* FRENTE = lado atual */}
-            <div className="absolute inset-0 overflow-hidden rounded-full" style={{ backfaceVisibility: "hidden" }}>
-              <Face
-                tracks={side === "A" ? sideA : sideB}
-                coverUrl={side === "A" ? coverUrl : (coverUrlB ?? coverUrl)}
-                cfg={cfg} side={side}
-                hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play}
-                grooveDisabled={armDrag || angle !== 0}
-              />
-            </div>
+          {/* FRENTE = lado atual */}
+          <div className="absolute inset-0" style={{ backfaceVisibility: "hidden" }}>
+            <Face
+              tracks={side === "A" ? sideA : sideB}
+              coverUrl={side === "A" ? coverUrl : (coverUrlB ?? coverUrl)}
+              cfg={cfg} side={side}
+              hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play}
+              grooveDisabled={armDrag || angle !== 0}
+            />
+          </div>
 
-            {/* VERSO = outro lado (aparece durante o giro) */}
-            <div className="absolute inset-0 overflow-hidden rounded-full" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-              <Face
-                tracks={side === "A" ? sideB : sideA}
-                coverUrl={side === "A" ? (coverUrlB ?? coverUrl) : coverUrl}
-                cfg={cfg} side={side === "A" ? "B" : "A"}
-                hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play}
-                grooveDisabled={armDrag || angle !== 0}
-              />
-            </div>
+          {/* VERSO = outro lado (aparece durante o giro) */}
+          <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+            <Face
+              tracks={side === "A" ? sideB : sideA}
+              coverUrl={side === "A" ? (coverUrlB ?? coverUrl) : coverUrl}
+              cfg={cfg} side={side === "A" ? "B" : "A"}
+              hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play}
+              grooveDisabled={armDrag || angle !== 0}
+            />
           </div>
         </div>
 
