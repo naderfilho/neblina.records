@@ -23,6 +23,9 @@ export type Profile = {
   role: UserRole;
   avatar_url: string | null;
   birth_date: string | null;
+  gender: string | null;
+  city: string | null;
+  state: string | null;
   created_at: string;
   last_login_at: string | null;
   welcomed_at: string | null;

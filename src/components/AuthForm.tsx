@@ -7,6 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
+const BR_UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+
 export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -15,6 +17,9 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+  const [gender, setGender] = useState("");
+  const [city, setCity] = useState("");
+  const [uf, setUf] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -40,7 +45,14 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
           email,
           password,
           options: {
-            data: { first_name: firstName.trim(), last_name: lastName.trim(), phone: phone.trim() },
+            data: {
+              first_name: firstName.trim(),
+              last_name: lastName.trim(),
+              phone: phone.trim(),
+              gender: gender || "",
+              city: city.trim(),
+              state: uf || "",
+            },
           },
         });
         if (error) throw error;
@@ -115,6 +127,25 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
                     required
                   />
                 </Field>
+                <Field label="Gênero">
+                  <select className="ipt" value={gender} onChange={(e) => setGender(e.target.value)}>
+                    <option value="">Prefiro não dizer</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Feminino">Feminino</option>
+                    <option value="Outro">Outro</option>
+                  </select>
+                </Field>
+                <div className="grid grid-cols-[1fr_88px] gap-3">
+                  <Field label="Cidade">
+                    <input className="ipt" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Sua cidade" />
+                  </Field>
+                  <Field label="UF">
+                    <select className="ipt" value={uf} onChange={(e) => setUf(e.target.value)}>
+                      <option value="">—</option>
+                      {BR_UFS.map((u) => <option key={u} value={u}>{u}</option>)}
+                    </select>
+                  </Field>
+                </div>
               </>
             )}
 

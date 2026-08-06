@@ -163,13 +163,16 @@ begin
     v_role := 'admin';
   end if;
 
-  insert into public.profiles (id, email, first_name, last_name, phone, role)
+  insert into public.profiles (id, email, first_name, last_name, phone, gender, city, state, role)
   values (
     new.id,
     new.email,
     coalesce(new.raw_user_meta_data->>'first_name', ''),
     coalesce(new.raw_user_meta_data->>'last_name', ''),
     coalesce(new.raw_user_meta_data->>'phone', ''),
+    nullif(new.raw_user_meta_data->>'gender', ''),
+    nullif(new.raw_user_meta_data->>'city', ''),
+    nullif(new.raw_user_meta_data->>'state', ''),
     v_role
   )
   on conflict (id) do update
@@ -177,6 +180,9 @@ begin
         first_name = coalesce(nullif(excluded.first_name, ''), public.profiles.first_name),
         last_name  = coalesce(nullif(excluded.last_name, ''),  public.profiles.last_name),
         phone      = coalesce(nullif(excluded.phone, ''),      public.profiles.phone),
+        gender     = coalesce(excluded.gender, public.profiles.gender),
+        city       = coalesce(excluded.city,   public.profiles.city),
+        state      = coalesce(excluded.state,  public.profiles.state),
         role       = greatest_role(public.profiles.role, v_role);
   return new;
 end;
@@ -455,6 +461,11 @@ create policy site_settings_admin_write on public.site_settings for all using (p
 --  Data de nascimento no perfil (promoções de aniversário)
 -- ============================================================================
 alter table public.profiles add column if not exists birth_date date;
+
+-- Gênero e localização (coletados no cadastro; usados nos filtros do admin)
+alter table public.profiles add column if not exists gender text;
+alter table public.profiles add column if not exists city   text;
+alter table public.profiles add column if not exists state  text;
 
 -- ============================================================================
 --  Uso da Neblina IA (custo por chamada — gasto em tempo real no admin)
