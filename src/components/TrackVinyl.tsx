@@ -128,7 +128,6 @@ export default function TrackVinyl({
 }) {
   const cfg: DiscConfig = { ...DEFAULT_DISC_CONFIG, ...(config ?? {}) };
   const [side, setSide] = useState<"A" | "B">("A");
-  const [flipping, setFlipping] = useState(false); // meio do flip 2D (disco "de perfil")
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -304,25 +303,14 @@ export default function TrackVinyl({
     return () => window.removeEventListener("resize", apply);
   }, [playingId, side, sideA, sideB, armDrag]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const flipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   function flipTo(s: "A" | "B") {
     if (s === side) return;
     const a = audioRef.current;
     if (a) a.pause();
     setPlayingId(null);
     setHoverId(null);
-    // Flip 2D (scaleX): encolhe o disco até "de perfil", troca a face nesse ponto e
-    // volta. É intencionalmente SEM 3D (nada de rotateY/perspective/preserve-3d): no
-    // mobile o transform 3D persistente do verso fazia o iOS Safari travar num zoom
-    // sem volta. Sem 3D, não há como o flip mexer na escala da página.
-    if (flipTimer.current) clearTimeout(flipTimer.current);
-    setFlipping(true);
-    flipTimer.current = setTimeout(() => {
-      setSide(s);
-      setFlipping(false);
-    }, 300);
+    setSide(s);
   }
-  useEffect(() => () => { if (flipTimer.current) clearTimeout(flipTimer.current); }, []);
 
   const current = tracks.find((t) => t.id === (hoverId ?? playingId));
   const caption = hoverId
@@ -339,24 +327,42 @@ export default function TrackVinyl({
         <span className={cn("truncate", current ? "text-ink" : "text-faint")}>{caption}</span>
       </div>
 
-      {/* disco com flip 2D (scaleX) — SEM 3D de propósito (ver flipTo) */}
+      {/* disco com flip 3D */}
       <div ref={discRef} className="relative aspect-square w-full">
-        {/* sombra estática atrás do disco */}
-        <div className="absolute inset-[5%] rounded-full bg-black/60 blur-xl" aria-hidden />
-
-        {/* Só a face ativa é renderizada. O scaleX encolhe o disco até "de perfil"
-            (flipping) e volta; a troca de face acontece nesse ponto. Transform 2D puro:
-            não projeta além da caixa nem cria camada 3D, então não há zoom travado no
-            mobile. O braço fica fora deste wrapper (irmão), intacto. */}
+        {/* Palco 3D do flip — clipado e isolado numa camada própria. O flip é o rotateY
+            3D de sempre (mesma animação); a diferença é que o DIV das faces é um QUADRADO
+            e, ao girar com perspective, seus cantos projetam PRA FORA da caixa. No mobile
+            (iOS Safari) esses limites 3D entravam no cálculo de escala da página e
+            travavam num zoom sem volta ao ficar no Lado B (rotateY 180 persistente); no
+            Lado A (rotateY 0) não havia projeção, por isso "voltava ao normal". Conter
+            aqui — overflow-hidden + isolation + contain(paint) + camada própria — clipa a
+            projeção e impede que ela afete a escala/rolagem da página. O disco visível é
+            um círculo inscrito no quadrado, então o clip não corta nada aparente. O braço
+            fica FORA deste palco (irmão), logo não é clipado. */}
         <div
-          className="absolute inset-0 transition-transform duration-300 ease-in-out"
-          style={{ transform: flipping ? "scaleX(0.04)" : "scaleX(1)" }}
+          className="absolute inset-0 overflow-hidden"
+          style={{ perspective: "1400px", isolation: "isolate", contain: "paint", transform: "translateZ(0)" }}
         >
-          {side === "A" ? (
-            <Face tracks={sideA} coverUrl={coverUrl} cfg={cfg} side="A" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
-          ) : (
-            <Face tracks={sideB} coverUrl={coverUrlB ?? coverUrl} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
-          )}
+          <div
+            className="absolute inset-0 transition-transform duration-[2100ms]"
+            style={{ transformStyle: "preserve-3d", transform: side === "B" ? "rotateY(180deg)" : "rotateY(0deg)", transitionTimingFunction: "cubic-bezier(0.45,0,0.15,1)", willChange: "transform" }}
+          >
+            {/* sombra */}
+            <div className="absolute inset-[5%] rounded-full bg-black/60 blur-xl" style={{ backfaceVisibility: "hidden" }} aria-hidden />
+
+            {/* Lado A (frente). rounded-full = a face é um CÍRCULO, não um quadrado —
+                assim, ao girar em 3D, não há cantos de quadrado projetando pra fora da
+                caixa (a raiz do overflow que fazia o mobile dar zoom). O disco já é
+                circular, então nada visível é cortado. */}
+            <div className="absolute inset-0 overflow-hidden rounded-full" style={{ backfaceVisibility: "hidden" }}>
+              <Face tracks={sideA} coverUrl={coverUrl} cfg={cfg} side="A" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
+            </div>
+
+            {/* Lado B (verso) */}
+            <div className="absolute inset-0 overflow-hidden rounded-full" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+              <Face tracks={sideB} coverUrl={coverUrlB ?? coverUrl} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
+            </div>
+          </div>
         </div>
 
         {/* braço/agulha — arraste até o sulco pra tocar */}
