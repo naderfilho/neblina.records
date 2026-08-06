@@ -328,22 +328,32 @@ export default function TrackVinyl({
       </div>
 
       {/* disco com flip 3D */}
-      <div ref={discRef} className="relative aspect-square w-full" style={{ perspective: "1400px" }}>
-        <div
-          className="relative h-full w-full transition-transform duration-[2100ms]"
-          style={{ transformStyle: "preserve-3d", transform: side === "B" ? "rotateY(180deg)" : "rotateY(0deg)", transitionTimingFunction: "cubic-bezier(0.45,0,0.15,1)" }}
-        >
-          {/* sombra */}
-          <div className="absolute inset-[5%] rounded-full bg-black/60 blur-xl" style={{ backfaceVisibility: "hidden" }} aria-hidden />
+      <div ref={discRef} className="relative aspect-square w-full">
+        {/* Palco 3D do flip, com clip e camada isolada PRÓPRIOS. Conter a rotação aqui
+            (overflow-hidden + isolation) impede que o iOS Safari inclua os limites 3D do
+            rotateY no cálculo de escala da página — era isso que "prendia" o mobile num
+            zoom sem volta ao virar pro Lado B (o transform 3D persistente do verso). Ao
+            voltar pro Lado A o transform some e o zoom "desprendia": o sintoma exato do
+            bug. O disco é um círculo inscrito no quadrado e, com esta perspectiva, nunca
+            projeta além da própria caixa — então o clip não corta nada visível. O braço
+            fica fora deste palco (irmão), logo continua inteiro. */}
+        <div className="absolute inset-0 overflow-hidden" style={{ perspective: "1400px", isolation: "isolate" }}>
+          <div
+            className="absolute inset-0 transition-transform duration-[2100ms]"
+            style={{ transformStyle: "preserve-3d", transform: side === "B" ? "rotateY(180deg)" : "rotateY(0deg)", transitionTimingFunction: "cubic-bezier(0.45,0,0.15,1)" }}
+          >
+            {/* sombra */}
+            <div className="absolute inset-[5%] rounded-full bg-black/60 blur-xl" style={{ backfaceVisibility: "hidden" }} aria-hidden />
 
-          {/* Lado A (frente) */}
-          <div className="absolute inset-0" style={{ backfaceVisibility: "hidden" }}>
-            <Face tracks={sideA} coverUrl={coverUrl} cfg={cfg} side="A" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
-          </div>
+            {/* Lado A (frente) */}
+            <div className="absolute inset-0" style={{ backfaceVisibility: "hidden" }}>
+              <Face tracks={sideA} coverUrl={coverUrl} cfg={cfg} side="A" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
+            </div>
 
-          {/* Lado B (verso) */}
-          <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-            <Face tracks={sideB} coverUrl={coverUrlB ?? coverUrl} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
+            {/* Lado B (verso) */}
+            <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+              <Face tracks={sideB} coverUrl={coverUrlB ?? coverUrl} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
+            </div>
           </div>
         </div>
 
