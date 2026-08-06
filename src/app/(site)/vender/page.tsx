@@ -20,7 +20,7 @@ export default function VenderPage() {
         <p className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-brand">Compramos seu disco</p>
         <h1 className="font-display text-4xl leading-tight text-ink md:text-5xl">Venda seu vinil para a Neblina</h1>
         <p className="mx-auto mt-4 max-w-2xl text-muted">
-          Tem discos parados em casa? A gente compra. Preencha os dados do disco que você quer vender — é rápido, e
+          Tem discos parados em casa? A gente compra. Preencha os dados do disco que você quer vender. É rápido, e
           nossa equipe faz uma proposta justa pela sua peça.
         </p>
       </div>
