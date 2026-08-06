@@ -645,3 +645,57 @@ create policy records_public_read on public.records
       where br.record_id = records.id and bx.is_published
     )
   );
+
+-- ============================================================================
+--  ACESSOS ao site (analytics) — uma linha por page view, sem dado pessoal.
+-- ============================================================================
+create table if not exists public.site_visits (
+  id         bigint generated always as identity primary key,
+  path       text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists site_visits_created_idx on public.site_visits (created_at);
+
+alter table public.site_visits enable row level security;
+drop policy if exists site_visits_admin_read on public.site_visits;
+create policy site_visits_admin_read on public.site_visits
+  for select using (public.is_admin());
+-- sem policy de insert: ninguém insere direto; só a RPC (security definer).
+
+create or replace function public.log_site_visit(p_path text)
+returns void language sql security definer set search_path = public as $$
+  insert into public.site_visits (path) values (left(coalesce(p_path, ''), 200));
+$$;
+grant execute on function public.log_site_visit(text) to anon, authenticated;
+
+-- Agregações (fuso America/Sao_Paulo). RLS admin-read filtra: não-admin vê 0.
+create or replace function public.visit_stats_daily(p_days int default 30)
+returns table(bucket date, visits bigint)
+language sql stable set search_path = public as $$
+  select (created_at at time zone 'America/Sao_Paulo')::date as bucket, count(*)::bigint
+  from public.site_visits
+  where created_at >= now() - make_interval(days => p_days)
+  group by 1 order by 1;
+$$;
+create or replace function public.visit_stats_hourly(p_days int default 30)
+returns table(bucket int, visits bigint)
+language sql stable set search_path = public as $$
+  select extract(hour from created_at at time zone 'America/Sao_Paulo')::int as bucket, count(*)::bigint
+  from public.site_visits
+  where created_at >= now() - make_interval(days => p_days)
+  group by 1 order by 1;
+$$;
+create or replace function public.visit_stats_weekday(p_days int default 30)
+returns table(bucket int, visits bigint)
+language sql stable set search_path = public as $$
+  select extract(dow from created_at at time zone 'America/Sao_Paulo')::int as bucket, count(*)::bigint
+  from public.site_visits
+  where created_at >= now() - make_interval(days => p_days)
+  group by 1 order by 1;
+$$;
+grant execute on function public.visit_stats_daily(int)   to authenticated;
+grant execute on function public.visit_stats_hourly(int)  to authenticated;
+grant execute on function public.visit_stats_weekday(int) to authenticated;
+revoke execute on function public.visit_stats_daily(int)   from anon;
+revoke execute on function public.visit_stats_hourly(int)  from anon;
+revoke execute on function public.visit_stats_weekday(int) from anon;

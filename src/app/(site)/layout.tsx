@@ -1,4 +1,5 @@
 import Providers from "@/components/Providers";
+import VisitLogger from "@/components/VisitLogger";
 import { getSessionProfile } from "@/lib/auth";
 
 export default async function SiteLayout({
@@ -7,5 +8,10 @@ export default async function SiteLayout({
   children: React.ReactNode;
 }) {
   const { profile } = await getSessionProfile();
-  return <Providers profile={profile}>{children}</Providers>;
+  return (
+    <Providers profile={profile}>
+      <VisitLogger />
+      {children}
+    </Providers>
+  );
 }
