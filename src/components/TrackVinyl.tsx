@@ -128,12 +128,16 @@ export default function TrackVinyl({
 }) {
   const cfg: DiscConfig = { ...DEFAULT_DISC_CONFIG, ...(config ?? {}) };
   const [side, setSide] = useState<"A" | "B">("A");
-  // Ângulo do giro 3D. `null` = parado/reto (SEM 3D). Número = girando (estrutura 3D
-  // transiente). Manter o disco reto quando parado é o que mata o zoom travado no
-  // mobile: no Lado B não fica mais uma camada rotateY(180) 3D permanente.
-  const [flipAngle, setFlipAngle] = useState<number | null>(null);
+  // Estrutura 3D SEMPRE montada. Em repouso o ângulo é SEMPRE 0 (o mesmo estado do
+  // Lado A original, que nunca deu zoom). O giro anima 0→180; ao terminar, resetamos
+  // pra 0 de forma INSTANTÂNEA e trocamos qual face fica na frente (invisível: 180
+  // mostrando o verso == 0 mostrando o novo lado na frente). Assim nunca sobra um
+  // rotateY(180) fixo no Lado B, e não há troca de estrutura no fim (era o que
+  // disparava o zoom atrasado no WebKit). `instant` desliga a transição só no reset.
+  const [angle, setAngle] = useState(0); // 0 = repouso · 180 = girando
+  const [instant, setInstant] = useState(false);
   const flipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const flipStart = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flipReset = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -310,27 +314,25 @@ export default function TrackVinyl({
   }, [playingId, side, sideA, sideB, armDrag]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function flipTo(s: "A" | "B") {
-    if (s === side || flipAngle !== null) return; // ignora se já está no lado ou girando
+    if (s === side || angle !== 0) return; // ignora se já está no lado ou girando
     const a = audioRef.current;
     if (a) a.pause();
     setPlayingId(null);
     setHoverId(null);
-    const from = side === "A" ? 0 : 180;
-    const to = s === "A" ? 0 : 180;
-    // monta a estrutura 3D no ângulo atual (idêntico ao estado reto) e, logo depois,
-    // dispara a transição pro ângulo alvo — a MESMA animação 3D de sempre. Usamos
-    // setTimeout (não rAF) para o giro rodar mesmo se a aba não estiver compondo frames.
-    setFlipAngle(from);
-    flipStart.current = setTimeout(() => setFlipAngle(to), 40);
-    // ao terminar o giro, assenta RETO no novo lado (flipAngle volta a null → sem 3D).
+    // gira 0→180 (a face do verso = novo lado vem pra frente) — animação 3D de sempre.
+    setAngle(180);
     flipTimer.current = setTimeout(() => {
+      // fim do giro: volta pra 0 SEM animar e troca o lado lógico. 180 mostrando o
+      // verso (s) é idêntico a 0 mostrando s na frente → troca invisível. Repouso = 0.
+      setInstant(true);
       setSide(s);
-      setFlipAngle(null);
-    }, 2200);
+      setAngle(0);
+      flipReset.current = setTimeout(() => setInstant(false), 60);
+    }, 2150);
   }
   useEffect(() => () => {
     if (flipTimer.current) clearTimeout(flipTimer.current);
-    if (flipStart.current) clearTimeout(flipStart.current);
+    if (flipReset.current) clearTimeout(flipReset.current);
   }, []);
 
   const current = tracks.find((t) => t.id === (hoverId ?? playingId));
@@ -348,40 +350,45 @@ export default function TrackVinyl({
         <span className={cn("truncate", current ? "text-ink" : "text-faint")}>{caption}</span>
       </div>
 
-      {/* disco: flip 3D SÓ durante o giro; parado fica reto (sem 3D) — ver flipTo */}
+      {/* disco: estrutura 3D SEMPRE montada; repouso sempre em rotateY(0) — ver flipTo.
+          Front = lado atual, Back = outro lado. No fim do giro a troca é invisível. */}
       <div ref={discRef} className="relative aspect-square w-full">
-        {/* sombra estática atrás do disco */}
-        <div className="absolute inset-[5%] rounded-full bg-black/60 blur-xl" aria-hidden />
+        <div className="absolute inset-0 overflow-hidden" style={{ perspective: "1400px", isolation: "isolate", contain: "paint" }}>
+          <div
+            className="absolute inset-0"
+            style={{
+              transformStyle: "preserve-3d",
+              transform: `rotateY(${angle}deg)`,
+              transition: instant ? "none" : "transform 2100ms cubic-bezier(0.45,0,0.15,1)",
+              willChange: "transform",
+            }}
+          >
+            {/* sombra */}
+            <div className="absolute inset-[5%] rounded-full bg-black/60 blur-xl" style={{ backfaceVisibility: "hidden" }} aria-hidden />
 
-        {flipAngle !== null ? (
-          /* ---- Girando: estrutura 3D transiente (perspective + duas faces). Como ela
-             só existe durante o giro (~2s) e some ao parar, NÃO sobra camada rotateY(180)
-             fixa no Lado B — que era o que travava o zoom no WebKit (Safari/Brave iOS).
-             Clipe/isolamento mantidos pra conter a projeção durante o giro. */
-          <div className="absolute inset-0 overflow-hidden" style={{ perspective: "1400px", isolation: "isolate", contain: "paint" }}>
-            <div
-              className="absolute inset-0 transition-transform duration-[2100ms]"
-              style={{ transformStyle: "preserve-3d", transform: `rotateY(${flipAngle}deg)`, transitionTimingFunction: "cubic-bezier(0.45,0,0.15,1)", willChange: "transform" }}
-            >
-              <div className="absolute inset-0 overflow-hidden rounded-full" style={{ backfaceVisibility: "hidden" }}>
-                <Face tracks={sideA} coverUrl={coverUrl} cfg={cfg} side="A" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled />
-              </div>
-              <div className="absolute inset-0 overflow-hidden rounded-full" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                <Face tracks={sideB} coverUrl={coverUrlB ?? coverUrl} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled />
-              </div>
+            {/* FRENTE = lado atual */}
+            <div className="absolute inset-0 overflow-hidden rounded-full" style={{ backfaceVisibility: "hidden" }}>
+              <Face
+                tracks={side === "A" ? sideA : sideB}
+                coverUrl={side === "A" ? coverUrl : (coverUrlB ?? coverUrl)}
+                cfg={cfg} side={side}
+                hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play}
+                grooveDisabled={armDrag || angle !== 0}
+              />
+            </div>
+
+            {/* VERSO = outro lado (aparece durante o giro) */}
+            <div className="absolute inset-0 overflow-hidden rounded-full" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+              <Face
+                tracks={side === "A" ? sideB : sideA}
+                coverUrl={side === "A" ? (coverUrlB ?? coverUrl) : coverUrl}
+                cfg={cfg} side={side === "A" ? "B" : "A"}
+                hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play}
+                grooveDisabled={armDrag || angle !== 0}
+              />
             </div>
           </div>
-        ) : (
-          /* ---- Parado: só a face ativa, RETA, sem perspective/rotateY/preserve-3d.
-             Sem transform 3D persistente = sem zoom travado no mobile. ---- */
-          <div className="absolute inset-0">
-            {side === "A" ? (
-              <Face tracks={sideA} coverUrl={coverUrl} cfg={cfg} side="A" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
-            ) : (
-              <Face tracks={sideB} coverUrl={coverUrlB ?? coverUrl} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
-            )}
-          </div>
-        )}
+        </div>
 
         {/* braço/agulha — arraste até o sulco pra tocar */}
         <svg ref={armSvgRef} viewBox="0 0 200 200" className="pointer-events-none absolute -right-4 -top-4 z-30 h-[62%] w-[62%] touch-none drop-shadow-xl">
