@@ -128,6 +128,12 @@ export default function TrackVinyl({
 }) {
   const cfg: DiscConfig = { ...DEFAULT_DISC_CONFIG, ...(config ?? {}) };
   const [side, setSide] = useState<"A" | "B">("A");
+  // Ângulo do giro 3D. `null` = parado/reto (SEM 3D). Número = girando (estrutura 3D
+  // transiente). Manter o disco reto quando parado é o que mata o zoom travado no
+  // mobile: no Lado B não fica mais uma camada rotateY(180) 3D permanente.
+  const [flipAngle, setFlipAngle] = useState<number | null>(null);
+  const flipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flipStart = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -304,13 +310,28 @@ export default function TrackVinyl({
   }, [playingId, side, sideA, sideB, armDrag]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function flipTo(s: "A" | "B") {
-    if (s === side) return;
+    if (s === side || flipAngle !== null) return; // ignora se já está no lado ou girando
     const a = audioRef.current;
     if (a) a.pause();
     setPlayingId(null);
     setHoverId(null);
-    setSide(s);
+    const from = side === "A" ? 0 : 180;
+    const to = s === "A" ? 0 : 180;
+    // monta a estrutura 3D no ângulo atual (idêntico ao estado reto) e, logo depois,
+    // dispara a transição pro ângulo alvo — a MESMA animação 3D de sempre. Usamos
+    // setTimeout (não rAF) para o giro rodar mesmo se a aba não estiver compondo frames.
+    setFlipAngle(from);
+    flipStart.current = setTimeout(() => setFlipAngle(to), 40);
+    // ao terminar o giro, assenta RETO no novo lado (flipAngle volta a null → sem 3D).
+    flipTimer.current = setTimeout(() => {
+      setSide(s);
+      setFlipAngle(null);
+    }, 2200);
   }
+  useEffect(() => () => {
+    if (flipTimer.current) clearTimeout(flipTimer.current);
+    if (flipStart.current) clearTimeout(flipStart.current);
+  }, []);
 
   const current = tracks.find((t) => t.id === (hoverId ?? playingId));
   const caption = hoverId
@@ -327,43 +348,40 @@ export default function TrackVinyl({
         <span className={cn("truncate", current ? "text-ink" : "text-faint")}>{caption}</span>
       </div>
 
-      {/* disco com flip 3D */}
+      {/* disco: flip 3D SÓ durante o giro; parado fica reto (sem 3D) — ver flipTo */}
       <div ref={discRef} className="relative aspect-square w-full">
-        {/* Palco 3D do flip — clipado e isolado numa camada própria. O flip é o rotateY
-            3D de sempre (mesma animação); a diferença é que o DIV das faces é um QUADRADO
-            e, ao girar com perspective, seus cantos projetam PRA FORA da caixa. No mobile
-            (iOS Safari) esses limites 3D entravam no cálculo de escala da página e
-            travavam num zoom sem volta ao ficar no Lado B (rotateY 180 persistente); no
-            Lado A (rotateY 0) não havia projeção, por isso "voltava ao normal". Conter
-            aqui — overflow-hidden + isolation + contain(paint) + camada própria — clipa a
-            projeção e impede que ela afete a escala/rolagem da página. O disco visível é
-            um círculo inscrito no quadrado, então o clip não corta nada aparente. O braço
-            fica FORA deste palco (irmão), logo não é clipado. */}
-        <div
-          className="absolute inset-0 overflow-hidden"
-          style={{ perspective: "1400px", isolation: "isolate", contain: "paint", transform: "translateZ(0)" }}
-        >
-          <div
-            className="absolute inset-0 transition-transform duration-[2100ms]"
-            style={{ transformStyle: "preserve-3d", transform: side === "B" ? "rotateY(180deg)" : "rotateY(0deg)", transitionTimingFunction: "cubic-bezier(0.45,0,0.15,1)", willChange: "transform" }}
-          >
-            {/* sombra */}
-            <div className="absolute inset-[5%] rounded-full bg-black/60 blur-xl" style={{ backfaceVisibility: "hidden" }} aria-hidden />
+        {/* sombra estática atrás do disco */}
+        <div className="absolute inset-[5%] rounded-full bg-black/60 blur-xl" aria-hidden />
 
-            {/* Lado A (frente). rounded-full = a face é um CÍRCULO, não um quadrado —
-                assim, ao girar em 3D, não há cantos de quadrado projetando pra fora da
-                caixa (a raiz do overflow que fazia o mobile dar zoom). O disco já é
-                circular, então nada visível é cortado. */}
-            <div className="absolute inset-0 overflow-hidden rounded-full" style={{ backfaceVisibility: "hidden" }}>
-              <Face tracks={sideA} coverUrl={coverUrl} cfg={cfg} side="A" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
-            </div>
-
-            {/* Lado B (verso) */}
-            <div className="absolute inset-0 overflow-hidden rounded-full" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-              <Face tracks={sideB} coverUrl={coverUrlB ?? coverUrl} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
+        {flipAngle !== null ? (
+          /* ---- Girando: estrutura 3D transiente (perspective + duas faces). Como ela
+             só existe durante o giro (~2s) e some ao parar, NÃO sobra camada rotateY(180)
+             fixa no Lado B — que era o que travava o zoom no WebKit (Safari/Brave iOS).
+             Clipe/isolamento mantidos pra conter a projeção durante o giro. */
+          <div className="absolute inset-0 overflow-hidden" style={{ perspective: "1400px", isolation: "isolate", contain: "paint" }}>
+            <div
+              className="absolute inset-0 transition-transform duration-[2100ms]"
+              style={{ transformStyle: "preserve-3d", transform: `rotateY(${flipAngle}deg)`, transitionTimingFunction: "cubic-bezier(0.45,0,0.15,1)", willChange: "transform" }}
+            >
+              <div className="absolute inset-0 overflow-hidden rounded-full" style={{ backfaceVisibility: "hidden" }}>
+                <Face tracks={sideA} coverUrl={coverUrl} cfg={cfg} side="A" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled />
+              </div>
+              <div className="absolute inset-0 overflow-hidden rounded-full" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+                <Face tracks={sideB} coverUrl={coverUrlB ?? coverUrl} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled />
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          /* ---- Parado: só a face ativa, RETA, sem perspective/rotateY/preserve-3d.
+             Sem transform 3D persistente = sem zoom travado no mobile. ---- */
+          <div className="absolute inset-0">
+            {side === "A" ? (
+              <Face tracks={sideA} coverUrl={coverUrl} cfg={cfg} side="A" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
+            ) : (
+              <Face tracks={sideB} coverUrl={coverUrlB ?? coverUrl} cfg={cfg} side="B" hoverId={hoverId} playingId={playingId} onHover={setHoverId} onPlay={play} grooveDisabled={armDrag} />
+            )}
+          </div>
+        )}
 
         {/* braço/agulha — arraste até o sulco pra tocar */}
         <svg ref={armSvgRef} viewBox="0 0 200 200" className="pointer-events-none absolute -right-4 -top-4 z-30 h-[62%] w-[62%] touch-none drop-shadow-xl">
