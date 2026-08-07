@@ -346,19 +346,18 @@ export default function TrackVinyl({
     <div className="mx-auto max-w-md">
       {/* caption */}
       <div className="mb-3 flex items-center justify-center gap-2 text-sm">
-        {playingId && !hoverId ? <Play size={14} className="text-brand" /> : null}
-        <span className={cn("truncate", current ? "text-ink" : "text-faint")}>{caption}</span>
+        {playingId && !hoverId ? <Play size={14} className="shrink-0 text-brand" /> : null}
+        <span className={cn("min-w-0 truncate", current ? "text-ink" : "text-faint")}>{caption}</span>
       </div>
 
       {/* disco: estrutura 3D SEMPRE montada; repouso sempre em rotateY(0) — ver flipTo.
           Front = lado atual, Back = outro lado. No fim do giro a troca é invisível.
-          SEM perspective e SEM will-change/contain/isolation/overflow. A perspective
-          fazia o disco "vir pra frente" e ficar ~15% maior no meio do giro; o iOS
-          rasterizava a camada nesse tamanho MÁXIMO e, ao ficar ocioso, redesenhava o
-          disco ampliado (o zoom que voltava ~1,5s depois de parar). Sem perspective, o
-          rotateY é ortográfico: o disco nunca passa do próprio tamanho → nada pra o iOS
-          cachear ampliado. O flip continua (a face vira e troca via backface). */}
-      <div ref={discRef} id="tv-disc" className="relative aspect-square w-full">
+          A CAUSA REAL do "zoom" era outra: um título de faixa longo (Lado B) não
+          truncava (faltava min-w-0 no flex), virava min-content grande e esticava a
+          coluna toda além da tela — e o disco (w-full) crescia junto (disc=448 vs 392,
+          com transform identidade). Corrigido no min-w-0 da lista/legenda. A perspective
+          está de volta (nunca foi o problema); repouso sempre em rotateY(0). */}
+      <div ref={discRef} className="relative aspect-square w-full" style={{ perspective: "1400px" }}>
         <div
           className="absolute inset-0"
           style={{
@@ -473,10 +472,13 @@ export default function TrackVinyl({
                 playingId === t.id ? "bg-brand/15 text-brand" : "text-muted hover:bg-panel",
               )}
             >
-              <span className="w-5 text-center text-xs text-faint">{i + 1}</span>
-              {playingId === t.id ? <Pause size={14} /> : <Play size={14} />}
-              <span className="flex-1 truncate">{t.title}</span>
-              {!t.audio_url && <span className="text-[10px] text-faint">sem áudio</span>}
+              <span className="w-5 shrink-0 text-center text-xs text-faint">{i + 1}</span>
+              {playingId === t.id ? <Pause size={14} className="shrink-0" /> : <Play size={14} className="shrink-0" />}
+              {/* min-w-0 é ESSENCIAL: sem ele, um título longo (nowrap do truncate) não
+                  encolhe, vira min-content grande e ESTICA a coluna toda além da tela —
+                  era isso que "aumentava o disco" no Lado B. Com min-w-0 o título trunca. */}
+              <span className="min-w-0 flex-1 truncate">{t.title}</span>
+              {!t.audio_url && <span className="shrink-0 text-[10px] text-faint">sem áudio</span>}
             </button>
           </li>
         ))}

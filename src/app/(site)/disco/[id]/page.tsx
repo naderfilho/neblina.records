@@ -17,7 +17,6 @@ import GradingHelp from "@/components/GradingHelp";
 import ShippingCalculator from "@/components/ShippingCalculator";
 import PhotoGallery from "@/components/PhotoGallery";
 import Comments from "@/components/Comments";
-import ZoomDebug from "@/components/ZoomDebug";
 import type { RecordItem, RecordPhoto, Comment, ExtraBlock } from "@/lib/types";
 
 export const revalidate = 0;
@@ -110,7 +109,6 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="mx-auto max-w-6xl overflow-x-clip px-6 py-10">
-      <ZoomDebug />
       <BackButton />
 
       <div className="grid gap-10 md:grid-cols-2">
