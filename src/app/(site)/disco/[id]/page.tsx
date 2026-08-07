@@ -112,8 +112,10 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
       <BackButton />
 
       <div className="grid gap-10 md:grid-cols-2">
-        {/* Vinil */}
-        <div className="md:sticky md:top-24 md:self-start">
+        {/* Vinil. min-w-0 é ESSENCIAL: grid item tem min-width:auto e, sem isso, um
+            título de faixa longo estica a coluna além da tela e o disco (w-full) cresce
+            junto — era o "zoom" do Lado B no mobile. */}
+        <div className="min-w-0 md:sticky md:top-24 md:self-start">
           <DiscCoverReveal coverUrl={r.cover_image_url} discOffset={r.tracks?.length ? 2 : 0}>
             {r.tracks && r.tracks.length > 0 ? (
               <TrackVinyl tracks={r.tracks} coverUrl={r.cover_image_url} coverUrlB={r.cover_image_url_b} config={r.disc_config} title={r.title} />
@@ -143,7 +145,7 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
         </div>
 
         {/* Info */}
-        <div>
+        <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             {r.format && (
               <span className="flex items-center gap-1 rounded-full bg-panel px-2.5 py-1 text-xs text-mist">
