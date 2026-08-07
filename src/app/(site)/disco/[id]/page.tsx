@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Disc3, Music2, Check, PenLine } from "lucide-react";
+import { Disc3, Music2, Check, PenLine, Package } from "lucide-react";
 import BackButton from "@/components/BackButton";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
@@ -28,7 +28,7 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
   // colunas seguras (sem dados internos: mercado/comprador). O papel `anon` nem
   // tem permissão de ler as internas — por isso NÃO usamos "*" aqui.
   const PUBLIC_COLS =
-    "id,title,artist,genre,nationality,format,weight_grams,disc_quality,cover_quality,price,payment_methods,description,cover_image_url,cover_image_url_b,is_gatefold,gatefold_image_url,gatefold_dir,is_autographed,autograph_photo_url,audioteca_tier,disc_config,audio_url,audio_start,audio_end,tracks,home_track_id,condition,included_content,history,identification,sale_info,tag_ids,sort_order,extra_blocks,year,catalog_number,label_company,views_count,stock_qty,availability,is_published,is_featured,sold,created_at,updated_at";
+    "id,title,artist,genre,nationality,format,weight_grams,disc_quality,cover_quality,price,payment_methods,description,cover_image_url,cover_image_url_b,is_gatefold,gatefold_image_url,gatefold_dir,is_autographed,autograph_photo_url,audioteca_tier,disc_config,audio_url,audio_start,audio_end,tracks,home_track_id,condition,included_content,history,identification,sale_info,tag_ids,sort_order,extra_blocks,year,catalog_number,label_company,views_count,stock_qty,availability,is_published,is_featured,sold,box_only,created_at,updated_at";
   const { data: record } = await supabase.from("records").select(PUBLIC_COLS).eq("id", id).single();
   if (!record) notFound();
   const r = record as RecordItem;
@@ -43,6 +43,19 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
   if (profile) {
     const { data: favRow } = await supabase.from("favorites").select("record_id").eq("record_id", id).eq("user_id", profile.id).maybeSingle();
     isFav = !!favRow;
+  }
+
+  // Disco exclusivo de box: não tem preço/compra próprios (o box é vendido completo).
+  // Busca o box a que pertence para direcionar o cliente.
+  let boxOf: { id: string; title: string } | null = null;
+  if (r.box_only) {
+    const { data: br } = await supabase
+      .from("box_records")
+      .select("boxes(id,title)")
+      .eq("record_id", id)
+      .maybeSingle();
+    const bx = (br as unknown as { boxes: { id: string; title: string } | null } | null)?.boxes;
+    if (bx) boxOf = bx;
   }
 
   // conta visita
@@ -163,23 +176,31 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
           <h1 translate="no" className="notranslate font-display text-4xl leading-tight text-ink">{r.title}</h1>
           <p translate="no" className="notranslate mt-1 text-lg text-muted">{r.artist}</p>
 
-          <div className="mt-5 flex items-center gap-3">
-            <span
-              className="font-display text-4xl font-bold"
-              style={{ color: "#ff9d2e", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}
-            >
-              {formatBRL(r.price)}
-            </span>
-            {r.availability === "sold" ? (
-              <span className="rounded-full border border-red-500/25 px-3 py-1 text-xs font-medium text-red-300" style={{ background: "#2e0f0f" }}>Vendido</span>
-            ) : r.availability === "reserved" ? (
-              <span className="rounded-full border border-amber-500/25 px-3 py-1 text-xs font-medium text-[#e0a63a]" style={{ background: "#2e2408" }}>Reservado</span>
-            ) : r.availability === "unavailable" ? (
-              <span className="rounded-full border border-line px-3 py-1 text-xs font-medium text-faint" style={{ background: "#1a1a1a" }}>Indisponível</span>
-            ) : (
-              <span className="rounded-full border border-teal/25 px-3 py-1 text-xs font-medium text-[#3aa7b4]" style={{ background: "#0c2e2b" }}>Disponível</span>
-            )}
-          </div>
+          {r.box_only ? (
+            <div className="mt-5">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+                <Package size={12} /> Disco de box
+              </span>
+            </div>
+          ) : (
+            <div className="mt-5 flex items-center gap-3">
+              <span
+                className="font-display text-4xl font-bold"
+                style={{ color: "#ff9d2e", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}
+              >
+                {formatBRL(r.price)}
+              </span>
+              {r.availability === "sold" ? (
+                <span className="rounded-full border border-red-500/25 px-3 py-1 text-xs font-medium text-red-300" style={{ background: "#2e0f0f" }}>Vendido</span>
+              ) : r.availability === "reserved" ? (
+                <span className="rounded-full border border-amber-500/25 px-3 py-1 text-xs font-medium text-[#e0a63a]" style={{ background: "#2e2408" }}>Reservado</span>
+              ) : r.availability === "unavailable" ? (
+                <span className="rounded-full border border-line px-3 py-1 text-xs font-medium text-faint" style={{ background: "#1a1a1a" }}>Indisponível</span>
+              ) : (
+                <span className="rounded-full border border-teal/25 px-3 py-1 text-xs font-medium text-[#3aa7b4]" style={{ background: "#0c2e2b" }}>Disponível</span>
+              )}
+            </div>
+          )}
 
           {/* qualidade */}
           <div className="mt-5 flex flex-wrap items-center gap-2">
@@ -199,7 +220,23 @@ export default async function DiscoPage({ params }: { params: Promise<{ id: stri
           </div>
 
           <div className="mt-6 space-y-3">
-            <BuyButtons id={r.id} title={r.title} artist={r.artist} price={r.price} coverUrl={r.cover_image_url} available={r.availability === "available"} />
+            {r.box_only ? (
+              <div className="rounded-2xl border border-brand/30 bg-brand/[0.07] p-4">
+                <p className="text-sm text-muted">
+                  Este disco faz parte de um box e <strong className="text-ink">não é vendido separado</strong> — ele vem junto no box completo.
+                </p>
+                {boxOf && (
+                  <Link
+                    href={`/box/${boxOf.id}`}
+                    className="btn-brand mt-3 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm"
+                  >
+                    <Package size={16} /> Ver o box “{boxOf.title}”
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <BuyButtons id={r.id} title={r.title} artist={r.artist} price={r.price} coverUrl={r.cover_image_url} available={r.availability === "available"} />
+            )}
             <div className="flex flex-wrap items-center gap-2">
               <FavoriteButton recordId={r.id} initialFav={isFav} userId={profile?.id ?? null} />
               <ShareButton id={r.id} title={r.title} artist={r.artist} />

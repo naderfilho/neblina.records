@@ -549,6 +549,8 @@ create index if not exists box_records_record_idx on public.box_records (record_
 -- discos exclusivos de um box (cadastrados junto do box, fora do catálogo)
 alter table public.records add column if not exists box_only boolean not null default false;
 create index if not exists records_box_only_idx on public.records (box_only);
+-- box_only é público (a página do disco esconde preço/compra dos discos de box).
+grant select (box_only) on public.records to anon;
 
 -- CUSTO / valor pago na aquisição (privado, só admin) — para calcular lucro.
 -- Fica no disco (inclui os do box) e no box. Nunca é exposto na área pública.
