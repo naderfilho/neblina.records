@@ -28,6 +28,19 @@ type VinylProps = {
 export const GROOVE_LAYER =
   "repeating-radial-gradient(circle at center, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 1px, rgba(0,0,0,0.28) 1px, rgba(0,0,0,0.28) 2px, transparent 2px, transparent 3px)";
 
+// ---- CD (mídia reflexiva). Iridescência (arco-íris), trilha de dados fina e brilho.
+//      Exportado para o TrackVinyl (página do disco com faixas) reusar. ----
+export const CD_IRIS = "conic-gradient(from 0deg,#ff3b5c,#ff9a00,#ffe000,#39d353,#00c7be,#2e9bff,#7b61ff,#c04bff,#ff3b5c)";
+export const CD_IRIS2 = "conic-gradient(from 140deg,#00c7be,#2e9bff,#7b61ff,#ff3b5c,#ff9a00,#39d353,#00c7be)";
+export const CD_TRACK = "repeating-radial-gradient(circle at center,rgba(255,255,255,.07) 0 1px,rgba(0,0,0,.10) 1px 2px)";
+export const CD_GLOSS = "linear-gradient(125deg,rgba(255,255,255,.42) 0%,rgba(255,255,255,.05) 26%,transparent 44%,transparent 62%,rgba(255,255,255,.16) 84%,rgba(255,255,255,.30) 100%)";
+export function cdSilver(finish?: string): string {
+  if (finish === "gold") return "radial-gradient(circle at 50% 50%,#fff3d6 0%,#ecd39a 40%,#c9a961 66%,#9c7c3c 84%,#5f4a1e 100%)";
+  if (finish === "blue") return "radial-gradient(circle at 50% 50%,#eaf4ff 0%,#bcd6f0 40%,#8fb4dc 64%,#5c82ad 84%,#2f4a68 100%)";
+  return "radial-gradient(circle at 50% 50%,#f2f6f8 0%,#d3dce1 38%,#b3bdc4 60%,#8b959c 80%,#5c656b 100%)";
+}
+export const cdIrisOpacity = (finish?: string) => (finish === "gold" ? 0.36 : 0.5);
+
 function bodyStyle(colorId: string, styleId?: string, bodyImageUrl?: string | null): CSSProperties {
   // estampa custom: a arte vira o corpo do disco — mas os sulcos ficam POR CIMA
   if (bodyImageUrl) {
@@ -352,6 +365,7 @@ export default function Vinyl({
       }
     : {};
 
+  const isCd = cfg.media === "cd";
   const ring = ringColor(cfg);
   const bType = borderType(cfg.border);
   const showPhoto = cfg.label === "photo" || cfg.label === "photo-ring";
@@ -368,54 +382,85 @@ export default function Vinyl({
     >
       <div className="absolute inset-[6%] rounded-full bg-black/60 blur-xl" aria-hidden />
 
-      <div
-        ref={bodyRef}
-        className="absolute inset-0 rounded-full"
-        style={bodyStyle(cfg.color, cfg.style, cfg.bodyImageUrl)}
-      >
-        <div className="absolute inset-0 rounded-full ring-1 ring-white/10" aria-hidden />
+      {isCd ? (
+        <>
+          {/* corpo do CD (gira) — base metálica + iridescência + trilha de dados */}
+          <div ref={bodyRef} className="absolute inset-0 rounded-full" style={{ backgroundImage: cdSilver(cfg.cdFinish) }}>
+            <div className="absolute inset-0 rounded-full" style={{ mixBlendMode: "screen", opacity: cdIrisOpacity(cfg.cdFinish), backgroundImage: CD_IRIS }} aria-hidden />
+            <div className="absolute inset-0 rounded-full" style={{ mixBlendMode: "screen", opacity: 0.28, backgroundImage: CD_IRIS2 }} aria-hidden />
+            <div className="absolute inset-0 rounded-full" style={{ opacity: 0.5, backgroundImage: CD_TRACK }} aria-hidden />
+            <div className="absolute inset-0 rounded-full ring-1 ring-black/20" aria-hidden />
 
-        <div className="absolute left-1/2 top-1/2 h-[44%] w-[44%] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full">
-          {showPhoto && coverUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={coverUrl} alt={title ?? "Capa"} className="h-full w-full object-cover" draggable={false} />
-          ) : isLogo || showPhoto ? (
-            // label de foto ainda sem capa → mostra o logo da Neblina como padrão
-            // (quando o admin enviar a capa, ela assume o centro automaticamente)
-            <div className="flex h-full w-full items-center justify-center bg-[#0b0b0b]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="Neblina" className="h-[86%] w-[86%] object-contain" draggable={false} />
+            {/* label central = capa do álbum (ou logo enquanto não tem capa) */}
+            <div className="absolute left-1/2 top-1/2 h-[44%] w-[44%] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full shadow-[0_0_0_1px_rgba(0,0,0,.35)]">
+              {coverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={coverUrl} alt={title ?? "Capa"} className="h-full w-full object-cover" draggable={false} />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-[#0b0b0b]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/logo.png" alt="Neblina" className="h-[86%] w-[86%] object-contain" draggable={false} />
+                </div>
+              )}
             </div>
-          ) : cfg.label === "gradient" ? (
-            <div className="h-full w-full" style={{ background: `radial-gradient(circle at 34% 28%, ${labelColor}, rgba(10,10,10,0.9) 130%)` }} />
-          ) : cfg.label === "target" ? (
-            <div className="h-full w-full" style={{ background: `repeating-radial-gradient(circle at center, ${labelColor} 0 6%, #0b0b0b 6% 12%)` }} />
-          ) : (
-            <div className="h-full w-full" style={{ background: cfg.label === "vintage" ? "#e9e0c8" : cfg.label === "dark" ? "#0b0b0b" : labelColor }} />
+
+            {/* anel transparente (cubo) + furo maior do CD */}
+            <div className="absolute left-1/2 top-1/2 h-[20%] w-[20%] -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: "radial-gradient(circle,rgba(226,232,236,.5),rgba(150,160,168,.32))", boxShadow: "inset 0 0 0 2px rgba(255,255,255,.35), inset 0 0 6px rgba(0,0,0,.4)" }} aria-hidden />
+            <div className="absolute left-1/2 top-1/2 h-[12%] w-[12%] -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: "#0a0d11", boxShadow: "inset 0 1px 3px rgba(255,255,255,.25), 0 0 0 1px rgba(0,0,0,.6)" }} aria-hidden />
+          </div>
+          {/* brilho fixo (não gira) — reflexo de luz */}
+          <div className="pointer-events-none absolute inset-0 rounded-full" style={{ backgroundImage: CD_GLOSS }} aria-hidden />
+        </>
+      ) : (
+        <div
+          ref={bodyRef}
+          className="absolute inset-0 rounded-full"
+          style={bodyStyle(cfg.color, cfg.style, cfg.bodyImageUrl)}
+        >
+          <div className="absolute inset-0 rounded-full ring-1 ring-white/10" aria-hidden />
+
+          <div className="absolute left-1/2 top-1/2 h-[44%] w-[44%] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full">
+            {showPhoto && coverUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={coverUrl} alt={title ?? "Capa"} className="h-full w-full object-cover" draggable={false} />
+            ) : isLogo || showPhoto ? (
+              // label de foto ainda sem capa → mostra o logo da Neblina como padrão
+              // (quando o admin enviar a capa, ela assume o centro automaticamente)
+              <div className="flex h-full w-full items-center justify-center bg-[#0b0b0b]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo.png" alt="Neblina" className="h-[86%] w-[86%] object-contain" draggable={false} />
+              </div>
+            ) : cfg.label === "gradient" ? (
+              <div className="h-full w-full" style={{ background: `radial-gradient(circle at 34% 28%, ${labelColor}, rgba(10,10,10,0.9) 130%)` }} />
+            ) : cfg.label === "target" ? (
+              <div className="h-full w-full" style={{ background: `repeating-radial-gradient(circle at center, ${labelColor} 0 6%, #0b0b0b 6% 12%)` }} />
+            ) : (
+              <div className="h-full w-full" style={{ background: cfg.label === "vintage" ? "#e9e0c8" : cfg.label === "dark" ? "#0b0b0b" : labelColor }} />
+            )}
+          </div>
+
+          {ring && (
+            <div
+              className="absolute left-1/2 top-1/2 h-[44%] w-[44%] -translate-x-1/2 -translate-y-1/2 rounded-full"
+              style={
+                bType === "dashed"
+                  ? { border: `3px dashed ${ring}` }
+                  : {
+                      boxShadow:
+                        bType === "double"
+                          ? `0 0 0 2px ${ring}, 0 0 0 5px rgba(0,0,0,.5), 0 0 0 7px ${ring}`
+                          : bType === "thick"
+                            ? `0 0 0 5px ${ring}, inset 0 0 0 2px rgba(0,0,0,.35)`
+                            : `0 0 0 3px ${ring}, inset 0 0 0 2px rgba(0,0,0,.35)`,
+                    }
+              }
+              aria-hidden
+            />
           )}
+
+          <div className="absolute left-1/2 top-1/2 h-[4.5%] w-[4.5%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0b0b0b] shadow-[inset_0_0_3px_rgba(255,255,255,.35)]" />
         </div>
-
-        {ring && (
-          <div
-            className="absolute left-1/2 top-1/2 h-[44%] w-[44%] -translate-x-1/2 -translate-y-1/2 rounded-full"
-            style={
-              bType === "dashed"
-                ? { border: `3px dashed ${ring}` }
-                : {
-                    boxShadow:
-                      bType === "double"
-                        ? `0 0 0 2px ${ring}, 0 0 0 5px rgba(0,0,0,.5), 0 0 0 7px ${ring}`
-                        : bType === "thick"
-                          ? `0 0 0 5px ${ring}, inset 0 0 0 2px rgba(0,0,0,.35)`
-                          : `0 0 0 3px ${ring}, inset 0 0 0 2px rgba(0,0,0,.35)`,
-                  }
-            }
-            aria-hidden
-          />
-        )}
-
-        <div className="absolute left-1/2 top-1/2 h-[4.5%] w-[4.5%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0b0b0b] shadow-[inset_0_0_3px_rgba(255,255,255,.35)]" />
-      </div>
+      )}
 
       {active && audioUrl && !dragging && (
         <div className="pointer-events-none absolute bottom-[8%] left-1/2 flex -translate-x-1/2 items-end gap-[3px]">

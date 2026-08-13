@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Pipette } from "lucide-react";
 import Vinyl from "@/components/Vinyl";
 import {
-  DISC_STYLES, LABEL_STYLES, BORDER_STYLES,
+  DISC_STYLES, LABEL_STYLES, BORDER_STYLES, CD_FINISHES,
   resolveDiscColor, resolveBorderColor, type DiscConfig,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -86,6 +86,7 @@ export default function VinylDesigner({
 }) {
   const set = (patch: Partial<DiscConfig>) => onChange({ ...config, ...patch });
   const showLabelColor = config.label === "solid" || config.label === "gradient" || config.label === "target";
+  const isCd = config.media === "cd";
 
   // hex atual (resolve preset id → hex para o seletor de cor)
   const discHex = /^#/.test(config.color) ? config.color : resolveDiscColor(config.color).groove;
@@ -98,11 +99,41 @@ export default function VinylDesigner({
         <div className="mx-auto max-w-[200px]">
           <Vinyl coverUrl={coverUrl} config={config} interactive={false} title="Prévia" />
         </div>
-        <p className="mt-2 text-center text-xs text-faint">Prévia do vinil na home</p>
+        <p className="mt-2 text-center text-xs text-faint">Prévia {isCd ? "do CD" : "do vinil"} na home</p>
       </div>
 
       {/* controles */}
       <div className="space-y-5">
+        {/* mídia: vinil ou CD (mesmo tamanho, muda só a arte) */}
+        <div>
+          <p className="mb-2 text-xs uppercase tracking-wider text-muted">Mídia</p>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => set({ media: "vinyl" })}
+              className={cn("rounded-lg border px-4 py-1.5 text-sm font-medium", !isCd ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:text-ink")}>
+              Vinil
+            </button>
+            <button type="button" onClick={() => set({ media: "cd", cdFinish: config.cdFinish ?? "silver" })}
+              className={cn("rounded-lg border px-4 py-1.5 text-sm font-medium", isCd ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:text-ink")}>
+              CD
+            </button>
+          </div>
+        </div>
+
+        {isCd ? (
+          <div>
+            <p className="mb-2 text-xs uppercase tracking-wider text-muted">Acabamento do CD</p>
+            <div className="flex flex-wrap gap-2">
+              {CD_FINISHES.map((f) => (
+                <button key={f.id} type="button" onClick={() => set({ cdFinish: f.id })}
+                  className={cn("rounded-lg border px-3 py-1.5 text-xs", (config.cdFinish ?? "silver") === f.id ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:text-ink")}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-faint">A capa do disco aparece no centro do CD. O disco continua do mesmo tamanho do vinil.</p>
+          </div>
+        ) : (
+        <>
         <div>
           <p className="mb-2 text-xs uppercase tracking-wider text-muted">Cor do disco</p>
           <ColorPicker value={discHex} onChange={(hex) => set({ color: hex })} />
@@ -157,6 +188,8 @@ export default function VinylDesigner({
             <p className="mb-2 text-xs uppercase tracking-wider text-muted">Cor da borda</p>
             <ColorPicker value={borderHex} onChange={(hex) => set({ borderColor: hex })} />
           </div>
+        )}
+        </>
         )}
       </div>
     </div>

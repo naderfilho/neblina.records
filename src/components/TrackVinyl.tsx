@@ -5,7 +5,7 @@ import { Play, Pause } from "lucide-react";
 import { type DiscConfig, DEFAULT_DISC_CONFIG, resolveDiscColor } from "@/lib/constants";
 import { claimAudio, releaseAudio } from "@/lib/audio-bus";
 import { playScratch } from "@/lib/scratch";
-import { GROOVE_LAYER } from "@/components/Vinyl";
+import { GROOVE_LAYER, CD_IRIS, CD_IRIS2, CD_TRACK, cdSilver, cdIrisOpacity } from "@/components/Vinyl";
 import type { Track } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -39,27 +39,40 @@ function Face({
   const R_OUT = 47.5;
   const R_IN = 23;
   const bw = (R_OUT - R_IN) / N;
-  const showPhoto = (cfg.label === "photo" || cfg.label === "photo-ring") && coverUrl;
+  const isCd = cfg.media === "cd";
+  const showPhoto = isCd ? !!coverUrl : (cfg.label === "photo" || cfg.label === "photo-ring") && coverUrl;
 
   return (
     <div className="absolute inset-0">
-      {/* corpo do vinil girando */}
+      {/* corpo girando (vinil OU CD) */}
       <div
         className="spin absolute inset-0 rounded-full bg-cover bg-center"
         style={
-          cfg.bodyImageUrl
+          isCd
+            ? { backgroundImage: `${cdSilver(cfg.cdFinish)}` }
+            : cfg.bodyImageUrl
             ? { backgroundImage: `${GROOVE_LAYER}, url(${cfg.bodyImageUrl})`, backgroundSize: "auto, cover", backgroundPosition: "center, center", backgroundRepeat: "repeat, no-repeat" }
             : {
                 backgroundImage: `${GROOVE_LAYER}, radial-gradient(circle at 30% 26%, rgba(255,255,255,0.10), transparent 42%), radial-gradient(circle at center, ${c.groove} 0%, ${c.ring} 66%, #050505 100%)`,
               }
         }
       >
-        {/* sulcos = faixas (SVG) */}
+        {/* CD: iridescência + trilha (giram com o corpo) */}
+        {isCd && (
+          <>
+            <div className="absolute inset-0 rounded-full" style={{ mixBlendMode: "screen", opacity: cdIrisOpacity(cfg.cdFinish), backgroundImage: CD_IRIS }} aria-hidden />
+            <div className="absolute inset-0 rounded-full" style={{ mixBlendMode: "screen", opacity: 0.28, backgroundImage: CD_IRIS2 }} aria-hidden />
+            <div className="absolute inset-0 rounded-full" style={{ opacity: 0.5, backgroundImage: CD_TRACK }} aria-hidden />
+          </>
+        )}
+
+        {/* sulcos = faixas (SVG) — no CD viram trilhas escuras finas, mas seguem clicáveis */}
         <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" style={{ pointerEvents: grooveDisabled ? "none" : undefined }}>
           {tracks.map((t, i) => {
             const rC = R_OUT - (i + 0.5) * bw;
             const isHover = hoverId === t.id;
             const isPlay = playingId === t.id;
+            const baseStroke = isCd ? "rgba(0,0,0,0.22)" : "rgba(255,255,255,0.16)";
             return (
               <g key={t.id}>
                 {/* área clicável (transparente) */}
@@ -78,7 +91,7 @@ function Face({
                   cx="50" cy="50" r={rC}
                   fill="none"
                   pointerEvents="none"
-                  stroke={isPlay ? "#ff9d2e" : isHover ? "#26c0d4" : "rgba(255,255,255,0.16)"}
+                  stroke={isPlay ? "#ff9d2e" : isHover ? "#26c0d4" : baseStroke}
                   strokeWidth={isPlay ? 2.4 : isHover ? 2 : 0.7}
                   opacity={isPlay || isHover ? 1 : 0.9}
                 />
@@ -106,8 +119,15 @@ function Face({
             </span>
           </div>
         </div>
-        {/* furo */}
-        <div className="absolute left-1/2 top-1/2 h-[4%] w-[4%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0b0b0b] shadow-[inset_0_0_3px_rgba(255,255,255,.4)]" />
+        {/* furo (CD tem anel transparente + furo maior) */}
+        {isCd ? (
+          <>
+            <div className="absolute left-1/2 top-1/2 h-[19%] w-[19%] -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: "radial-gradient(circle,rgba(226,232,236,.5),rgba(150,160,168,.32))", boxShadow: "inset 0 0 0 2px rgba(255,255,255,.35), inset 0 0 6px rgba(0,0,0,.4)" }} aria-hidden />
+            <div className="absolute left-1/2 top-1/2 h-[11%] w-[11%] -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: "#0a0d11", boxShadow: "inset 0 1px 3px rgba(255,255,255,.25), 0 0 0 1px rgba(0,0,0,.6)" }} aria-hidden />
+          </>
+        ) : (
+          <div className="absolute left-1/2 top-1/2 h-[4%] w-[4%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0b0b0b] shadow-[inset_0_0_3px_rgba(255,255,255,.4)]" />
+        )}
       </div>
     </div>
   );

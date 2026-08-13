@@ -241,6 +241,13 @@ export const BORDER_STYLES = [
   { id: "dashed", label: "Tracejada" },
 ] as const;
 
+/** Acabamentos do CD (o reflexo/iridescência da mídia) */
+export const CD_FINISHES = [
+  { id: "silver", label: "Prata (arco-íris)" },
+  { id: "gold", label: "Dourado" },
+  { id: "blue", label: "Azulado" },
+] as const;
+
 export type DiscConfig = {
   color: string;
   style?: string;
@@ -250,6 +257,10 @@ export type DiscConfig = {
   borderColor?: string;
   /** estampa/arte custom do CORPO do disco (substitui a cor/estilo presets) */
   bodyImageUrl?: string | null;
+  /** mídia: vinil (padrão) ou CD (reflexivo). Mesmo tamanho, só muda a arte. */
+  media?: "vinyl" | "cd";
+  /** acabamento do CD (quando media === "cd") */
+  cdFinish?: string;
 };
 
 export const DEFAULT_DISC_CONFIG: DiscConfig = {
