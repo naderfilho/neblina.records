@@ -6,6 +6,7 @@ import RecordCard from "@/components/RecordCard";
 import TagBadge from "@/components/TagBadge";
 import { QUALITY_GRADES, QUALITY_META, POPULAR_NATIONALITIES, RECORD_FORMATS, GENRE_TREE, genreMatches, homeGridClass } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { visibleTagIds } from "@/lib/tags";
 import type { RecordItem, Tag } from "@/lib/types";
 
 function uniqueSorted(values: (string | null)[]): string[] {
@@ -83,9 +84,9 @@ export default function RecordGrid({
   const [showFilters, setShowFilters] = useState(false);
 
   const tagMap = useMemo(() => new Map(tags.map((t) => [t.id, t])), [tags]);
-  // só mostra filtro de tags que existem em algum disco publicado
+  // só mostra filtro de tags que existem (e não expiraram) em algum disco publicado
   const usedTags = useMemo(() => {
-    const ids = new Set(records.flatMap((r) => r.tag_ids ?? []));
+    const ids = new Set(records.flatMap((r) => visibleTagIds(r)));
     return tags.filter((t) => ids.has(t.id));
   }, [records, tags]);
 
@@ -121,7 +122,7 @@ export default function RecordGrid({
       if (f.artist && r.artist !== f.artist) return false;
       if (f.format && r.format !== f.format) return false;
       if (f.quality && r.disc_quality !== f.quality) return false;
-      if (f.tag && !(r.tag_ids ?? []).includes(f.tag)) return false;
+      if (f.tag && !visibleTagIds(r).includes(f.tag)) return false;
       if (q && !`${r.title} ${r.artist} ${r.genre ?? ""} ${r.label_company ?? ""}`.toLowerCase().includes(q))
         return false;
       return true;
@@ -330,7 +331,7 @@ export default function RecordGrid({
               <RecordCard
                 key={r.id}
                 record={r}
-                tags={(r.tag_ids ?? []).map((id) => tagMap.get(id)).filter((t): t is Tag => !!t)}
+                tags={visibleTagIds(r).map((id) => tagMap.get(id)).filter((t): t is Tag => !!t)}
               />
             ))}
           </div>

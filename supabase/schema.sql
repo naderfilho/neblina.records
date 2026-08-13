@@ -552,6 +552,11 @@ create index if not exists records_box_only_idx on public.records (box_only);
 -- box_only é público (a página do disco esconde preço/compra dos discos de box).
 grant select (box_only) on public.records to anon;
 
+-- Expiração por tag no disco: { [tag_id]: iso }. Ausente = permanente. Público
+-- (as páginas da loja escondem tags expiradas).
+alter table public.records add column if not exists tag_expiries jsonb not null default '{}'::jsonb;
+grant select (tag_expiries) on public.records to anon;
+
 -- CUSTO / valor pago na aquisição (privado, só admin) — para calcular lucro.
 -- Fica no disco (inclui os do box) e no box. Nunca é exposto na área pública.
 alter table public.records add column if not exists cost numeric(10,2);

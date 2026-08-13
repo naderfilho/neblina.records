@@ -122,6 +122,7 @@ export default function RecordForm({
   const [ident, setIdent] = useState<IdentificationInfo>(record?.identification ?? {});
   const [sale, setSale] = useState<SaleInfo>(record?.sale_info ?? {});
   const [tagIds, setTagIds] = useState<string[]>(record?.tag_ids ?? []);
+  const [tagExpiries, setTagExpiries] = useState<Record<string, string>>(record?.tag_expiries ?? {});
   const [allTags, setAllTags] = useState<Tag[]>([]);
 
   // registro de venda
@@ -498,6 +499,7 @@ export default function RecordForm({
         tracks: finalTracks, home_track_id: homeTrackId,
         condition, included_content: content, history, market,
         identification: ident, sale_info: sale, tag_ids: tagIds,
+        tag_expiries: Object.fromEntries(Object.entries(tagExpiries).filter(([id]) => tagIds.includes(id))),
         sort_order: record?.sort_order ?? 0,
         extra_blocks: blocks,
       };
@@ -1024,14 +1026,21 @@ export default function RecordForm({
       </Section>
 
       {/* 9. Etiquetas */}
-      <Section title="Etiquetas (tags)" desc="Aparecem em cima do disco na home e permitem filtrar (ex: Mais Vendido, Promoção).">
+      <Section title="Etiquetas (tags)" desc="Aparecem em cima do disco na home e permitem filtrar (ex: Mais Vendido, Promoção). Você pode dar um PRAZO para a tag — passado o prazo, ela some sozinha do disco na loja.">
         <div className="flex flex-wrap items-center gap-2">
           {allTags.length === 0 && <p className="text-sm text-faint">Nenhuma tag criada ainda.</p>}
           {allTags.map((t) => {
             const on = tagIds.includes(t.id);
             return (
               <button key={t.id} type="button"
-                onClick={() => setTagIds((ids) => (on ? ids.filter((x) => x !== t.id) : [...ids, t.id]))}
+                onClick={() => {
+                  if (on) {
+                    setTagIds((ids) => ids.filter((x) => x !== t.id));
+                    setTagExpiries((e) => { const n = { ...e }; delete n[t.id]; return n; });
+                  } else {
+                    setTagIds((ids) => [...ids, t.id]);
+                  }
+                }}
                 className={cn("rounded-full px-3 py-1.5 text-xs font-bold ring-2 transition", on ? "ring-brand" : "ring-transparent opacity-70 hover:opacity-100")}
                 style={{ background: t.bg, color: t.fg }}>
                 {t.label}
@@ -1042,6 +1051,43 @@ export default function RecordForm({
             <TagIcon size={13} /> Gerenciar tags
           </Link>
         </div>
+
+        {/* prazo por tag (só das selecionadas) */}
+        {tagIds.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <p className="text-xs uppercase tracking-wider text-muted">Prazo das tags</p>
+            {tagIds.map((id) => {
+              const t = allTags.find((x) => x.id === id);
+              if (!t) return null;
+              const iso = tagExpiries[id];
+              const dateVal = iso ? new Date(iso).toISOString().slice(0, 10) : "";
+              const setDate = (d: string) => setTagExpiries((e) => {
+                const n = { ...e };
+                if (d) n[id] = new Date(d + "T23:59:59").toISOString(); else delete n[id];
+                return n;
+              });
+              const inDays = (days: number) => { const d = new Date(Date.now() + days * 86400000); setDate(d.toISOString().slice(0, 10)); };
+              const expired = !!iso && new Date(iso).getTime() <= Date.now();
+              return (
+                <div key={id} className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-bg-soft p-2.5">
+                  <span className="rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: t.bg, color: t.fg }}>{t.label}</span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button type="button" onClick={() => inDays(7)} className="rounded-lg border border-line px-2.5 py-1 text-xs text-muted hover:border-brand/50 hover:text-brand">1 semana</button>
+                    <button type="button" onClick={() => inDays(15)} className="rounded-lg border border-line px-2.5 py-1 text-xs text-muted hover:border-brand/50 hover:text-brand">15 dias</button>
+                    <button type="button" onClick={() => inDays(30)} className="rounded-lg border border-line px-2.5 py-1 text-xs text-muted hover:border-brand/50 hover:text-brand">1 mês</button>
+                    <input type="date" value={dateVal} onChange={(e) => setDate(e.target.value)} className="rounded-lg border border-line bg-panel px-2 py-1 text-xs text-ink outline-none focus:border-brand/50" />
+                    {iso ? (
+                      <button type="button" onClick={() => setDate("")} className="rounded-lg px-2 py-1 text-xs text-faint hover:text-red-400">sem prazo</button>
+                    ) : (
+                      <span className="text-xs text-faint">sem prazo (permanente)</span>
+                    )}
+                  </div>
+                  {expired && <span className="text-xs text-red-400">já expirou — não aparece na loja</span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </Section>
 
       {/* 10. Identificação */}

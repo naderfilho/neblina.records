@@ -11,7 +11,7 @@ export const revalidate = 0;
 // Colunas que a vitrine (grade + filtros) usa — evita baixar os campos pesados
 // (tracks, history, extra_blocks…) de milhares de discos à toa.
 const GRID_COLS =
-  "id,title,artist,genre,nationality,format,disc_quality,tag_ids,label_company,price,availability,cover_image_url,disc_config,audio_url,audio_start,audio_end";
+  "id,title,artist,genre,nationality,format,disc_quality,tag_ids,tag_expiries,label_company,price,availability,cover_image_url,disc_config,audio_url,audio_start,audio_end";
 
 /**
  * Busca TODOS os discos publicados. O Supabase/PostgREST limita cada resposta a

@@ -148,6 +148,8 @@ export type RecordItem = {
   tag_ids: string[];
   sort_order: number;
   extra_blocks: ExtraBlock[];
+  /** expiração por tag: { [tagId]: isoDatetime }. Ausente = permanente. */
+  tag_expiries: Record<string, string>;
   year: number | null;
   catalog_number: string | null;
   label_company: string | null;
