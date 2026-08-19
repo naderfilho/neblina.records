@@ -6,7 +6,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
 ![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS_4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?logo=supabase&logoColor=white)
-![Claude API](https://img.shields.io/badge/Claude_API-191919?logo=anthropic&logoColor=white)
+![Claude API](https://img.shields.io/badge/Claude_API-D97757?logo=claude&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Vercel-000000?logo=vercel&logoColor=white)
 
 Loja online de discos de vinil com experiência imersiva: abertura cinematográfica, discos que giram e tocam ao passar o mouse (ou ao toque, no celular), cursor em formato de agulha, gatefold que abre e Audioteca com toca-discos virtual, além de um painel administrativo completo com cadastro assistido por IA.
