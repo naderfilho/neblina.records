@@ -14,11 +14,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Instalar dependencias
-        run: npm ci
+        # npm install (e nao npm ci): o lockfile gerado no Windows nao registra
+        # os binarios opcionais de Linux que o runner precisa (bug conhecido do npm)
+        run: npm install --no-audit --no-fund
 
       - name: Lint
         run: npm run lint
