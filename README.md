@@ -13,7 +13,7 @@ Loja online de discos de vinil com experiência imersiva: abertura cinematográf
 
 **Site em produção:** [neblinarecords.com.br](https://www.neblinarecords.com.br)
 
-Projetado e desenvolvido do zero por **[Nader Filho](https://github.com/naderfilho)** (NDR Private Agency).
+Projetado e desenvolvido do zero por **[Nader Filho](https://github.com/naderfilho)** na **Cedru Labs**, grupo de desenvolvimento da NDR Private Agency.
 
 ---
 
@@ -114,4 +114,4 @@ O schema completo está em [`supabase/schema.sql`](supabase/schema.sql). Para re
 
 ---
 
-© Nader Filho (NDR Private Agency). Código disponível para leitura e avaliação; todos os direitos reservados.
+© Nader Filho · Cedru Labs, grupo da NDR Private Agency. Código disponível para leitura e avaliação; todos os direitos reservados.
