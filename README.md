@@ -1,5 +1,7 @@
 # Neblina Records
 
+[![CI](https://github.com/naderfilho/neblina.records/actions/workflows/ci.yml/badge.svg)](https://github.com/naderfilho/neblina.records/actions/workflows/ci.yml)
+
 Loja online de discos de vinil com experiência imersiva: abertura cinematográfica, discos que giram e tocam ao passar o mouse (ou ao toque, no celular), cursor em formato de agulha, gatefold que abre e Audioteca com toca-discos virtual, além de um painel administrativo completo com cadastro assistido por IA.
 
 **Site em produção:** [neblinarecords.com.br](https://www.neblinarecords.com.br)
