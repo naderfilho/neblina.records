@@ -202,7 +202,7 @@ export default function RecordForm({
     supabase.from("profiles").select("id,first_name,last_name,email").order("first_name").then(({ data }) => {
       if (data) setUsers(data as typeof users);
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);  
 
   const audioPreviewSrc = useMemo(
     () => (audioFile ? URL.createObjectURL(audioFile) : audioUrl),

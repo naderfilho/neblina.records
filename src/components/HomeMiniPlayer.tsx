@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Play, Pause } from "lucide-react";
 import TagBadge from "@/components/TagBadge";
-import { claimAudio, releaseAudio } from "@/lib/audio-bus";
+import { claimAudio } from "@/lib/audio-bus";
 import type { Tag } from "@/lib/types";
 
 export type HomeSong = {
@@ -93,7 +93,7 @@ export default function HomeMiniPlayer({ song }: { song: HomeSong }) {
         )}
       </button>
 
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      { }
       <audio
         ref={audioRef}
         src={song.audioUrl}

@@ -46,7 +46,7 @@ export default function SiteFooter() {
         <div>
           <h4 className="mb-4 text-sm font-semibold uppercase tracking-widest text-ink">Navegar</h4>
           <ul className="space-y-2 text-sm text-muted">
-            <li><a href="/#acervo" className="hover:text-brand">Discos</a></li>
+            <li><Link href="/#acervo" className="hover:text-brand">Discos</Link></li>
             <li><Link href="/audioteca" className="hover:text-brand">Audioteca</Link></li>
             <li><Link href="/eventos" className="hover:text-brand">Eventos</Link></li>
             <li><Link href="/vender" className="hover:text-brand">Venda seu disco</Link></li>

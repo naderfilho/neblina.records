@@ -452,7 +452,7 @@ export default function Audioteca({ records, boxes = [], isLoggedIn }: { records
     apply();
     window.addEventListener("resize", apply);
     return () => window.removeEventListener("resize", apply);
-  }, [entry, platterDi, platterSide, sideA, sideB, armDrag]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [entry, platterDi, platterSide, sideA, sideB, armDrag]);  
 
   /* ---------- fila ---------- */
   function place(rec: RecordItem) {
@@ -488,7 +488,7 @@ export default function Audioteca({ records, boxes = [], isLoggedIn }: { records
     setPlatterDi((p) => (di === p ? -1 : di < p ? p - 1 : p));
     // re-sincroniza a posição pela faixa atual
     setTimeout(() => {
-      setPos((p) => {
+      setPos(() => {
         const pl: Entry[] = [];
         queue.filter((_, i) => i !== di).forEach((rec, ndi) => {
           const ts = rec.tracks ?? [];
@@ -929,7 +929,7 @@ export default function Audioteca({ records, boxes = [], isLoggedIn }: { records
 
       {/* áudio (segundo plano) + xiado */}
       <audio ref={audioRef} preload="none" crossOrigin="anonymous" />
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      { }
       <audio ref={crackleRef} src="/needle.mp3" preload="auto" />
 
       <style jsx>{`

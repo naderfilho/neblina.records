@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Play, Pause } from "lucide-react";
 import { type DiscConfig, DEFAULT_DISC_CONFIG, resolveDiscColor } from "@/lib/constants";
-import { claimAudio, releaseAudio } from "@/lib/audio-bus";
+import { claimAudio } from "@/lib/audio-bus";
 import { playScratch } from "@/lib/scratch";
 import { GROOVE_LAYER, CD_IRIS, CD_IRIS2, CD_TRACK, cdSilver, cdIrisOpacity } from "@/components/Vinyl";
 import type { Track } from "@/lib/types";
@@ -331,7 +331,7 @@ export default function TrackVinyl({
     apply();
     window.addEventListener("resize", apply);
     return () => window.removeEventListener("resize", apply);
-  }, [playingId, side, sideA, sideB, armDrag]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [playingId, side, sideA, sideB, armDrag]);  
 
   function flipTo(s: "A" | "B") {
     if (s === side || angle !== 0) return; // ignora se já está no lado ou girando
